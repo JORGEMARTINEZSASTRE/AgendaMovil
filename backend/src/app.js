@@ -86,4 +86,12 @@ app.use((err, _req, res, _next) => {
   });
 });
 
+// ─── TEST EVOLUTION (TEMPORAL, borrar después) ──────────
+const evolution = require('./services/evolution.service');
+
+app.get('/api/test-evolution', async (_req, res) => {
+  const resultado = await evolution.ping();
+  res.json(resultado);
+});
+
 module.exports = app;
