@@ -3,6 +3,7 @@
 const cron       = require('node-cron');
 const nodemailer = require('nodemailer');
 const { query }  = require('./src/config/db');
+const evolution = require('./src/services/evolution.service');
 
 // ─── MAILER ──────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
@@ -181,10 +182,42 @@ function mensajeWhatsApp(turno, tipo) {
 // Nota: wa.me abre el chat con el mensaje prellenado.
 // Para envío 100% automático sin intervención se necesita
 // WPPConnect/Baileys (ver recordatorios.wppclient.js)
-function logWhatsAppLink(turno, tipo) {
-  const mensaje = mensajeWhatsApp(turno, tipo);
-  const link    = linkWhatsApp(turno.telefono, mensaje);
-  console.log(`[WA] Link para ${turno.nombre}: ${link}`);
+async function enviarWhatsAppAutomatico(turno, tipo) {
+  try {
+    if (!turno.telefono) {
+      console.log(`[WA] Turno ${turno.id} sin teléfono, skip`);
+      return { ok: false, error: 'sin_telefono' };
+    }
+
+    // Verificar que la estética tenga WhatsApp conectado
+    const instance = `user_${turno.user_id}`;
+    const estadoRes = await evolution.estadoInstancia(instance);
+
+    if (!estadoRes.ok || estadoRes.estado !== 'open') {
+      console.log(`[WA] Usuario ${turno.user_id} sin WhatsApp conectado (estado: ${estadoRes.estado || 'error'})`);
+      // Fallback: loguear el link para envío manual
+      const mensaje = mensajeWhatsApp(turno, tipo);
+      const link    = linkWhatsApp(turno.telefono, mensaje);
+      console.log(`[WA] Link fallback para ${turno.nombre}: ${link}`);
+      return { ok: false, error: 'wa_desconectado' };
+    }
+
+    // Enviar el mensaje automáticamente
+    const mensaje = mensajeWhatsApp(turno, tipo);
+    const resultado = await evolution.enviarMensaje(instance, turno.telefono, mensaje);
+
+    if (!resultado.ok) {
+      console.error(`[WA] ❌ Error enviando a ${turno.nombre}:`, resultado.error);
+      return { ok: false, error: resultado.error };
+    }
+
+    console.log(`[WA] ✅ ${tipo} enviado automáticamente a ${turno.nombre} (${turno.telefono})`);
+    return { ok: true };
+
+  } catch (err) {
+    console.error(`[WA] Error general:`, err.message);
+    return { ok: false, error: err.message };
+  }
 }
 
 // ─── PROCESADOR ──────────────────────────────────────────────
@@ -198,13 +231,15 @@ async function procesarRecordatorios() {
     for (const turno of turnos24h) {
       try {
         await enviarEmailRecordatorio(turno, '24h');
-        logWhatsAppLink(turno, '24h');
+        await enviarWhatsAppAutomatico(turno, '24h');
         await marcarEnviado24h(turno.id);
         console.log(`[CRON] ✅ Recordatorio 24h enviado: ${turno.nombre} (${turno.id})`);
       } catch (err) {
         console.error(`[CRON] ❌ Error 24h para ${turno.id}:`, err.message);
       }
     }
+          await new Promise(r => setTimeout(r, 1500));
+
   } catch (err) {
     console.error('[CRON] Error al obtener turnos 24h:', err.message);
   }
@@ -215,13 +250,15 @@ async function procesarRecordatorios() {
     for (const turno of turnos2h) {
       try {
         await enviarEmailRecordatorio(turno, '2h');
-        logWhatsAppLink(turno, '2h');
+        await enviarWhatsAppAutomatico(turno, '2h');   // ← CAMBIÓ
         await marcarEnviado2h(turno.id);
         console.log(`[CRON] ✅ Recordatorio 2h enviado: ${turno.nombre} (${turno.id})`);
       } catch (err) {
         console.error(`[CRON] ❌ Error 2h para ${turno.id}:`, err.message);
       }
     }
+          await new Promise(r => setTimeout(r, 1500));
+
   } catch (err) {
     console.error('[CRON] Error al obtener turnos 2h:', err.message);
   }

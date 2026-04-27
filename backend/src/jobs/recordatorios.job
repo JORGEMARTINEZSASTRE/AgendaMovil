@@ -1,0 +1,160 @@
+'use strict';
+
+const { query } = require('../config/db');
+const evolution = require('../services/evolution.service');
+
+// ═══════════════════════════════════════════════════════════
+//  HELPER: Reemplazar variables en la plantilla
+// ═══════════════════════════════════════════════════════════
+function armarMensaje(plantilla, turno, usuario) {
+  if (!plantilla) {
+    plantilla = '¡Hola {nombre}! Te recordamos tu turno el {fecha} a las {hora}. ¡Te esperamos! 🌸';
+  }
+
+  const fechaFormateada = new Date(turno.fecha).toLocaleDateString('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const horaFormateada = turno.hora ? turno.hora.toString().slice(0, 5) : '';
+
+  return plantilla
+    .replace(/{nombre}/g,    turno.nombre || 'clienta')
+    .replace(/{fecha}/g,     fechaFormateada)
+    .replace(/{hora}/g,      horaFormateada)
+    .replace(/{servicio}/g,  turno.servicio_nombre || '')
+    .replace(/{zona}/g,      turno.servicio_zona || '')
+    .replace(/{duracion}/g,  turno.duracion || '')
+    .replace(/{negocio}/g,   usuario?.nombre_negocio || usuario?.nombre || '')
+    .replace(/{monto}/g,     turno.monto_senia || '');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUSCAR TURNOS PARA RECORDATORIO DE 24H
+// ═══════════════════════════════════════════════════════════
+async function buscarTurnos24h() {
+  const { rows } = await query(`
+    SELECT 
+      t.*,
+      u.nombre AS usuario_nombre,
+      u.nombre_negocio,
+      c.plantilla_turno
+    FROM turnos t
+    INNER JOIN usuarios u ON u.id = t.user_id
+    LEFT JOIN configuracion c ON c.user_id = t.user_id
+    INNER JOIN whatsapp_sesiones ws ON ws.user_id = t.user_id
+    WHERE t.estado = 'activo'
+      AND t.recordatorio_24h_enviado = FALSE
+      AND ws.estado = 'open'
+      AND (
+        (t.fecha::date + t.hora::time) BETWEEN 
+          NOW() + INTERVAL '23 hours 30 minutes' 
+          AND NOW() + INTERVAL '24 hours 30 minutes'
+      )
+  `);
+  return rows;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUSCAR TURNOS PARA RECORDATORIO DE 2H
+// ═══════════════════════════════════════════════════════════
+async function buscarTurnos2h() {
+  const { rows } = await query(`
+    SELECT 
+      t.*,
+      u.nombre AS usuario_nombre,
+      u.nombre_negocio,
+      c.plantilla_turno
+    FROM turnos t
+    INNER JOIN usuarios u ON u.id = t.user_id
+    LEFT JOIN configuracion c ON c.user_id = t.user_id
+    INNER JOIN whatsapp_sesiones ws ON ws.user_id = t.user_id
+    WHERE t.estado = 'activo'
+      AND t.recordatorio_2h_enviado = FALSE
+      AND ws.estado = 'open'
+      AND (
+        (t.fecha::date + t.hora::time) BETWEEN 
+          NOW() + INTERVAL '1 hour 30 minutes' 
+          AND NOW() + INTERVAL '2 hours 30 minutes'
+      )
+  `);
+  return rows;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ENVIAR RECORDATORIO
+// ═══════════════════════════════════════════════════════════
+async function enviarRecordatorio(turno, tipo) {
+  try {
+    if (!turno.telefono) {
+      console.log(`[recordatorios] Turno ${turno.id} sin teléfono, skip`);
+      return { ok: false, error: 'sin_telefono' };
+    }
+
+    const usuario = {
+      nombre: turno.usuario_nombre,
+      nombre_negocio: turno.nombre_negocio,
+    };
+
+    const plantilla = turno.plantilla_turno;
+    const mensaje = armarMensaje(plantilla, turno, usuario);
+
+    const instance = `user_${turno.user_id}`;
+    const resultado = await evolution.enviarMensaje(instance, turno.telefono, mensaje);
+
+    if (!resultado.ok) {
+      console.error(`[recordatorios] Error enviando ${turno.id}:`, resultado.error);
+      return { ok: false, error: resultado.error };
+    }
+
+    // Marcar como enviado
+    const campoEnviado = tipo === '24h' ? 'recordatorio_24h_enviado' : 'recordatorio_2h_enviado';
+    const campoFecha   = tipo === '24h' ? 'recordatorio_24h_fecha'   : 'recordatorio_2h_fecha';
+
+    await query(
+      `UPDATE turnos SET ${campoEnviado} = TRUE, ${campoFecha} = NOW() WHERE id = $1`,
+      [turno.id]
+    );
+
+    console.log(`[recordatorios] ✅ ${tipo} enviado a ${turno.nombre} (${turno.telefono})`);
+    return { ok: true };
+
+  } catch (err) {
+    console.error(`[recordatorios] Error general:`, err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EJECUTAR EL JOB
+// ═══════════════════════════════════════════════════════════
+async function ejecutarJob() {
+  console.log('[recordatorios] 🕐 Iniciando revisión de recordatorios...');
+
+  try {
+    // Recordatorios de 24h
+    const turnos24h = await buscarTurnos24h();
+    console.log(`[recordatorios] 24h encontrados: ${turnos24h.length}`);
+    for (const turno of turnos24h) {
+      await enviarRecordatorio(turno, '24h');
+      // Pequeña pausa entre envíos para no saturar
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    // Recordatorios de 2h
+    const turnos2h = await buscarTurnos2h();
+    console.log(`[recordatorios] 2h encontrados: ${turnos2h.length}`);
+    for (const turno of turnos2h) {
+      await enviarRecordatorio(turno, '2h');
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    console.log('[recordatorios] ✅ Revisión completada');
+
+  } catch (err) {
+    console.error('[recordatorios] Error en el job:', err.message);
+  }
+}
+
+module.exports = { ejecutarJob };
