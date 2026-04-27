@@ -1,0 +1,135 @@
+/* ═══════════════════════════════════════
+   ADMIN — admin.css
+   ═══════════════════════════════════════ */
+
+/* ─── SPLASH ─────────────────────────── */
+.admin-splash {
+  position:fixed; inset:0; z-index:9999;
+  background:linear-gradient(145deg,#2A1A4A 0%,#4A2E7A 55%,#A85568 100%);
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* ─── STATS ──────────────────────────── */
+.admin-stats {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:10px; padding:16px;
+}
+.stat-card {
+  background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--radio-sm); padding:14px 10px;
+  text-align:center; box-shadow:var(--sombra);
+}
+.stat-num {
+  font-family:'Cormorant Garamond',serif;
+  font-size:32px; font-weight:700; color:var(--rosa-vino);
+  line-height:1;
+}
+.stat-label {
+  font-size:10px; color:var(--gris); margin-top:4px;
+  letter-spacing:1px; text-transform:uppercase; font-weight:700;
+}
+
+/* ─── ACCIONES ───────────────────────── */
+.admin-acciones {
+  padding:0 16px 16px;
+}
+.btn-nueva-clienta {
+  width:auto !important;
+  padding:11px 20px !important;
+  font-size:14px !important;
+}
+
+/* ─── LISTA CLIENTAS ─────────────────── */
+.lista-clientas {
+  padding:0 16px 32px;
+  display:flex; flex-direction:column; gap:12px;
+}
+
+/* ─── CARD CLIENTA ───────────────────── */
+.card-clienta {
+  background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--radio); padding:15px 16px;
+  box-shadow:var(--sombra); animation:aparecer .3s ease;
+}
+.card-clienta.inactiva { opacity:.55 }
+.clienta-header {
+  display:flex; align-items:flex-start;
+  justify-content:space-between; margin-bottom:10px;
+}
+.clienta-info { flex:1; min-width:0 }
+.clienta-nombre {
+  font-family:'Cormorant Garamond',serif;
+  font-size:17px; font-weight:700; color:var(--marron);
+  margin-bottom:2px;
+}
+.clienta-negocio { font-size:12px; color:var(--rosa-vino); font-weight:600 }
+.clienta-email { font-size:12px; color:var(--gris); margin-top:2px }
+.clienta-badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px }
+.badge {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 10px; border-radius:100px;
+  font-size:11px; font-weight:700;
+}
+.badge-trial {
+  background:rgba(201,169,110,.15); color:#7A5A20;
+  border:1px solid rgba(201,169,110,.4);
+}
+.badge-premium {
+  background:rgba(168,85,104,.12); color:var(--rosa-vino);
+  border:1px solid rgba(168,85,104,.25);
+}
+.badge-activa {
+  background:rgba(37,211,102,.12); color:#1a7a3e;
+  border:1px solid rgba(37,211,102,.3);
+}
+.badge-inactiva {
+  background:rgba(224,85,85,.1); color:var(--rojo);
+  border:1px solid rgba(224,85,85,.25);
+}
+.badge-vencido {
+  background:rgba(224,85,85,.1); color:var(--rojo);
+  border:1px solid rgba(224,85,85,.25);
+}
+.clienta-trial-info {
+  font-size:11px; color:var(--gris); margin-top:6px;
+}
+.clienta-acciones {
+  display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;
+  padding-top:10px; border-top:1px solid var(--borde);
+}
+.btn-admin {
+  background:var(--crema2); border:1.5px solid var(--borde);
+  border-radius:8px; padding:6px 12px;
+  font-family:'Nunito',sans-serif; font-size:12px;
+  font-weight:700; cursor:pointer; transition:all .2s;
+  color:var(--marron);
+}
+.btn-admin:hover { background:var(--blush); border-color:var(--rosa-polvo) }
+.btn-admin.btn-danger { color:var(--rojo) }
+.btn-admin.btn-danger:hover {
+  background:#FFF0F0; border-color:var(--rojo);
+}
+.btn-admin.btn-success { color:#1a7a3e }
+.btn-admin.btn-success:hover {
+  background:rgba(37,211,102,.1); border-color:#1a7a3e;
+}
+.btn-admin.btn-link {
+  background:rgba(37,211,102,.1); color:#1a7a3e;
+  border-color:rgba(37,211,102,.3);
+}
+.btn-admin.btn-link:hover {
+  background:rgba(37,211,102,.2);
+}
+
+/* ─── EDIT PLAN NOMBRE ───────────────── */
+.edit-plan-nombre {
+  font-family:'Cormorant Garamond',serif;
+  font-size:18px; font-weight:700; color:var(--marron);
+  margin-bottom:12px; text-align:center;
+}
+
+/* ─── RESPONSIVE ─────────────────────── */
+@media(max-width:380px) {
+  .admin-stats { grid-template-columns:repeat(2,1fr) }
+  .stat-num { font-size:26px }
+}

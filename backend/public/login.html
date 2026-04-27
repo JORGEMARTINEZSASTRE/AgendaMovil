@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#A85568">
+  <title>🌸 DEPIMÓVIL PRO — Ingresar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body class="login-body">
+
+<div class="login-bg"></div>
+
+<div class="login-wrap">
+
+  <!-- Logo -->
+  <div class="login-logo">
+    <span class="login-icono">🌸</span>
+    <p class="login-marca">DEPIMÓVIL PRO</p>
+    <h1 class="login-titulo">Bienvenida</h1>
+    <p class="login-sub">Ingresá a tu agenda inteligente</p>
+  </div>
+
+  <!-- Card login -->
+  <div class="login-card">
+
+    <!-- Error banner -->
+    <div id="login-error" class="login-error oculto">
+      <span class="login-error-icono">⚠️</span>
+      <span id="login-error-msg">Error al iniciar sesión</span>
+    </div>
+
+    <!-- Trial vencido banner -->
+    <div id="trial-banner" class="trial-banner oculto">
+      <span>⏰</span>
+      <div>
+        <strong>Tu período de prueba venció</strong>
+        <p>Contactá al administrador para continuar.</p>
+      </div>
+    </div>
+
+    <form id="login-form" novalidate>
+
+      <div class="campo">
+        <label for="login-email">📧 Email</label>
+        <input
+          type="email"
+          id="login-email"
+          placeholder="tu@email.com"
+          autocomplete="email"
+          required
+        >
+        <span class="campo-error" id="err-email"></span>
+      </div>
+
+      <div class="campo">
+        <label for="login-password">🔒 Contraseña</label>
+        <div class="password-wrap">
+          <input
+            type="password"
+            id="login-password"
+            placeholder="Tu contraseña"
+            autocomplete="current-password"
+            required
+          >
+          <button type="button" class="btn-toggle-pass" id="btn-toggle-pass" tabindex="-1">
+            👁
+          </button>
+        </div>
+        <span class="campo-error" id="err-password"></span>
+      </div>
+
+      <button type="submit" class="btn-login" id="btn-login">
+        <span id="btn-login-texto">Ingresar →</span>
+        <span id="btn-login-loader" class="login-loader oculto"></span>
+      </button>
+
+    </form>
+
+    <p class="login-footer-text">
+      ¿No tenés cuenta? Contactá a tu administrador.
+    </p>
+
+  </div>
+
+  <!-- Invitación -->
+  <div id="seccion-invitacion" class="invitacion-card oculto">
+    <div class="seccion-titulo"><span>✦ Activar cuenta con invitación</span></div>
+    <p class="inv-desc">Si recibiste un link de invitación, completá tus datos para activar tu cuenta.</p>
+    <form id="form-invitacion" novalidate>
+      <div class="campo">
+        <label for="inv-token">🔑 Código de invitación</label>
+        <input type="text" id="inv-token" placeholder="Pegá tu código aquí" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="inv-nombre">👤 Tu nombre</label>
+        <input type="text" id="inv-nombre" placeholder="Nombre completo" autocomplete="name">
+      </div>
+      <div class="campo">
+        <label for="inv-negocio">🏪 Nombre del negocio</label>
+        <input type="text" id="inv-negocio" placeholder="Ej: Depilaciones María" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="inv-pass">🔒 Elegí tu contraseña</label>
+        <input type="password" id="inv-pass" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+      </div>
+      <div class="campo">
+        <label for="inv-pass2">🔒 Repetí la contraseña</label>
+        <input type="password" id="inv-pass2" placeholder="Repetí tu contraseña" autocomplete="new-password">
+      </div>
+      <div id="inv-error" class="login-error oculto">
+        <span>⚠️</span><span id="inv-error-msg"></span>
+      </div>
+      <button type="submit" class="btn-login" id="btn-inv">
+        <span id="btn-inv-texto">✅ Activar cuenta</span>
+        <span id="btn-inv-loader" class="login-loader oculto"></span>
+      </button>
+    </form>
+  </div>
+
+  <button class="btn-link-inv" id="btn-mostrar-inv">
+    ¿Tenés un código de invitación? Activá tu cuenta
+  </button>
+
+  <p class="login-version">DEPIMÓVIL PRO v5.0 · Sistema privado</p>
+
+</div>
+
+<script src="api.js"></script>
+<script src="login.js"></script>
+</body>
+</html>

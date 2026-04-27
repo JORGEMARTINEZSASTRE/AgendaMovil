@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#A85568">
+  <title>🌸 AGENDAMOVIL PRO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<div id="modal-ayuda" class="modal-overlay oculto">
+  <div class="modal-card modal-ayuda-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">❓ ¿Cómo funciona?</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="ayuda-contenido">
+
+      <div class="ayuda-seccion">
+        <h3>📋 Agenda</h3>
+        <p>Acá ves todos tus turnos del día. Usá el selector de fecha para ver otros días. Con el botón <strong>＋</strong> agregás un turno nuevo.</p>
+        <p class="ayuda-tip">💡 Los turnos usan el color del servicio en tono pastel. Los turnos que ya pasaron se ven desteñidos, y los próximos (a menos de 2h) tienen una animación sutil.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>📅 Calendario</h3>
+        <p>Vista mensual de todos tus turnos. Los días con turnos tienen un punto rosa. Tocá un día para ir directo a la agenda de ese día.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>✂️ Servicios</h3>
+        <p>Creá tus servicios con nombre, zona, duración y color. Al crear un turno podés seleccionar un servicio y se completa automáticamente.</p>
+        <p class="ayuda-tip">💰 Activá "Requiere seña" para que cuando alguien reserve por el link público, el turno quede como pendiente hasta que confirmes el pago.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>🎂 Cumpleaños</h3>
+        <p>Al crear un turno podés guardar la fecha de cumpleaños de la clienta. Acá aparecen ordenados por mes para que puedas enviarles un saludo.</p>
+      </div>
+
+      <div class="ayuda-seccion destacada">
+        <h3>💬 Mensajes pendientes</h3>
+        <p>El botón <strong>💬</strong> del encabezado muestra la <strong>bandeja de mensajes listos para enviar</strong>. Aparece un <span class="ayuda-badge">badge verde</span> con el número de pendientes.</p>
+        <p>Los mensajes se arman solos cuando:</p>
+        <ul>
+          <li>Una clienta reserva por el link público 🌸</li>
+          <li>Hay una reserva con seña pendiente 💰</li>
+          <li>Falta 24 horas para un turno ⏰</li>
+          <li>Falta 2 horas para un turno 🔔</li>
+          <li>Confirmás una seña ✅</li>
+          <li>Modificás o cancelás un turno ✏️🚫</li>
+        </ul>
+        <p>Tocás <strong>"💬 Enviar por WhatsApp"</strong> y se abre WhatsApp con el número y el texto listos. Solo te queda apretar enviar.</p>
+        <p class="ayuda-tip">✨ Así tus clientas reciben los mensajes desde <strong>tu propio número</strong>, no desde un bot.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>🌸 Link público de reservas</h3>
+        <p>Desde Configuración ⚙️ podés copiar el link de tu agenda pública. Al compartirlo, tus clientas pueden reservar sin escribirte. Cada reserva genera automáticamente un mensaje pendiente para que le confirmes por WhatsApp.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>⚙️ Configuración y plantillas</h3>
+        <p>Personalizá los mensajes de WhatsApp desde el botón ⚙️. Lo que escribas en la plantilla se usa automáticamente en:</p>
+        <ul>
+          <li>Confirmaciones de reserva</li>
+          <li>Recordatorios 24h y 2h</li>
+        </ul>
+        <p>Variables disponibles:</p>
+        <ul class="ayuda-variables">
+          <li><code>{nombre}</code> — Nombre de la clienta</li>
+          <li><code>{fecha}</code> — Fecha del turno</li>
+          <li><code>{hora}</code> — Hora del turno</li>
+          <li><code>{servicio}</code> — Nombre del servicio</li>
+          <li><code>{zona}</code> — Zona del servicio</li>
+          <li><code>{duracion}</code> — Duración en minutos</li>
+          <li><code>{negocio}</code> — Nombre de tu negocio</li>
+          <li><code>{monto}</code> — Monto de la seña</li>
+        </ul>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>⏰ Recordatorios automáticos</h3>
+        <p>El sistema revisa cada 5 minutos qué turnos están a 24h o a 2h. Para cada uno:</p>
+        <ul>
+          <li>Envía un <strong>mail automático</strong> a la clienta ✉️</li>
+          <li>Deja un <strong>WhatsApp listo</strong> en tu bandeja 💬</li>
+        </ul>
+        <p>Así no se te olvida ninguno y la clienta recibe doble aviso.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>💰 Señas</h3>
+        <p>Si un servicio tiene seña, los turnos reservados por el link público quedan como <strong>pendientes</strong> hasta que confirmes el pago. Para confirmar:</p>
+        <ol>
+          <li>Coordinás el pago con la clienta por WhatsApp</li>
+          <li>Tocás <strong>"Confirmar seña ✅"</strong> en el turno</li>
+          <li>El turno pasa a activo y se genera un WhatsApp de confirmación para enviarle</li>
+        </ol>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>🚫 Cancelar turnos</h3>
+        <p>En cada turno hay un botón 🚫 para cancelarlo. El turno queda visible pero tachado. Podés reactivarlo con el botón ✅. Al cancelar, se genera un mensaje pendiente para avisarle a la clienta.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>🔒 Tu cuenta</h3>
+        <p>Tu cuenta tiene un <strong>plan</strong> (trial o premium) y una <strong>vigencia</strong>. Si tu período de prueba está por vencer, vas a ver el aviso en el encabezado.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- BTN AYUDA FLOTANTE -->
+<button id="btn-ayuda" class="btn-ayuda-flotante" title="Ayuda">
+  ❓
+</button>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     PANTALLA SPLASH
+════════════════════════════════════════════════ -->
+<div id="pantalla-splash">
+  <div class="splash-contenido">
+    <span class="splash-icono">🌸</span>
+    <p class="splash-marca">DEPIMÓVIL PRO</p>
+    <div class="splash-loader"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PANTALLA PRINCIPAL
+════════════════════════════════════════════════ -->
+<div id="pantalla-principal" style="display:none">
+
+  <!-- ─── HEADER ─────────────────────────────── -->
+  <header class="header">
+    <div class="header-izq">
+      <img src="logo.jpeg" alt="DepiMóvil" class="header-logo">
+      <div class="header-textos">
+        <p id="usuario-nombre" class="header-negocio">Mi Agenda</p>
+        <span id="usuario-plan" class="plan-badge trial">🕐 Trial</span>
+      </div>
+    </div>
+    <div class="header-der">
+  <!-- ⬇ NUEVO: botón WhatsApp pendientes -->
+  <div class="wa-wrap">
+    <button id="btn-wa-pendientes" class="btn-wa-pend" title="Mensajes WhatsApp pendientes">
+      💬
+      <span id="wa-badge" class="wa-badge oculto">0</span>
+    </button>
+
+    <div id="wa-panel" class="wa-panel oculto">
+      <div class="wa-panel-header">
+        <h3>📤 Mensajes pendientes</h3>
+        <button id="btn-cerrar-wa" class="wa-link">✕</button>
+      </div>
+      <div id="wa-lista" class="wa-lista">
+        <p class="wa-vacio">Cargando...</p>
+      </div>
+    </div>
+  </div>
+      <span id="trial-info" class="trial-info oculto"></span>
+      <button id="btn-logout" class="btn-logout" title="Cerrar sesión">
+        🚪
+      </button>
+      <button id="btn-link-publico" class="btn-logout" title="Copiar link de agenda pública">
+  🔗
+</button>
+<button id="btn-ir-admin" class="btn-logout" title="Panel admin" style="display:none">
+  👑
+</button>
+    </div>
+    <div id="trialBanner" class="trial-banner" style="display:none;">
+  <span id="trialTexto"></span>
+  <a href="#" id="trialUpgrade">Pasar a Premium</a>
+</div>
+  </header>
+
+  <!-- ─── TABS ────────────────────────────────── -->
+  <nav class="tabs">
+    <button class="tab-btn activo" data-tab="agenda">
+      📋 <span>Agenda</span>
+    </button>
+    <button class="tab-btn" data-tab="calendario">
+      📅 <span>Calendario</span>
+    </button>
+    <button class="tab-btn" data-tab="servicios">
+      ✂️ <span>Servicios</span>
+    </button>
+    <button class="tab-btn" data-tab="cumples">
+      🎂 <span>Cumples</span>
+      <span id="badge-cumples" class="badge-tab" style="display:none"></span>
+    </button>
+  </nav>
+
+  <!-- ─── CONTENIDO PRINCIPAL ─────────────────── -->
+  <main class="main-contenido">
+
+    <!-- ══ PANEL: AGENDA ══════════════════════ -->
+    <section class="tab-panel activo" data-panel="agenda">
+
+      <div class="panel-header">
+        <div class="panel-header-top">
+          <p id="titulo-fecha" class="panel-titulo">📅 Hoy</p>
+          <button id="btn-nuevo-turno" class="btn-fab" title="Nuevo turno">
+            ＋
+          </button>
+        </div>
+        <div class="fecha-selector-wrap">
+          <input
+            type="date"
+            id="fecha-agenda"
+            class="fecha-selector"
+            title="Seleccionar fecha"
+          >
+        </div>
+      </div>
+
+      <div id="lista-usuarios" class="lista-turnos">
+        <!-- Cards de turnos se renderizan aquí -->
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: CALENDARIO ══════════════════ -->
+    <section class="tab-panel" data-panel="calendario">
+
+      <div class="panel-header">
+        <div class="cal-nav">
+          <button id="cal-prev" class="btn-cal-nav">‹</button>
+          <p id="cal-titulo" class="panel-titulo">Mes Año</p>
+          <button id="cal-next" class="btn-cal-nav">›</button>
+        </div>
+      </div>
+
+      <div id="cal-grilla" class="cal-grilla">
+        <!-- Calendario se renderiza aquí -->
+      </div>
+
+      <div class="timeline-wrap">
+        <p class="timeline-titulo">📋 Turnos del mes</p>
+        <div id="cal-timeline" class="cal-timeline">
+          <!-- Timeline se renderiza aquí -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: SERVICIOS ═══════════════════ -->
+    <section class="tab-panel" data-panel="servicios">
+
+      <div class="panel-header">
+        <p class="panel-titulo">✂️ Mis servicios</p>
+        <button id="btn-nuevo-servicio" class="btn-fab" title="Nuevo servicio">
+          ＋
+        </button>
+      </div>
+<!-- BARRA DE BÚSQUEDA -->
+  <div class="busqueda-servicios-wrap">
+    <input
+      type="text"
+      id="buscar-servicio"
+      class="input-busqueda-servicio"
+      placeholder="🔍 Buscar servicio o categoría..."
+      autocomplete="off"
+    >
+  </div>
+      <div id="lista-servicios" class="lista-servicios">
+        <!-- Cards de servicios se renderizan aquí -->
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: CUMPLEAÑOS ══════════════════ -->
+    <section class="tab-panel" data-panel="cumples">
+
+      <div class="panel-header">
+        <p class="panel-titulo">🎂 Cumpleaños</p>
+      </div>
+
+      <div id="lista-cumple-hoy" class="lista-cumples">
+        <!-- Cumpleaños se renderizan aquí -->
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ─── CONFIGURACIÓN (panel fijo abajo) ────── -->
+  <div id="seccion-config" class="config-panel oculto">
+    <div class="config-header">
+      <p class="config-titulo">⚙️ Configuración</p>
+      <button id="btn-cerrar-config" class="btn-cerrar-config">✕</button>
+    </div>
+    <form id="form-config" class="form-config">
+      <div class="campo">
+        <label for="config-plantilla-turno">
+          💬 Plantilla confirmación de turno
+        </label>
+        <textarea
+          id="config-plantilla-turno"
+          rows="8"
+          placeholder="Usá {nombre}, {fecha}, {hora}, {servicio}, {zona}, {duracion}"
+        ></textarea>
+        <p class="campo-ayuda">
+          Variables: {nombre} {fecha} {hora} {servicio} {zona} {duracion}
+        </p>
+      </div>
+      <div class="campo">
+        <label for="config-plantilla-cumple">
+          🎂 Plantilla saludo de cumpleaños
+        </label>
+        <textarea
+          id="config-plantilla-cumple"
+          rows="6"
+          placeholder="Usá {nombre}"
+        ></textarea>
+        <p class="campo-ayuda">Variables: {nombre}</p>
+      </div>
+      <button type="submit" id="btn-guardar-config" class="btn-primario">
+        💾 Guardar configuración
+      </button>
+    </form>
+  </div>
+
+  <!-- ─── BTN CONFIG ───────────────────────────── -->
+  <button id="btn-abrir-config" class="btn-config-flotante" title="Configuración">
+    ⚙️
+  </button>
+
+</div><!-- fin pantalla-principal -->
+
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: NUEVO / EDITAR TURNO
+════════════════════════════════════════════════ -->
+<div id="modal-turno" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 id="modal-turno-titulo" class="modal-titulo">➕ Nuevo turno</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <form id="form-turno" class="form-modal" novalidate>
+
+      <!-- Error -->
+      <div id="form-turno-error" class="form-error oculto"></div>
+
+      <!-- Servicio -->
+      <div class="campo">
+        <label for="turno-servicio-id">✂️ Servicio (opcional)</label>
+        <select id="turno-servicio-id">
+          <option value="">— Sin servicio —</option>
+        </select>
+      </div>
+
+      <!-- Nombre -->
+      <div class="campo">
+        <label for="turno-nombre">👤 Nombre de la clienta *</label>
+        <input
+          type="text"
+          id="turno-nombre"
+          placeholder="Ej: María García"
+          autocomplete="off"
+          required
+        >
+      </div>
+
+      <!-- Teléfono -->
+      <div class="campo">
+        <label for="turno-telefono">📞 Teléfono *</label>
+        <input
+          type="tel"
+          id="turno-telefono"
+          placeholder="Ej: 5491112345678"
+          autocomplete="off"
+          required
+        >
+      </div>
+
+      <!-- Fecha y Hora -->
+      <div class="campos-fila">
+        <div class="campo">
+          <label for="turno-fecha">📅 Fecha *</label>
+          <input type="date" id="turno-fecha" required>
+        </div>
+        <div class="campo">
+          <label for="turno-hora">🕐 Hora *</label>
+          <select id="turno-hora" required>
+            <option value="">— Elegí un horario —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Duración -->
+      <div class="campo">
+        <label for="turno-duracion">⏱ Duración (minutos) *</label>
+        <input
+          type="number"
+          id="turno-duracion"
+          min="5"
+          max="480"
+          step="5"
+          placeholder="Ej: 30"
+          required
+        >
+      </div>
+
+    
+        <div class="campo">
+          <label for="turno-servicio-zona">Zona</label>
+          <input type="text" id="turno-servicio-zona" placeholder="Ej: Piernas completas">
+        </div>
+        <div class="campo">
+          <label for="turno-servicio-color">Color</label>
+          <input type="color" id="turno-servicio-color" value="#A85568">
+        </div>
+      </details>
+
+      <!-- Notas -->
+      <div class="campo">
+        <label for="turno-notas">📝 Notas (opcional)</label>
+        <textarea
+          id="turno-notas"
+          rows="2"
+          placeholder="Observaciones, indicaciones..."
+        ></textarea>
+      </div>
+
+      <!-- Cumpleaños -->
+      <details class="campo-detalle">
+        <summary>🎂 Fecha de cumpleaños (opcional)</summary>
+        <div class="campos-fila">
+          <div class="campo">
+            <label for="turno-cumple-dia">Día</label>
+            <input
+              type="number"
+              id="turno-cumple-dia"
+              min="1"
+              max="31"
+              placeholder="DD"
+            >
+          </div>
+          <div class="campo">
+            <label for="turno-cumple-mes">Mes</label>
+            <input
+              type="number"
+              id="turno-cumple-mes"
+              min="1"
+              max="12"
+              placeholder="MM"
+            >
+          </div>
+        </div>
+      </details>
+
+      <button type="submit" id="btn-guardar-turno" class="btn-primario">
+        Guardar turno
+      </button>
+
+    </form>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: NUEVO / EDITAR SERVICIO
+════════════════════════════════════════════════ -->
+<div id="modal-servicio" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 id="modal-servicio-titulo" class="modal-titulo">➕ Nuevo servicio</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <form id="form-servicio" class="form-modal" novalidate>
+
+      <div id="form-servicio-error" class="form-error oculto"></div>
+
+      <div class="campo">
+        <label for="serv-nombre">✂️ Nombre del servicio *</label>
+        <input
+          type="text"
+          id="serv-nombre"
+          placeholder="Ej: Depilación"
+          required
+        >
+      </div>
+     <div class="campo">
+  <label for="serv-categoria">📂 Categoría</label>
+  <input
+    type="text"
+    id="serv-categoria"
+    list="categorias-sugeridas"
+    placeholder="Ej: Facial, Corporal, Depilación..."
+    maxlength="100"
+    autocomplete="off"
+  >
+  <datalist id="categorias-sugeridas"></datalist>
+  <small style="font-size:11px;color:var(--gris);margin-top:4px;display:block">
+    Escribí una nueva o elegí de la lista. Si lo dejás vacío se guarda como "General".
+  </small>
+</div>
+
+      <div class="campo">
+        <label for="serv-zona">📍 Zona *</label>
+        <input
+          type="text"
+          id="serv-zona"
+          placeholder="Ej: Piernas completas"
+          required
+        >
+      </div>
+
+      <div class="campo">
+        <label for="serv-duracion">⏱ Duración (minutos) *</label>
+        <input
+          type="number"
+          id="serv-duracion"
+          min="5"
+          max="480"
+          step="5"
+          placeholder="Ej: 45"
+          required
+        >
+      </div>
+
+      <div class="campo">
+        <label for="serv-color">🎨 Color identificador</label>
+        <input type="color" id="serv-color" value="#A85568">
+      </div>
+
+      <div class="campo">
+        <label for="serv-descripcion">📝 Descripción (opcional)</label>
+        <textarea
+          id="serv-descripcion"
+          rows="2"
+          placeholder="Descripción del servicio..."
+        ></textarea>
+      </div>
+
+      <!-- Seña -->
+      <div class="campo-senia">
+        <div class="senia-toggle-wrap">
+          <span class="senia-toggle-label">💰 Requiere seña</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="serv-requiere-senia">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div id="serv-senia-monto-wrap" class="campo oculto">
+          <label for="serv-monto-senia">Monto de la seña ($)</label>
+          <input
+            type="number"
+            id="serv-monto-senia"
+            min="0"
+            step="50"
+            placeholder="Ej: 500"
+          >
+        </div>
+      </div>
+
+      <button type="submit" id="btn-guardar-servicio" class="btn-primario">
+        Guardar servicio
+      </button>
+
+    </form>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: PREVIEW WHATSAPP
+════════════════════════════════════════════════ -->
+<div id="modal-wa" class="modal-overlay oculto">
+  <div class="modal-card modal-wa-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">💬 Vista previa WhatsApp</h2>
+          <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="wa-preview-wrap">
+      <div class="wa-burbuja">
+        <pre id="wa-preview-texto" class="wa-preview-texto"></pre>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button id="btn-wa-enviar" class="btn-primario btn-wa-enviar">
+        💬 Abrir en WhatsApp
+      </button>
+      <button class="btn-cerrar-modal btn-secundario">
+        Cancelar
+      </button>
+    </div>
+
+  </div>
+</div>
+<script src="color-utils.js"></script>
+
+<!-- ═══════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════ -->
+<script src="api.js"></script>
+<script src="app.js"></script>
+
+<!-- Script inline para btn config -->
+<script>
+  // Botón flotante de configuración
+  const btnAbrirConfig  = document.getElementById('btn-abrir-config');
+  const btnCerrarConfig = document.getElementById('btn-cerrar-config');
+  const panelConfig     = document.getElementById('seccion-config');
+
+  if (btnAbrirConfig && panelConfig) {
+    btnAbrirConfig.addEventListener('click', () => {
+      panelConfig.classList.toggle('oculto');
+    });
+  }
+
+  if (btnCerrarConfig && panelConfig) {
+    btnCerrarConfig.addEventListener('click', () => {
+      panelConfig.classList.add('oculto');
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,230 @@
+/* ═══════════════════════════════════════
+   AGENDA PÚBLICA — agenda-publica.css
+   ═══════════════════════════════════════ */
+
+.publica-body {
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+.publica-bg {
+  position:fixed; inset:0; z-index:-1;
+  background:linear-gradient(160deg,var(--crema) 0%,var(--blush) 50%,var(--crema2) 100%);
+}
+
+/* ─── HEADER ─────────────────────────── */
+.publica-header {
+  background:linear-gradient(135deg,var(--rosa-vino),var(--rosa-polvo));
+  padding:18px 20px;
+  display:flex; align-items:center; gap:14px;
+  box-shadow:0 4px 20px rgba(168,85,104,.25);
+}
+.publica-icono { font-size:32px }
+.publica-marca {
+  font-size:9px; font-weight:700; letter-spacing:5px;
+  text-transform:uppercase; color:rgba(255,255,255,.7);
+  margin-bottom:3px;
+}
+.publica-titulo {
+  font-family:'Cormorant Garamond',serif;
+  font-size:20px; font-weight:700; font-style:italic;
+  color:white; line-height:1;
+}
+
+/* ─── MAIN ───────────────────────────── */
+.publica-main {
+  flex:1; padding:20px 16px; max-width:480px; margin:0 auto; width:100%;
+}
+/* ─── ERROR ──────────────────────────── */
+.publica-error {
+  background:#FFF0F0; border:1.5px solid rgba(224,85,85,.3);
+  border-radius:var(--radio); padding:20px;
+  text-align:center; margin-top:20px;
+  display:flex; flex-direction:column;
+  align-items:center; gap:10px;
+}
+.publica-error span { font-size:32px }
+.publica-error p {
+  font-size:14px; font-weight:600; color:var(--rojo);
+}
+
+/* ─── ÉXITO ──────────────────────────── */
+.publica-exito {
+  background:var(--panel); border:1.5px solid rgba(168,85,104,.2);
+  border-radius:var(--radio); padding:32px 20px;
+  text-align:center; margin-top:20px;
+  box-shadow:var(--sombra2);
+  animation:aparecer .5s ease;
+}
+.exito-icono {
+  font-size:56px; display:block; margin-bottom:14px;
+  animation:latido 2s ease-in-out infinite;
+}
+.exito-titulo {
+  font-family:'Cormorant Garamond',serif;
+  font-size:28px; font-weight:700; font-style:italic;
+  color:var(--rosa-vino); margin-bottom:10px;
+}
+.exito-detalle {
+  font-size:15px; font-weight:600; color:var(--marron);
+  margin-bottom:8px; line-height:1.5;
+}
+.exito-sub {
+  font-size:13px; color:var(--gris); font-style:italic;
+}
+
+/* ─── CARD FORMULARIO ────────────────── */
+.publica-card {
+  background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--radio); padding:22px 18px;
+  box-shadow:var(--sombra2); margin-top:20px;
+  animation:aparecer .4s ease;
+}
+.publica-desc {
+  font-size:13px; color:var(--gris);
+  margin-bottom:18px; line-height:1.55;
+  text-align:center; font-style:italic;
+}
+
+/* ─── CAMPOS ─────────────────────────── */
+#form-publica .campo {
+  margin-bottom:12px;
+}
+#form-publica .campo label {
+  font-size:11px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--rosa-vino); opacity:.85;
+  display:block; margin-bottom:5px;
+}
+#form-publica .campo input,
+#form-publica .campo select,
+#form-publica .campo textarea {
+  width:100%; background:var(--crema2);
+  border:1.5px solid var(--borde);
+  border-radius:var(--radio-sm);
+  padding:11px 13px;
+  font-family:'Nunito',sans-serif;
+  font-size:14px; color:var(--texto);
+  outline:none; transition:border-color .2s;
+}
+#form-publica .campo input:focus,
+#form-publica .campo select:focus,
+#form-publica .campo textarea:focus {
+  border-color:var(--rosa-polvo);
+  box-shadow:0 0 0 3px rgba(212,132,122,.15);
+  background:var(--panel);
+}
+#form-publica .campo input::placeholder,
+#form-publica .campo textarea::placeholder {
+  color:var(--gris); opacity:.7;
+}
+
+/* ─── SELECT HORA OCUPADO ────────────── */
+#pub-hora option:disabled {
+  color:var(--gris);
+  background:#FFF5F5;
+}
+
+/* ─── BTN SUBMIT ─────────────────────── */
+#form-publica .btn-primario {
+  margin-top:8px;
+  background:linear-gradient(135deg,var(--rosa-vino),var(--rosa-polvo));
+  color:white; border:none; padding:14px 20px;
+  border-radius:100px; font-family:'Nunito',sans-serif;
+  font-size:15px; font-weight:700; cursor:pointer;
+  box-shadow:0 4px 16px rgba(168,85,104,.35);
+  transition:transform .2s, box-shadow .2s;
+  width:100%; display:flex;
+  align-items:center; justify-content:center; gap:8px;
+}
+#form-publica .btn-primario:hover {
+  transform:translateY(-2px);
+  box-shadow:0 6px 20px rgba(168,85,104,.45);
+}
+#form-publica .btn-primario:disabled {
+  opacity:.7; cursor:not-allowed; transform:none;
+}
+
+/* ─── FORM ERROR ─────────────────────── */
+#pub-form-error {
+  background:#FFF0F0; border:1.5px solid rgba(224,85,85,.3);
+  border-radius:var(--radio-sm); padding:10px 13px;
+  font-size:13px; font-weight:600; color:var(--rojo);
+  margin-bottom:10px;
+}
+
+/* ─── LOADER ─────────────────────────── */
+.splash-loader {
+  border:2px solid rgba(255,255,255,.4);
+  border-top-color:white; border-radius:50%;
+  animation:girar .7s linear infinite;
+  flex-shrink:0;
+}
+
+/* ─── RESPONSIVE ─────────────────────── */
+@media(min-width:480px) {
+  .publica-main {
+    padding:28px 20px;
+  }
+  .publica-card {
+    padding:28px 24px;
+  }
+}
+/* ─── AVISO SEÑA EN FORMULARIO ───────── */
+.pub-senia-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(168,85,104,.07);
+  border: 1.5px solid rgba(168,85,104,.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--marron);
+  line-height: 1.5;
+}
+.pub-senia-aviso span { font-size: 18px; flex-shrink: 0; }
+
+/* ─── PANTALLA ÉXITO CON SEÑA ────────── */
+.publica-exito-senia { border-color: rgba(168,85,104,.3); }
+
+.senia-aviso-card {
+  background: var(--crema2);
+  border: 1.5px solid var(--borde);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 16px 0;
+  text-align: left;
+}
+.senia-aviso-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rosa-vino);
+  margin-bottom: 8px;
+}
+.senia-aviso-texto {
+  font-size: 13px;
+  color: var(--marron);
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+.btn-wa-senia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #25D366;
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px 20px;
+  border-radius: 100px;
+  text-decoration: none;
+  margin-top: 14px;
+  transition: opacity .2s;
+}
+.btn-wa-senia:hover { opacity: .88; }

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#A85568">
+  <title>🌸 Reservar turno</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="agenda-publica.css">
+</head>
+<body class="publica-body">
+
+<div class="publica-bg"></div>
+
+<!-- HEADER -->
+<header class="publica-header">
+  <span class="publica-icono">🌸</span>
+  <div>
+    <p class="publica-marca">DEPIMÓVIL PRO</p>
+    <h1 id="publica-negocio" class="publica-titulo">Cargando...</h1>
+  </div>
+</header>
+
+<!-- CONTENIDO -->
+<main class="publica-main">
+
+  <!-- ERROR -->
+  <div id="publica-error" class="publica-error oculto">
+    <span>⚠️</span>
+    <p id="publica-error-msg">Error</p>
+  </div>
+
+  <!-- ÉXITO — sin seña -->
+  <div id="publica-exito" class="publica-exito oculto">
+    <span class="exito-icono">🎉</span>
+    <h2 class="exito-titulo">¡Turno reservado!</h2>
+    <p id="exito-detalle" class="exito-detalle"></p>
+    <p class="exito-sub">Te esperamos 🌸</p>
+  </div>
+
+  <!-- ÉXITO — con seña pendiente -->
+  <div id="publica-exito-senia" class="publica-exito publica-exito-senia oculto">
+    <span class="exito-icono">💰</span>
+    <h2 class="exito-titulo">¡Casi listo!</h2>
+    <p class="exito-detalle" id="exito-senia-detalle"></p>
+    <div class="senia-aviso-card">
+      <p class="senia-aviso-titulo">⚠️ Tu turno no está confirmado todavía</p>
+      <p class="senia-aviso-texto">Para confirmar tu lugar, necesitás abonar la seña de <strong id="exito-senia-monto"></strong>.</p>
+      <p class="senia-aviso-texto">Contactate con <strong id="exito-senia-negocio"></strong> para coordinar el pago:</p>
+      <a id="exito-senia-wa" href="#" target="_blank" class="btn-wa-senia">
+        💬 Escribir por WhatsApp
+      </a>
+    </div>
+    <p class="exito-sub">Una vez abonada, recibirás la confirmación 🌸</p>
+  </div>
+
+  <!-- FORMULARIO -->
+  <div id="publica-form-wrap" class="publica-card">
+
+    <p class="publica-desc">
+      Completá tus datos para reservar un turno
+    </p>
+
+    <form id="form-publica" novalidate>
+
+      <!-- Servicio -->
+      <div class="campo">
+        <label for="pub-servicio">✂️ Servicio</label>
+        <select id="pub-servicio">
+          <option value="">— Sin servicio —</option>
+        </select>
+      </div>
+
+      <!-- Aviso seña del servicio -->
+      <div id="pub-senia-aviso" class="pub-senia-aviso oculto">
+        <span>💰</span>
+        <p>Este servicio requiere una seña de <strong id="pub-senia-monto"></strong> para confirmar el turno.</p>
+      </div>
+
+      <!-- Nombre -->
+      <div class="campo">
+        <label for="pub-nombre">👤 Tu nombre *</label>
+        <input type="text" id="pub-nombre" placeholder="Ej: María García" autocomplete="name" required>
+      </div>
+
+  <!-- Teléfono -->
+<div class="campo">
+  <label for="pub-telefono">📞 Tu teléfono *</label>
+
+  <div style="display:flex; gap:8px;">
+    <select id="codigo-pais" style="max-width:110px;">
+      <option value="598">🇺🇾 +598</option>
+      <option value="54">🇦🇷 +54</option>
+    </select>
+
+    <input 
+      type="tel" 
+      id="pub-telefono" 
+      placeholder="Ej: 9112345678" 
+      autocomplete="tel" 
+      required
+      style="flex:1;"
+    >
+  </div>
+          <span class="campo-ayuda">Coloca el número sin el 0 del inicio</span>
+
+</div>
+
+      <!-- Email -->
+      <div class="campo">
+        <label for="pub-email">📧 Tu email</label>
+        <input type="email" id="pub-email" placeholder="para recibir confirmación" autocomplete="email">
+        <span class="campo-ayuda">Si lo dejás, te mandamos un mail cuando confirmen tu turno.</span>
+      </div>
+
+      <!-- Fecha -->
+      <div class="campo">
+        <label for="pub-fecha">📅 Fecha *</label>
+        <input type="date" id="pub-fecha" required>
+      </div>
+
+      <!-- Hora -->
+      <div class="campo">
+        <label for="pub-hora">🕐 Horario *</label>
+        <select id="pub-hora" required>
+          <option value="">— Primero elegí una fecha —</option>
+        </select>
+      </div>
+
+      <input type="hidden" id="pub-duracion" value="30">
+
+      <!-- Notas -->
+      <div class="campo">
+        <label for="pub-notas">📝 Notas (opcional)</label>
+        <textarea id="pub-notas" rows="2" placeholder="Alguna indicación especial..."></textarea>
+      </div>
+
+      <div id="pub-form-error" class="form-error oculto"></div>
+
+      <button type="submit" id="btn-pub-guardar" class="btn-primario">
+        <span id="btn-pub-texto">✅ Reservar turno</span>
+        <span id="btn-pub-loader" class="splash-loader oculto" style="width:18px;height:18px;border-width:2px"></span>
+      </button>
+
+    </form>
+  </div>
+
+</main>
+
+<script>
+'use strict';
+
+const API_URL = 'https://depimovilagenda-production.up.railway.app/api';
+let userId    = null;
+let servicios = [];
+let ocupados  = [];
+let infoNegocio = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  userId = params.get('u');
+  if (!userId) { mostrarError('Link inválido. Pedile el link correcto a tu profesional.'); return; }
+  await cargarInfo();
+  await cargarServicios();
+  bindForm();
+});
+
+async function cargarInfo() {
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/info`);
+    const data = await resp.json();
+    if (!data.ok) { mostrarError('Agenda no encontrada.'); return; }
+    infoNegocio = data.info;
+    const negocio = data.info.nombre_negocio || data.info.nombre;
+    document.getElementById('publica-negocio').textContent = negocio;
+    document.title = `🌸 Reservar turno — ${negocio}`;
+  } catch { mostrarError('No se pudo conectar. Intentá más tarde.'); }
+}
+
+async function cargarServicios() {
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/servicios`);
+    const data = await resp.json();
+    if (!data.ok) return;
+    servicios = data.servicios;
+    const select = document.getElementById('pub-servicio');
+    servicios.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = `${s.nombre}${s.zona ? ' — ' + s.zona : ''} (${s.duracion} min)${s.requiere_senia ? ' 💰' : ''}`;
+      opt.dataset.duracion      = s.duracion;
+      opt.dataset.requiereSenia = s.requiere_senia || false;
+      opt.dataset.montoSenia    = s.monto_senia    || 0;
+      select.appendChild(opt);
+    });
+  } catch {}
+}
+
+function bindForm() {
+  const selectServicio = document.getElementById('pub-servicio');
+  const avisoSenia     = document.getElementById('pub-senia-aviso');
+  const montoSeniaEl   = document.getElementById('pub-senia-monto');
+
+  selectServicio.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('pub-duracion').value = opt.dataset.duracion || 30;
+
+    // Mostrar/ocultar aviso seña
+    const requiere = opt.dataset.requiereSenia === 'true';
+    const monto    = parseFloat(opt.dataset.montoSenia) || 0;
+    avisoSenia.classList.toggle('oculto', !requiere);
+    if (requiere) montoSeniaEl.textContent = `$${monto}`;
+
+    const fecha = document.getElementById('pub-fecha').value;
+    if (fecha) cargarHorarios(fecha);
+  });
+
+  document.getElementById('pub-fecha').addEventListener('change', function() {
+    if (this.value) cargarHorarios(this.value);
+  });
+
+  document.getElementById('pub-fecha').min = new Date().toISOString().split('T')[0];
+  document.getElementById('form-publica').addEventListener('submit', handleSubmit);
+}
+
+async function cargarHorarios(fecha) {
+  const selectHora = document.getElementById('pub-hora');
+  selectHora.innerHTML = '<option value="">Cargando...</option>';
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${fecha}`);
+    const data = await resp.json();
+    ocupados = data.ok ? data.ocupados : [];
+  } catch { ocupados = []; }
+
+  const duracion = parseInt(document.getElementById('pub-duracion').value) || 30;
+  selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
+
+  for (let m = 7 * 60; m <= 20 * 60; m += 15) {
+    const hora    = minutosAHora(m);
+    const horaFin = m + duracion;
+    if (horaFin > 20 * 60) continue;
+    const ocupado = ocupados.some(t => {
+      const tMin = horaAMinutos(t.hora.slice(0,5));
+      return m < tMin + parseInt(t.duracion) && horaFin > tMin;
+    });
+    const opt = document.createElement('option');
+    opt.value       = hora;
+    opt.textContent = ocupado ? `${hora} — Ocupado` : `${hora} — Disponible`;
+    opt.disabled    = ocupado;
+    if (ocupado) opt.style.color = '#B09590';
+    selectHora.appendChild(opt);
+  }
+}
+
+async function handleSubmit(e) {
+  e.preventDefault();
+
+  const nombre   = document.getElementById('pub-nombre').value.trim();
+  const telefono = document.getElementById('pub-telefono').value.trim();
+  const codigoPais = document.getElementById('codigo-pais').value;
+
+  const fecha    = document.getElementById('pub-fecha').value;
+  const hora     = document.getElementById('pub-hora').value;
+  const duracion = parseInt(document.getElementById('pub-duracion').value) || 30;
+  const notas    = document.getElementById('pub-notas').value.trim();
+  const servId   = document.getElementById('pub-servicio').value;
+  const serv     = servicios.find(s => String(s.id) === String(servId));
+
+  // 🔹 LIMPIAR TELÉFONO
+  let telefonoLimpio = telefono.replace(/\D/g, '');
+
+  // sacar 0 inicial si existe
+  if (telefonoLimpio.startsWith('0')) {
+    telefonoLimpio = telefonoLimpio.slice(1);
+  }
+
+  // agregar código país seleccionado
+  telefonoLimpio = '+' + codigoPais + telefonoLimpio;
+
+  // 🔹 VALIDACIONES
+  if (!nombre)   { mostrarFormError('El nombre es requerido');   return; }
+  if (!telefono) { mostrarFormError('El teléfono es requerido'); return; }
+  if (telefonoLimpio.length < 11) { 
+    mostrarFormError('Número inválido'); 
+    return; 
+  }
+  if (!fecha)    { mostrarFormError('La fecha es requerida');    return; }
+  if (!hora)     { mostrarFormError('El horario es requerido');  return; }
+
+  setBtnLoading(true);
+  ocultarFormError();
+
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/turno`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre,
+        telefono: telefonoLimpio, // ✅ ahora sí correcto
+        fecha,
+        hora,
+        duracion,
+        notas:           notas        || null,
+        email_clienta:   document.getElementById('pub-email')?.value.trim() || null,
+        servicio_id:     serv?.id     || null,
+        servicio_nombre: serv?.nombre || null,
+        servicio_zona:   serv?.zona   || null,
+        servicio_color:  serv?.color  || '#A85568',
+      }),
+    });
+
+    const data = await resp.json();
+
+    if (!data.ok) {
+      mostrarFormError(data.error || 'Error al reservar');
+      setBtnLoading(false);
+      return;
+    }
+
+    document.getElementById('publica-form-wrap').classList.add('oculto');
+
+    const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+      weekday:'long', day:'numeric', month:'long'
+    });
+
+    if (data.turno?.senia_requerida) {
+      const negocio   = infoNegocio.nombre_negocio || infoNegocio.nombre;
+      const telNegocio = infoNegocio.telefono || '';
+
+      document.getElementById('exito-senia-detalle').textContent =
+        `${nombre}, tu solicitud para el ${fechaFormateada} a las ${hora} hs fue recibida.`;
+
+      document.getElementById('exito-senia-monto').textContent   = `$${data.turno.monto_senia}`;
+      document.getElementById('exito-senia-negocio').textContent = negocio;
+
+      const msgWA = encodeURIComponent(
+        `Hola ${negocio}! 🌸 Me agendé para el ${fechaFormateada} a las ${hora} hs` +
+        `${serv ? ` (${serv.nombre})` : ''}. ` +
+        `Quería coordinar el pago de la seña de $${data.turno.monto_senia}. ¡Gracias!`
+      );
+
+      const waLink = telNegocio
+        ? `https://wa.me/${telNegocio.replace(/\D/g,'')}?text=${msgWA}`
+        : '#';
+
+      document.getElementById('exito-senia-wa').href = waLink;
+      document.getElementById('publica-exito-senia').classList.remove('oculto');
+
+    } else {
+      document.getElementById('exito-detalle').textContent =
+        `${nombre}, tu turno es el ${fechaFormateada} a las ${hora} hs.`;
+
+      document.getElementById('publica-exito').classList.remove('oculto');
+    }
+
+  } catch {
+    mostrarFormError('Error de conexión. Intentá de nuevo.');
+    setBtnLoading(false);
+  }
+}
+
+function minutosAHora(m) {
+  return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
+}
+function horaAMinutos(h) { const [hh,mm] = h.split(':').map(Number); return hh*60+mm; }
+function mostrarError(msg) {
+  document.getElementById('publica-form-wrap')?.classList.add('oculto');
+  document.getElementById('publica-error').classList.remove('oculto');
+  document.getElementById('publica-error-msg').textContent = msg;
+}
+function mostrarFormError(msg) {
+  const el = document.getElementById('pub-form-error');
+  el.textContent = msg; el.classList.remove('oculto');
+}
+function ocultarFormError() { document.getElementById('pub-form-error').classList.add('oculto'); }
+function setBtnLoading(loading) {
+  document.getElementById('btn-pub-texto').classList.toggle('oculto',  loading);
+  document.getElementById('btn-pub-loader').classList.toggle('oculto', !loading);
+  document.getElementById('btn-pub-guardar').disabled = loading;
+}
+</script>
+</body>
+</html>

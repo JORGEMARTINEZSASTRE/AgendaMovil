@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear cuenta - AgendaMovil</title>
+  <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="registro.css">
+
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>Probá 14 días gratis</h1>
+      <p class="subtitle">Creá tu agenda en menos de un minuto</p>
+<!-- Campo oculto que humanos no ven, bots sí llenan -->
+<input type="text" name="website" id="website" 
+       style="position:absolute;left:-9999px;" tabindex="-1" autocomplete="off">
+       
+      <form id="registroForm" class="auth-form">
+        <div class="field">
+          <label for="nombre">Nombre de tu estética</label>
+          <input type="text" id="nombre" name="nombre" required minlength="2" 
+                 placeholder="Ej: Estética Sofía">
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required 
+                 placeholder="tu@email.com" autocomplete="email">
+        </div>
+
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" required 
+                 minlength="8" autocomplete="new-password"
+                 placeholder="Mínimo 8 caracteres">
+        </div>
+
+        <div class="field field-telefono">
+          <label>Teléfono (opcional)</label>
+          <div class="telefono-row">
+            <select id="codigo_pais" name="codigo_pais">
+              <option value="+598">🇺🇾 +598</option>
+              <option value="+54">🇦🇷 +54</option>
+            </select>
+            <input type="tel" id="telefono" name="telefono" 
+                   placeholder="99123456" pattern="[0-9]{6,15}">
+          </div>
+        </div>
+
+        <div class="terms">
+          <label>
+            <input type="checkbox" id="acepto" required>
+            Acepto los términos del servicio
+          </label>
+        </div>
+
+        <button type="submit" id="btnRegistrar" class="btn-primary">
+          Crear mi cuenta
+        </button>
+
+        <p id="mensaje" class="mensaje" role="alert"></p>
+      </form>
+
+      <p class="auth-footer">
+        ¿Ya tenés cuenta? <a href="login.html">Iniciá sesión</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="registro.js"></script>
+</body>
+</html>

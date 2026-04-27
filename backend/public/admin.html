@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#A85568">
+  <title>👑 Panel Admin — DEPIMÓVIL PRO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="admin-splash" class="admin-splash">
+  <div class="splash-contenido">
+    <span class="splash-icono">👑</span>
+    <p class="splash-marca">PANEL ADMIN</p>
+    <div class="splash-loader"></div>
+  </div>
+</div>
+
+<!-- CONTENIDO -->
+<div id="admin-contenido" style="display:none">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-izq">
+      <span class="header-icono">👑</span>
+      <div class="header-textos">
+        <p class="header-negocio">Panel Administrador</p>
+        <span class="plan-badge premium">⭐ Admin</span>
+      </div>
+    </div>
+    <div class="header-der">
+  <button id="btn-compartir-registro" class="btn-logout" title="Compartir link de registro">🔗</button>
+  <button id="btn-ir-app" class="btn-logout" title="Ir a la app">🌸</button>
+  <button id="btn-admin-logout" class="btn-logout" title="Cerrar sesión">🚪</button>
+</div>
+  </header>
+
+  <!-- STATS -->
+  <div class="admin-stats">
+    <div class="stat-card">
+      <p id="stat-total" class="stat-num">0</p>
+      <p class="stat-label">Total clientas</p>
+    </div>
+    <div class="stat-card">
+      <p id="stat-activas" class="stat-num">0</p>
+      <p class="stat-label">Activas</p>
+    </div>
+    <div class="stat-card">
+      <p id="stat-trial" class="stat-num">0</p>
+      <p class="stat-label">En trial</p>
+    </div>
+    <div class="stat-card">
+      <p id="stat-premium" class="stat-num">0</p>
+      <p class="stat-label">Premium</p>
+    </div>
+  </div>
+
+  <!-- ACCIONES -->
+  <div class="admin-acciones">
+    <button id="btn-nueva-clienta" class="btn-primario btn-nueva-clienta">
+      ➕ Nueva clienta
+    </button>
+  </div>
+
+  <!-- LISTA CLIENTAS -->
+  <div id="lista-clientas" class="lista-clientas">
+    <!-- Se renderiza con JS -->
+  </div>
+
+</div>
+
+<!-- MODAL: NUEVA CLIENTA -->
+<div id="modal-nueva-clienta" class="modal-overlay oculto">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-titulo">➕ Nueva clienta</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+    <form id="form-nueva-clienta" class="form-modal" novalidate>
+      <div id="form-clienta-error" class="form-error oculto"></div>
+      <div class="campo">
+        <label for="clienta-nombre">👤 Nombre *</label>
+        <input type="text" id="clienta-nombre" placeholder="Nombre completo" required>
+      </div>
+      <div class="campo">
+        <label for="clienta-negocio">🏪 Nombre del negocio</label>
+        <input type="text" id="clienta-negocio" placeholder="Ej: Depilaciones María">
+      </div>
+   <div class="campo">
+  <label for="clienta-telefono">📞 Teléfono *</label>
+
+  <div style="display:flex; gap:8px;">
+    <select id="clienta-codigo" style="max-width:110px;">
+      <option value="598">🇺🇾 +598</option>
+      <option value="54">🇦🇷 +54</option>
+    </select>
+
+    <input 
+      type="tel" 
+      id="clienta-telefono" 
+      placeholder="Ej: 99123456 o 9112345678"
+      required
+      style="flex:1;"
+    >
+  </div>
+
+  <span class="campo-ayuda">Sin 0 inicial</span>
+</div>
+      <div class="campo">
+        <label for="clienta-email">📧 Email *</label>
+        <input type="email" id="clienta-email" placeholder="email@ejemplo.com" required>
+      </div>
+      <div class="campo">
+        <label for="clienta-password">🔒 Contraseña *</label>
+        <input type="password" id="clienta-password" placeholder="Mínimo 8 caracteres" required>
+      </div>
+      <div class="campo">
+        <label for="clienta-plan">📋 Plan *</label>
+        <select id="clienta-plan">
+          <option value="trial">Trial</option>
+          <option value="premium">Premium</option>
+        </select>
+      </div>
+      <div class="campo" id="campo-dias-trial">
+        <label for="clienta-dias">⏱ Días de trial *</label>
+        <input type="number" id="clienta-dias" value="30" min="1" max="365">
+      </div>
+      <button type="submit" class="btn-primario">✅ Crear clienta</button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR CLIENTA -->
+<div id="modal-editar-clienta" class="modal-overlay oculto">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-titulo">✏️ Editar clienta</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+    <form id="form-editar-clienta" class="form-modal" novalidate>
+      <input type="hidden" id="edit-clienta-id">
+      <div id="form-editar-clienta-error" class="form-error oculto"></div>
+      <div class="campo">
+        <label for="edit-clienta-nombre">👤 Nombre *</label>
+        <input type="text" id="edit-clienta-nombre" placeholder="Nombre completo" required>
+      </div>
+      <div class="campo">
+        <label for="edit-clienta-negocio">🏪 Nombre del negocio</label>
+        <input type="text" id="edit-clienta-negocio" placeholder="Ej: Depilaciones María">
+      </div>
+<div class="campo">
+  <label for="edit-clienta-telefono">📞 Teléfono</label>
+
+  <div style="display:flex; gap:8px;">
+    <select id="edit-clienta-codigo" style="max-width:110px;">
+      <option value="598">🇺🇾 +598</option>
+      <option value="54">🇦🇷 +54</option>
+    </select>
+
+    <input 
+      type="tel" 
+      id="edit-clienta-telefono" 
+      placeholder="Ej: 99123456"
+      style="flex:1;"
+    >
+  </div>
+
+  <span class="campo-ayuda">Sin 0 inicial</span>
+</div>
+      <div class="campo">
+        <label for="edit-clienta-email">📧 Email *</label>
+        <input type="email" id="edit-clienta-email" placeholder="email@ejemplo.com" required>
+      </div>
+      <div class="campo">
+        <label for="edit-clienta-password">🔒 Nueva contraseña (opcional)</label>
+        <input type="password" id="edit-clienta-password" placeholder="Dejá vacío para no cambiar">
+        <span class="campo-ayuda">Mínimo 8 caracteres si querés cambiarla</span>
+      </div>
+      <button type="submit" class="btn-primario">💾 Guardar cambios</button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR PLAN -->
+<div id="modal-editar-plan" class="modal-overlay oculto">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 class="modal-titulo">🔄 Cambiar plan</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+    <form id="form-editar-plan" class="form-modal" novalidate>
+      <input type="hidden" id="edit-plan-user-id">
+      <div id="form-plan-error" class="form-error oculto"></div>
+      <p id="edit-plan-nombre" class="edit-plan-nombre"></p>
+      <div class="campo">
+        <label for="edit-plan">📋 Plan</label>
+        <select id="edit-plan">
+          <option value="trial">trial</option>
+          <option value="premium">premium</option>
+        </select>
+      </div>
+      <div class="campo" id="campo-edit-dias">
+        <label for="edit-dias">⏱ Días de trial</label>
+        <input type="number" id="edit-dias" value="30" min="1" max="365">
+      </div>
+      <button type="submit" class="btn-primario">💾 Guardar cambios</button>
+    </form>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script src="admin.js"></script>
+
+</body>
+</html>
