@@ -57,7 +57,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, servicio: 'DEPIMÓVIL PRO API', ts: new Date().toISOString() });
 });
 // ─── TEST RECORDATORIO (TEMPORAL, borrar después) ──────────
-const { testRecordatorioManual } = require('../recordatorios');
+const { testRecordatorioManual } = require('../../recordatorios');
 
 app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
   const { turnoId } = req.params;
@@ -66,7 +66,6 @@ app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
   const resultado = await testRecordatorioManual(turnoId, tipo);
   res.json(resultado);
 });
-
 
 // ─── STATIC FRONTEND ─────────────────────────────
 const path = require('path');
@@ -99,15 +98,6 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// ─── TEST RECORDATORIO (TEMPORAL, borrar después) ──────────
-const { testRecordatorioManual } = require('../../recordatorios');
 
-app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
-  const { turnoId } = req.params;
-  const { tipo = '2h' } = req.body || {};
-
-  const resultado = await testRecordatorioManual(turnoId, tipo);
-  res.json(resultado);
-});
 
 module.exports = app;
