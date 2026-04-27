@@ -50,9 +50,18 @@ app.use('/api/senia', seniaRoutes);
 app.use('/api/wa', waRoutes);
 
 
+
 // ─── HEALTH CHECK ────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, servicio: 'DEPIMÓVIL PRO API', ts: new Date().toISOString() });
+});
+
+// ─── TEST EVOLUTION (TEMPORAL, borrar después) ──────────
+const evolution = require('./services/evolution.service');
+
+app.get('/api/test-evolution', async (_req, res) => {
+  const resultado = await evolution.ping();
+  res.json(resultado);
 });
 
 // ─── STATIC FRONTEND ─────────────────────────────
@@ -86,12 +95,6 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// ─── TEST EVOLUTION (TEMPORAL, borrar después) ──────────
-const evolution = require('./services/evolution.service');
 
-app.get('/api/test-evolution', async (_req, res) => {
-  const resultado = await evolution.ping();
-  res.json(resultado);
-});
 
 module.exports = app;
