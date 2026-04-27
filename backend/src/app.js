@@ -13,7 +13,7 @@ const configRoutes   = require('./routes/config.routes');
 const publicaRoutes   = require('./routes/publica.routes'); 
 const seniaRoutes = require('./routes/senia.routes');
 const waRoutes = require('./routes/wa.routes');
-
+const whatsappRoutes = require('./routes/whatsapp.routes');
 
 const app = express();
 
@@ -48,6 +48,7 @@ app.use('/api/config',    configRoutes);
 app.use('/api/publica',   publicaRoutes);
 app.use('/api/senia', seniaRoutes);
 app.use('/api/wa', waRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 
 
@@ -56,13 +57,6 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, servicio: 'DEPIMÓVIL PRO API', ts: new Date().toISOString() });
 });
 
-// ─── TEST EVOLUTION (TEMPORAL, borrar después) ──────────
-const evolution = require('./services/evolution.service');
-
-app.get('/api/test-evolution', async (_req, res) => {
-  const resultado = await evolution.ping();
-  res.json(resultado);
-});
 
 // ─── STATIC FRONTEND ─────────────────────────────
 const path = require('path');
