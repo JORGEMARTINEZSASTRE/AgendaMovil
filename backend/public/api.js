@@ -5,7 +5,7 @@
 //  Cliente HTTP que consume la API REST
 // ═══════════════════════════════════════════════════════════
 
-const API_URL = 'https://depimovilagenda-production.up.railway.app/api';
+const API_URL = 'https://agendamovil-production.up.railway.app/api';
 
 // ─── HELPER: obtener token ───────────────────────────────
 function getToken() {
