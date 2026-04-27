@@ -57,7 +57,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, servicio: 'DEPIMÓVIL PRO API', ts: new Date().toISOString() });
 });
 // ─── TEST RECORDATORIO (TEMPORAL, borrar después) ──────────
-const { testRecordatorioManual } = require('../../recordatorios');
+const { testRecordatorioManual } = require('../recordatorios');
 
 app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
   const { turnoId } = req.params;
