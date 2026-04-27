@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   mostrarInfoUsuario();
   await cargarDatosIniciales();
   initUI();
+  bindBtnConectarWhatsApp();
   mostrarApp();
 
   // Mostrar botón admin si es admin
@@ -116,6 +117,7 @@ function initUI() {
   bindFormServicio();
   bindBotonesHeader();
   bindConfiguracion();
+  bindBtnConectarWhatsApp();
   renderTabActual();
   inicializarWaPendientes(); 
   const inputBuscarServ = document.getElementById('buscar-servicio');
@@ -1624,6 +1626,172 @@ async function cargarWaPendientes() {
         await cargarWaPendientes();
       });
     });
+   // ═══════════════════════════════════════════════════════════
+//  WHATSAPP — CONECTAR
+// ═══════════════════════════════════════════════════════════
+
+let waPollingInterval = null;
+
+function bindBtnConectarWhatsApp() {
+  const btn = document.getElementById('btn-wa-conectar');
+  if (btn) {
+    btn.addEventListener('click', abrirModalConectarWA);
+  }
+
+  document.getElementById('btn-wa-metodo-qr')
+    ?.addEventListener('click', iniciarConexionQR);
+
+  document.getElementById('btn-wa-metodo-codigo')
+    ?.addEventListener('click', () => {
+      mostrarStepWA('numero');
+    });
+
+  document.getElementById('btn-wa-pedir-codigo')
+    ?.addEventListener('click', iniciarConexionCodigo);
+}
+
+async function abrirModalConectarWA() {
+  const modal = document.getElementById('modal-wa-conectar');
+  if (!modal) return;
+
+  modal.classList.remove('oculto');
+
+  // Verificar si ya está conectado
+  try {
+    const data = await WhatsAppAPI.obtenerEstado();
+    if (data?.ok && data.conectado) {
+      mostrarStepWA('ok');
+      return;
+    }
+  } catch (err) {
+    console.warn('[wa] estado check:', err.message);
+  }
+
+  mostrarStepWA('inicio');
+}
+
+function mostrarStepWA(step) {
+  const steps = ['inicio', 'numero', 'qr', 'codigo', 'ok', 'error'];
+  steps.forEach(s => {
+    const el = document.getElementById(`wa-step-${s}`);
+    if (el) el.classList.toggle('oculto', s !== step);
+  });
+}
+
+async function iniciarConexionQR() {
+  mostrarStepWA('qr');
+  const container = document.getElementById('wa-qr-container');
+  if (container) {
+    container.innerHTML = '<p style="text-align:center;color:var(--gris)">Generando QR...</p>';
+  }
+
+  try {
+    const data = await WhatsAppAPI.conectar();
+
+    if (!data?.ok) {
+      mostrarErrorWA(data?.error || 'No se pudo generar el QR');
+      return;
+    }
+
+    if (data.qr) {
+      const src = data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`;
+      container.innerHTML = `<img src="${src}" alt="QR WhatsApp">`;
+    } else if (data.code) {
+      container.innerHTML = `<p style="color:var(--gris);word-break:break-all">${data.code}</p>`;
+    } else {
+      mostrarErrorWA('No se recibió ningún código');
+      return;
+    }
+
+    iniciarPollingEstado();
+
+  } catch (err) {
+    mostrarErrorWA(err.message || 'Error de conexión');
+  }
+}
+
+async function iniciarConexionCodigo() {
+  const input = document.getElementById('wa-input-telefono');
+  const telefono = (input?.value || '').replace(/\D/g, '');
+
+  if (!telefono || telefono.length < 10) {
+    alert('Ingresá un número válido con código de país.\nEj: 5491112345678');
+    return;
+  }
+
+  mostrarStepWA('codigo');
+  const codigoEl = document.getElementById('wa-pairing-code');
+  if (codigoEl) codigoEl.textContent = 'Generando...';
+
+  try {
+    const data = await WhatsAppAPI.conectar(telefono);
+
+    if (!data?.ok) {
+      mostrarErrorWA(data?.error || 'No se pudo generar el código');
+      return;
+    }
+
+    const pairing = data.pairingCode || data.code;
+    if (!pairing) {
+      mostrarErrorWA('No se recibió el código de emparejamiento');
+      return;
+    }
+
+    const formateado = pairing.length === 8
+      ? `${pairing.slice(0,4)}-${pairing.slice(4)}`
+      : pairing;
+    codigoEl.textContent = formateado;
+
+    iniciarPollingEstado();
+
+  } catch (err) {
+    mostrarErrorWA(err.message || 'Error de conexión');
+  }
+}
+
+function iniciarPollingEstado() {
+  if (waPollingInterval) clearInterval(waPollingInterval);
+
+  let intentos = 0;
+  const MAX_INTENTOS = 60; // 3 min
+
+  waPollingInterval = setInterval(async () => {
+    intentos++;
+
+    if (intentos >= MAX_INTENTOS) {
+      clearInterval(waPollingInterval);
+      waPollingInterval = null;
+      return;
+    }
+
+    try {
+      const data = await WhatsAppAPI.obtenerEstado();
+      if (data?.ok && data.conectado) {
+        clearInterval(waPollingInterval);
+        waPollingInterval = null;
+        mostrarStepWA('ok');
+      }
+    } catch (err) {
+      console.warn('[wa polling]', err.message);
+    }
+  }, 3000);
+}
+
+function mostrarErrorWA(msg) {
+  mostrarStepWA('error');
+  const el = document.getElementById('wa-error-msg');
+  if (el) el.textContent = msg;
+}
+
+// Limpiar polling al cerrar el modal
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#modal-wa-conectar .btn-cerrar-modal')) {
+    if (waPollingInterval) {
+      clearInterval(waPollingInterval);
+      waPollingInterval = null;
+    }
+  }
+});
 
     // Descartar
     lista.querySelectorAll('.wa-btn-eliminar').forEach(b => {

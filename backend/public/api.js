@@ -296,3 +296,31 @@ const WaAPI = {
     return await fetchAPI(`/wa/${id}`, { method: 'DELETE' });
   },
 };
+// ═══════════════════════════════════════════════════════════
+//  WHATSAPP CONEXIÓN API
+// ═══════════════════════════════════════════════════════════
+const WhatsAppAPI = {
+  async obtenerEstado() {
+    return await fetchAPI('/whatsapp/estado');
+  },
+
+  async conectar(telefono = null) {
+    return await fetchAPI('/whatsapp/conectar', {
+      method: 'POST',
+      body: JSON.stringify(telefono ? { telefono } : {}),
+    });
+  },
+
+  async desconectar() {
+    return await fetchAPI('/whatsapp/desconectar', {
+      method: 'POST',
+    });
+  },
+
+  async enviarTest(telefono, mensaje) {
+    return await fetchAPI('/whatsapp/test', {
+      method: 'POST',
+      body: JSON.stringify({ telefono, mensaje }),
+    });
+  },
+};

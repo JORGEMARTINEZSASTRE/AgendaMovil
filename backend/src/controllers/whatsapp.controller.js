@@ -77,20 +77,20 @@ async function conectar(req, res) {
   try {
     const userId = req.user.id;
     const instance = nombreInstanciaDe(userId);
+    const { telefono } = req.body; // Opcional — si lo mandan, devuelve pairing code
 
-    // Verificar si ya existe
+    // Verificar si ya existe en DB
     const { rows } = await query(
       `SELECT * FROM whatsapp_sesiones WHERE user_id = $1`,
       [userId]
     );
 
-    let crear;
     if (rows.length === 0) {
-      // Crear instancia nueva en Evolution
-      crear = await evolution.crearInstancia(instance);
+      // Crear instancia nueva
+      const crear = await evolution.crearInstancia(instance);
 
       if (!crear.ok) {
-        // Puede ser que ya exista en Evolution pero no en nuestra DB
+        // Puede que ya exista en Evolution pero no en nuestra DB
         const estadoRes = await evolution.estadoInstancia(instance);
         if (!estadoRes.ok) {
           return res.status(500).json({
@@ -109,21 +109,23 @@ async function conectar(req, res) {
       );
     }
 
-    // Obtener QR
-    const qr = await evolution.obtenerQR(instance);
+    // Obtener QR o pairing code
+    const qr = await evolution.obtenerQR(instance, telefono);
 
     if (!qr.ok) {
       return res.status(500).json({ ok: false, error: qr.error });
     }
 
-    // Evolution devuelve el QR en diferentes formatos según el caso
+    // Evolution puede devolver varios formatos
     const base64 = qr.data?.base64 || qr.data?.qrcode?.base64 || null;
     const code = qr.data?.code || qr.data?.qrcode?.code || null;
+    const pairingCode = qr.data?.pairingCode || null;
 
     return res.json({
       ok: true,
-      qr: base64,
-      code,
+      qr: base64,         // imagen del QR en base64
+      code,               // string del QR
+      pairingCode,        // código de 8 dígitos
       raw: qr.data,
     });
 

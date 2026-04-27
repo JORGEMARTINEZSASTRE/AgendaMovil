@@ -38,9 +38,14 @@ async function crearInstancia(nombreInstancia) {
   }
 }
 
-async function obtenerQR(nombreInstancia) {
+async function obtenerQR(nombreInstancia, numeroTelefono = null) {
   try {
-    const { data } = await client.get(`/instance/connect/${nombreInstancia}`);
+    // Si mandan número, Evolution devuelve un pairing code
+    const url = numeroTelefono
+      ? `/instance/connect/${nombreInstancia}?number=${numeroTelefono}`
+      : `/instance/connect/${nombreInstancia}`;
+
+    const { data } = await client.get(url);
     return { ok: true, data };
   } catch (err) {
     const msg = err.response?.data?.message || err.message;

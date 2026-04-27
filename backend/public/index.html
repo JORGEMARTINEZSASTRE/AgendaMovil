@@ -150,6 +150,10 @@
       </div>
     </div>
     <div class="header-der">
+      
+      <button id="btn-wa-conectar" class="btn-logout" title="Conectar WhatsApp">
+  📱
+</button>
   <!-- ⬇ NUEVO: botón WhatsApp pendientes -->
   <div class="wa-wrap">
     <button id="btn-wa-pendientes" class="btn-wa-pend" title="Mensajes WhatsApp pendientes">
@@ -338,6 +342,116 @@
 
 </div><!-- fin pantalla-principal -->
 
+<!-- ═══════════════════════════════════════════════
+     MODAL: CONECTAR WHATSAPP
+════════════════════════════════════════════════ -->
+<div id="modal-wa-conectar" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">📱 Conectar WhatsApp</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <!-- Estado inicial: ELEGIR MÉTODO -->
+    <div id="wa-step-inicio" class="wa-conectar-step">
+      <p class="wa-conectar-desc">
+        Elegí cómo querés vincular tu WhatsApp:
+      </p>
+
+      <div class="wa-metodos">
+        <button id="btn-wa-metodo-qr" class="wa-metodo-btn">
+          <span class="wa-metodo-icono">📷</span>
+          <div>
+            <p class="wa-metodo-titulo">Con código QR</p>
+            <p class="wa-metodo-desc">Si estás en la computadora</p>
+          </div>
+        </button>
+
+        <button id="btn-wa-metodo-codigo" class="wa-metodo-btn">
+          <span class="wa-metodo-icono">🔢</span>
+          <div>
+            <p class="wa-metodo-titulo">Con código numérico</p>
+            <p class="wa-metodo-desc">Si estás en el celular</p>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Estado: PEDIR NÚMERO (para código de 8 dígitos) -->
+    <div id="wa-step-numero" class="wa-conectar-step oculto">
+      <p class="wa-conectar-desc">
+        Ingresá tu número de WhatsApp <strong>con código de país</strong>:
+      </p>
+      <div class="campo">
+        <label for="wa-input-telefono">📞 Número de WhatsApp</label>
+        <input
+          type="tel"
+          id="wa-input-telefono"
+          placeholder="Ej: 5491112345678"
+          autocomplete="off"
+        >
+        <small style="font-size:11px;color:var(--gris)">
+          Formato: código país + código área + número (sin + ni espacios)
+        </small>
+      </div>
+      <button id="btn-wa-pedir-codigo" class="btn-primario">
+        Generar código
+      </button>
+    </div>
+
+    <!-- Estado: MOSTRAR QR -->
+    <div id="wa-step-qr" class="wa-conectar-step oculto">
+      <div id="wa-qr-container" class="wa-qr-box">
+        <p style="text-align:center;color:var(--gris)">Cargando QR...</p>
+      </div>
+      <div class="wa-instrucciones">
+        <p><strong>📱 Cómo escanearlo:</strong></p>
+        <ol>
+          <li>Abrí WhatsApp en tu celular</li>
+          <li>Tocá <strong>Menú (⋮) → Dispositivos vinculados</strong></li>
+          <li>Tocá <strong>"Vincular un dispositivo"</strong></li>
+          <li>Escaneá el código de arriba</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Estado: MOSTRAR CÓDIGO NUMÉRICO -->
+    <div id="wa-step-codigo" class="wa-conectar-step oculto">
+      <div class="wa-pairing-code" id="wa-pairing-code">
+        ----
+      </div>
+      <div class="wa-instrucciones">
+        <p><strong>📱 Ingresá este código en WhatsApp:</strong></p>
+        <ol>
+          <li>Abrí WhatsApp en tu celular</li>
+          <li>Tocá <strong>Menú (⋮) → Dispositivos vinculados</strong></li>
+          <li>Tocá <strong>"Vincular un dispositivo"</strong></li>
+          <li>Tocá <strong>"Vincular con número de teléfono"</strong></li>
+          <li>Ingresá el código de arriba</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Estado: CONECTADO -->
+    <div id="wa-step-ok" class="wa-conectar-step oculto">
+      <div class="wa-conectado-box">
+        <span class="wa-check">✅</span>
+        <p class="wa-conectado-titulo">¡WhatsApp conectado!</p>
+        <p class="wa-conectado-desc">
+          Ya podés enviar mensajes automáticos a tus clientas.
+        </p>
+      </div>
+    </div>
+
+    <div id="wa-step-error" class="wa-conectar-step oculto">
+      <div class="form-error" style="margin-top:10px">
+        <p id="wa-error-msg">Error</p>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════
      MODAL: NUEVO / EDITAR TURNO

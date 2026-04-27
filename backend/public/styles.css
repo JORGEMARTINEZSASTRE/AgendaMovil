@@ -1448,3 +1448,236 @@ body {
   background: #FFF0F0;
   border-color: var(--rojo);
 }
+/* ─── CONECTAR WHATSAPP ──────────────────────── */
+.wa-conectar-step {
+  padding: 8px 0;
+}
+
+.wa-conectar-desc {
+  font-size: 14px;
+  color: var(--texto);
+  margin-bottom: 18px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.wa-metodos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wa-metodo-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--crema2);
+  border: 2px solid var(--borde);
+  border-radius: var(--radio);
+  cursor: pointer;
+  text-align: left;
+  transition: all .2s;
+  font-family: 'Nunito', sans-serif;
+}
+
+.wa-metodo-btn:hover {
+  border-color: var(--rosa-polvo);
+  background: var(--panel);
+  transform: translateY(-2px);
+  box-shadow: var(--sombra);
+}
+
+.wa-metodo-icono {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.wa-metodo-titulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 2px;
+}
+
+.wa-metodo-desc {
+  font-size: 12px;
+  color: var(--gris);
+}
+
+.wa-qr-box {
+  background: white;
+  border: 2px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.wa-qr-box img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radio-sm);
+}
+
+.wa-pairing-code {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-align: center;
+  color: var(--rosa-vino);
+  background: var(--crema2);
+  border: 2px dashed var(--rosa-polvo);
+  border-radius: var(--radio);
+  padding: 20px;
+  margin-bottom: 16px;
+  user-select: all;
+}
+
+.wa-instrucciones {
+  background: var(--crema2);
+  border-radius: var(--radio-sm);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--texto);
+  line-height: 1.6;
+}
+
+.wa-instrucciones ol {
+  margin-top: 6px;
+  padding-left: 20px;
+}
+
+/* ─── CONECTAR WHATSAPP ──────────────────────── */
+.wa-conectar-step {
+  padding: 8px 0;
+}
+
+.wa-conectar-desc {
+  font-size: 14px;
+  color: var(--texto);
+  margin-bottom: 18px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.wa-metodos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wa-metodo-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--crema2);
+  border: 2px solid var(--borde);
+  border-radius: var(--radio);
+  cursor: pointer;
+  text-align: left;
+  transition: all .2s;
+  font-family: 'Nunito', sans-serif;
+}
+
+.wa-metodo-btn:hover {
+  border-color: var(--rosa-polvo);
+  background: var(--panel);
+  transform: translateY(-2px);
+  box-shadow: var(--sombra);
+}
+
+.wa-metodo-icono {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.wa-metodo-titulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 2px;
+}
+
+.wa-metodo-desc {
+  font-size: 12px;
+  color: var(--gris);
+}
+
+.wa-qr-box {
+  background: white;
+  border: 2px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.wa-qr-box img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radio-sm);
+}
+
+.wa-pairing-code {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-align: center;
+  color: var(--rosa-vino);
+  background: var(--crema2);
+  border: 2px dashed var(--rosa-polvo);
+  border-radius: var(--radio);
+  padding: 20px;
+  margin-bottom: 16px;
+  user-select: all;
+}
+
+.wa-instrucciones {
+  background: var(--crema2);
+  border-radius: var(--radio-sm);
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--texto);
+  line-height: 1.6;
+}
+
+.wa-instrucciones ol {
+  margin-top: 6px;
+  padding-left: 20px;
+}
+
+.wa-instrucciones li {
+  margin-bottom: 4px;
+}
+
+.wa-conectado-box {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.wa-check {
+  font-size: 64px;
+  display: block;
+  margin-bottom: 14px;
+  animation: latido 1.6s ease-in-out infinite;
+}
+
+.wa-conectado-titulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--rosa-vino);
+  margin-bottom: 8px;
+}
+
+.wa-conectado-desc {
+  font-size: 14px;
+  color: var(--gris);
+  line-height: 1.5;
+}
