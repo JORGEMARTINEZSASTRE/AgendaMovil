@@ -1626,7 +1626,34 @@ async function cargarWaPendientes() {
         await cargarWaPendientes();
       });
     });
-   // ═══════════════════════════════════════════════════════════
+
+    // Descartar
+    lista.querySelectorAll('.wa-btn-eliminar').forEach(b => {
+      b.addEventListener('click', async () => {
+        const id = b.dataset.id;
+        if (!confirm('¿Descartar este mensaje pendiente?')) return;
+        await WaAPI.eliminar(id);
+        await actualizarBadgeWa();
+        await cargarWaPendientes();
+      });
+    });
+
+  } catch (err) {
+    console.error('[wa] cargarWaPendientes:', err.message);
+    lista.innerHTML = '<p class="wa-vacio">Error al cargar mensajes</p>';
+  }
+}
+
+function tiempoRelativoCorto(fechaISO) {
+  const fecha = new Date(fechaISO);
+  const ahora = new Date();
+  const min = Math.floor((ahora - fecha) / 60000);
+  if (min < 1)    return 'Ahora';
+  if (min < 60)   return `${min}m`;
+  if (min < 1440) return `${Math.floor(min / 60)}h`;
+  return `${Math.floor(min / 1440)}d`;
+} 
+ // ═══════════════════════════════════════════════════════════
 //  WHATSAPP — CONECTAR
 // ═══════════════════════════════════════════════════════════
 
@@ -1792,30 +1819,3 @@ document.addEventListener('click', (e) => {
     }
   }
 });
-
-    // Descartar
-    lista.querySelectorAll('.wa-btn-eliminar').forEach(b => {
-      b.addEventListener('click', async () => {
-        const id = b.dataset.id;
-        if (!confirm('¿Descartar este mensaje pendiente?')) return;
-        await WaAPI.eliminar(id);
-        await actualizarBadgeWa();
-        await cargarWaPendientes();
-      });
-    });
-
-  } catch (err) {
-    console.error('[wa] cargarWaPendientes:', err.message);
-    lista.innerHTML = '<p class="wa-vacio">Error al cargar mensajes</p>';
-  }
-}
-
-function tiempoRelativoCorto(fechaISO) {
-  const fecha = new Date(fechaISO);
-  const ahora = new Date();
-  const min = Math.floor((ahora - fecha) / 60000);
-  if (min < 1)    return 'Ahora';
-  if (min < 60)   return `${min}m`;
-  if (min < 1440) return `${Math.floor(min / 60)}h`;
-  return `${Math.floor(min / 1440)}d`;
-} 
