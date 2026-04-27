@@ -269,5 +269,33 @@ async function procesarRecordatorios() {
 cron.schedule('*/5 * * * *', procesarRecordatorios);
 
 console.log('[CRON] Recordatorios iniciados — cada 5 minutos');
+// ═══════════════════════════════════════════════════════════
+//  TEST MANUAL — Dispara recordatorio para un turno específico
+// ═══════════════════════════════════════════════════════════
+async function testRecordatorioManual(turnoId, tipo = '2h') {
+  try {
+    const { rows } = await query(`
+      SELECT t.*, u.email AS user_email, u.nombre AS user_nombre
+      FROM turnos t
+      JOIN usuarios u ON u.id = t.user_id
+      WHERE t.id = $1
+    `, [turnoId]);
+
+    if (rows.length === 0) {
+      console.log('[TEST] Turno no encontrado');
+      return { ok: false, error: 'Turno no encontrado' };
+    }
+
+    const turno = rows[0];
+    console.log(`[TEST] Enviando ${tipo} a ${turno.nombre} (${turno.telefono})`);
+
+    const resultado = await enviarWhatsAppAutomatico(turno, tipo);
+    return resultado;
+
+  } catch (err) {
+    console.error('[TEST] Error:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
 
 module.exports = { procesarRecordatorios };

@@ -56,6 +56,16 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, servicio: 'DEPIMÓVIL PRO API', ts: new Date().toISOString() });
 });
+// ─── TEST RECORDATORIO (TEMPORAL, borrar después) ──────────
+const { testRecordatorioManual } = require('../recordatorios');
+
+app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
+  const { turnoId } = req.params;
+  const { tipo = '2h' } = req.body || {};
+
+  const resultado = await testRecordatorioManual(turnoId, tipo);
+  res.json(resultado);
+});
 
 
 // ─── STATIC FRONTEND ─────────────────────────────
