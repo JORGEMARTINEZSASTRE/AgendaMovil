@@ -99,6 +99,15 @@ app.use((err, _req, res, _next) => {
   });
 });
 
+// ─── TEST RECORDATORIO (TEMPORAL, borrar después) ──────────
+const { testRecordatorioManual } = require('../../recordatorios');
 
+app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
+  const { turnoId } = req.params;
+  const { tipo = '2h' } = req.body || {};
+
+  const resultado = await testRecordatorioManual(turnoId, tipo);
+  res.json(resultado);
+});
 
 module.exports = app;
