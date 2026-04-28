@@ -298,4 +298,4 @@ async function testRecordatorioManual(turnoId, tipo = '2h') {
   }
 }
 
-module.exports = { procesarRecordatorios };
+module.exports = { procesarRecordatorios, testRecordatorioManual };
