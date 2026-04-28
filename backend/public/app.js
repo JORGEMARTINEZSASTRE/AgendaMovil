@@ -624,6 +624,52 @@ function limpiarFormTurno() {
   const errEl = document.getElementById('form-turno-error');
   if (errEl) errEl.classList.add('oculto');
 }
+// ═══════════════════════════════════════════════════════════
+//  Cargar horarios disponibles según fecha y duración
+// ═══════════════════════════════════════════════════════════
+async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
+  const selectHora = document.getElementById('turno-hora');
+  if (!selectHora) return;
+
+  selectHora.innerHTML = '<option value="">Cargando...</option>';
+
+  // Traer los turnos del día
+  let ocupados = [];
+  try {
+    const turnosDelDia = await TurnosAPI.getAll({ fecha });
+    ocupados = (turnosDelDia || []).filter(t => {
+      // Si estoy editando, excluir el propio turno
+      if (editandoId && t.id === editandoId) return false;
+      return t.estado !== 'cancelado';
+    });
+  } catch (err) {
+    console.warn('[horarios] error cargando turnos del día:', err.message);
+  }
+
+  const duracion = parseInt(getVal('turno-duracion')) || 30;
+
+  selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
+
+  for (let m = 7 * 60; m <= 20 * 60; m += 15) {
+    const hora    = minutosAHora(m);
+    const horaFin = m + duracion;
+    if (horaFin > 20 * 60) continue;
+
+    const ocupado = ocupados.some(t => {
+      const tMin = horaAMinutos(formatearHora(t.hora));
+      const tFin = tMin + parseInt(t.duracion);
+      return m < tFin && horaFin > tMin;
+    });
+
+    const opt = document.createElement('option');
+    opt.value       = hora;
+    opt.textContent = ocupado ? `${hora} — Ocupado` : `${hora} — Disponible`;
+    opt.disabled    = ocupado;
+    if (ocupado) opt.style.color = '#B09590';
+    if (horaSeleccionada === hora) opt.selected = true;
+    selectHora.appendChild(opt);
+  }
+}
 
 async function handleSubmitTurno(e) {
   e.preventDefault();
