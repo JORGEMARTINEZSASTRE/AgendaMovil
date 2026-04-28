@@ -943,7 +943,15 @@ function renderCalendario() {
   // Timeline del mes seleccionado
   renderTimelineMes(anio, mes);
 }
-
+function capitalizarDia(fechaStr) {
+  try {
+    const fecha = new Date(fechaStr + 'T12:00:00');
+    const dia = fecha.toLocaleDateString('es-AR', { weekday: 'long' });
+    return dia.charAt(0).toUpperCase() + dia.slice(1);
+  } catch {
+    return '';
+  }
+}
 function renderTimelineMes(anio, mes) {
   const contenedor = document.getElementById('cal-timeline');
   if (!contenedor) return;
@@ -972,7 +980,7 @@ function renderTimelineMes(anio, mes) {
   contenedor.innerHTML = Object.entries(porFecha).map(([fecha, ts]) => `
     <div class="timeline-grupo">
       <div class="timeline-fecha">
-        ${nombreDiaSemana(fecha)} ${formatearFecha(fecha)}
+    ${capitalizarDia(fecha)} ${formatearFecha(fecha)}
       </div>
       ${ts.map(t => `
         <div class="timeline-item" style="border-left:3px solid ${t.servicio_color || '#A85568'}">
