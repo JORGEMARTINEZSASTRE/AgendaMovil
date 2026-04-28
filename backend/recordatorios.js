@@ -63,12 +63,30 @@ async function marcarEnviado2h(id) {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────
-function formatearFecha(fechaStr) {
-  if (!fechaStr) return '';
-  const [anio, mes, dia] = fechaStr.toString().split('T')[0].split('-');
+function formatearFecha(fechaInput) {
+  if (!fechaInput) return '';
+
   const meses = ['enero','febrero','marzo','abril','mayo','junio',
                  'julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  return `${parseInt(dia)} de ${meses[parseInt(mes) - 1]} de ${anio}`;
+
+  let fecha;
+
+  // Si viene como objeto Date
+  if (fechaInput instanceof Date) {
+    fecha = fechaInput;
+  } else {
+    // Si viene como string
+    const str = String(fechaInput);
+    // Intentar ISO o formato YYYY-MM-DD
+    fecha = new Date(str);
+    if (isNaN(fecha.getTime())) return str; // fallback: devolver tal cual
+  }
+
+  const dia = fecha.getUTCDate();
+  const mes = fecha.getUTCMonth();
+  const anio = fecha.getUTCFullYear();
+
+  return `${dia} de ${meses[mes]} de ${anio}`;
 }
 
 function formatearHora(horaStr) {
@@ -164,7 +182,7 @@ function mensajeWhatsApp(turno, tipo) {
   const fecha    = formatearFecha(turno.fecha);
   const hora     = formatearHora(turno.hora);
 
-  let msg = `🌸 *DEPIMÓVIL PRO*\n\n`;
+  let msg = `🌸 *AGENDAMOVIL PRO*\n\n`;
   msg += `Hola ${turno.nombre}! 👋\n`;
   msg += `Te recordamos que tu turno es en *${etiqueta}*:\n\n`;
   msg += `📅 *${fecha}*\n`;
