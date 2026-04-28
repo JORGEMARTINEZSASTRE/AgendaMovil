@@ -521,10 +521,16 @@
 
       <!-- Servicio -->
       <div class="campo">
-        <label for="turno-servicio-id">✂️ Servicio (opcional)</label>
+        <label for="turno-servicio-id">✂️ Servicio</label>
         <select id="turno-servicio-id">
           <option value="">— Sin servicio —</option>
         </select>
+      </div>
+
+      <!-- Aviso seña -->
+      <div id="turno-senia-aviso" class="pub-senia-aviso oculto">
+        <span>💰</span>
+        <p>Este servicio requiere una seña de <strong id="turno-senia-monto"></strong> para confirmar.</p>
       </div>
 
       <!-- Nombre -->
@@ -539,30 +545,49 @@
         >
       </div>
 
-      <!-- Teléfono -->
+      <!-- Teléfono con código de país -->
       <div class="campo">
         <label for="turno-telefono">📞 Teléfono *</label>
+        <div style="display:flex; gap:8px;">
+          <select id="turno-codigo-pais" style="max-width:110px;">
+            <option value="598">🇺🇾 +598</option>
+            <option value="54">🇦🇷 +54</option>
+          </select>
+          <input
+            type="tel"
+            id="turno-telefono"
+            placeholder="Ej: 92614060"
+            autocomplete="off"
+            required
+            style="flex:1;"
+          >
+        </div>
+        <span class="campo-ayuda">Sin el 0 inicial, sin espacios ni guiones.</span>
+      </div>
+
+      <!-- Email opcional -->
+      <div class="campo">
+        <label for="turno-email">📧 Email (opcional)</label>
         <input
-          type="tel"
-          id="turno-telefono"
-          placeholder="Ej: 5491112345678"
+          type="email"
+          id="turno-email"
+          placeholder="para recibir confirmación"
           autocomplete="off"
-          required
         >
       </div>
 
-      <!-- Fecha y Hora -->
-      <div class="campos-fila">
-        <div class="campo">
-          <label for="turno-fecha">📅 Fecha *</label>
-          <input type="date" id="turno-fecha" required>
-        </div>
-        <div class="campo">
-          <label for="turno-hora">🕐 Hora *</label>
-          <select id="turno-hora" required>
-            <option value="">— Elegí un horario —</option>
-          </select>
-        </div>
+      <!-- Fecha -->
+      <div class="campo">
+        <label for="turno-fecha">📅 Fecha *</label>
+        <input type="date" id="turno-fecha" required>
+      </div>
+
+      <!-- Hora con disponibilidad -->
+      <div class="campo">
+        <label for="turno-hora">🕐 Horario *</label>
+        <select id="turno-hora" required>
+          <option value="">— Primero elegí una fecha —</option>
+        </select>
       </div>
 
       <!-- Duración -->
@@ -579,7 +604,9 @@
         >
       </div>
 
-    
+      <!-- Datos de servicio editables (opcional) -->
+      <details class="campo-detalle">
+        <summary>🎨 Personalizar servicio</summary>
         <div class="campo">
           <label for="turno-servicio-zona">Zona</label>
           <input type="text" id="turno-servicio-zona" placeholder="Ej: Piernas completas">

@@ -948,7 +948,35 @@ body {
   display: inline-block;
   margin-top: 2px;
 }
+/* Aviso de seña en el modal de turno */
+.pub-senia-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(168,85,104,.08), rgba(168,85,104,.04));
+  border: 1.5px solid rgba(168,85,104,.2);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+  margin: 10px 0;
+  font-size: 13px;
+  color: var(--texto);
+  line-height: 1.5;
+}
 
+.pub-senia-aviso > span {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.pub-senia-aviso p {
+  margin: 0;
+  flex: 1;
+}
+
+.pub-senia-aviso strong {
+  color: var(--rosa-vino);
+  font-weight: 700;
+}
 
 /* ── SEÑA EN CARDS DE TURNO ──────────────────────────────── */
 .turno-senia-wrap {

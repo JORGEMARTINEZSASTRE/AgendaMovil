@@ -496,20 +496,53 @@ function bindFormTurno() {
   const form = document.getElementById('form-turno');
   if (!form) return;
   form.addEventListener('submit', handleSubmitTurno);
-  
+
+  // Al elegir servicio: autocompletar datos + aviso seña
   const selectServ = document.getElementById('turno-servicio-id');
   if (selectServ) {
     selectServ.addEventListener('change', () => {
       const serv = servicios.find(s => s.id === selectServ.value);
+      const avisoSenia = document.getElementById('turno-senia-aviso');
+      const montoEl    = document.getElementById('turno-senia-monto');
+
       if (serv) {
-        setVal('turno-duracion',        serv.duracion);
-        setVal('turno-servicio-nombre', serv.nombre);
-        setVal('turno-servicio-zona',   serv.zona);
-        setVal('turno-servicio-color',  serv.color);
+        setVal('turno-duracion',       serv.duracion);
+        setVal('turno-servicio-zona',  serv.zona);
+        setVal('turno-servicio-color', serv.color);
+
+        // Mostrar/ocultar aviso seña
+        if (serv.requiere_senia && serv.monto_senia > 0) {
+          avisoSenia?.classList.remove('oculto');
+          if (montoEl) montoEl.textContent = `$${serv.monto_senia}`;
+        } else {
+          avisoSenia?.classList.add('oculto');
+        }
+
+        // Recargar horarios con la duración nueva
+        const fecha = getVal('turno-fecha');
+        if (fecha) cargarHorariosDisponibles(fecha);
+      } else {
+        avisoSenia?.classList.add('oculto');
       }
     });
   }
-  
+
+  // Al cambiar fecha: cargar horarios disponibles
+  const inputFecha = document.getElementById('turno-fecha');
+  if (inputFecha) {
+    inputFecha.addEventListener('change', () => {
+      if (inputFecha.value) cargarHorariosDisponibles(inputFecha.value);
+    });
+  }
+
+  // Al cambiar duración manual: recargar horarios
+  const inputDuracion = document.getElementById('turno-duracion');
+  if (inputDuracion) {
+    inputDuracion.addEventListener('change', () => {
+      const fecha = getVal('turno-fecha');
+      if (fecha) cargarHorariosDisponibles(fecha);
+    });
+  }
 }
 
 function abrirFormTurno(turno = null) {
@@ -523,46 +556,64 @@ function abrirFormTurno(turno = null) {
   if (titulo)    titulo.textContent     = turno ? '✏️ Editar turno'   : '➕ Nuevo turno';
   if (btnGuardar) btnGuardar.textContent = turno ? 'Guardar cambios'   : 'Guardar turno';
 
-  // Poblar selector de servicios
+  // Poblar selector de servicios (con indicador de seña)
   const selectServ = document.getElementById('turno-servicio-id');
   if (selectServ) {
     selectServ.innerHTML =
       `<option value="">— Sin servicio —</option>` +
-      servicios.map(s =>
-        `<option value="${s.id}" ${turno?.servicio_id === s.id ? 'selected' : ''}>
-          ${escaparHTML(s.nombre)} · ${escaparHTML(s.zona)}
-        </option>`
-      ).join('');
+      servicios.map(s => {
+        const label = `${escaparHTML(s.nombre)} · ${escaparHTML(s.zona)}${s.requiere_senia ? ' 💰' : ''}`;
+        return `<option value="${s.id}" ${turno?.servicio_id === s.id ? 'selected' : ''}>${label}</option>`;
+      }).join('');
+  }
+
+  // Setear fecha mínima (hoy) excepto si estoy editando
+  const inputFecha = document.getElementById('turno-fecha');
+  if (inputFecha && !turno) {
+    inputFecha.min = new Date().toISOString().split('T')[0];
   }
 
   if (turno) {
     setVal('turno-nombre',          turno.nombre);
-    setVal('turno-telefono',        turno.telefono);
-    setVal('turno-fecha',           turno.fecha);
-    setVal('turno-hora',            formatearHora(turno.hora));
-    setVal('turno-duracion',        turno.duracion);
-    setVal('turno-servicio-nombre', turno.servicio_nombre || '');
-    setVal('turno-servicio-zona',   turno.servicio_zona   || '');
-    setVal('turno-servicio-color',  turno.servicio_color  || '#A85568');
-    setVal('turno-notas',           turno.notas           || '');
-    setVal('turno-cumple-dia',      turno.cumple_dia      || '');
-    setVal('turno-cumple-mes',      turno.cumple_mes      || '');
+
+    // Separar teléfono en código país + resto
+    const tel = String(turno.telefono || '').replace(/\D/g, '');
+    if (tel.startsWith('598')) {
+      setVal('turno-codigo-pais', '598');
+      setVal('turno-telefono',    tel.slice(3));
+    } else if (tel.startsWith('54')) {
+      setVal('turno-codigo-pais', '54');
+      setVal('turno-telefono',    tel.slice(2));
+    } else {
+      setVal('turno-codigo-pais', '598');
+      setVal('turno-telefono',    tel);
+    }
+
+    setVal('turno-email',          turno.email_clienta   || '');
+    setVal('turno-fecha',          turno.fecha);
+    setVal('turno-duracion',       turno.duracion);
+    setVal('turno-servicio-zona',  turno.servicio_zona   || '');
+    setVal('turno-servicio-color', turno.servicio_color  || '#A85568');
+    setVal('turno-notas',          turno.notas           || '');
+    setVal('turno-cumple-dia',     turno.cumple_dia      || '');
+    setVal('turno-cumple-mes',     turno.cumple_mes      || '');
+
+    // Cargar horarios disponibles y seleccionar el del turno
+    cargarHorariosDisponibles(turno.fecha, formatearHora(turno.hora));
+
+    // Disparar el change del servicio para mostrar aviso de seña si aplica
+    if (turno.servicio_id && selectServ) {
+      selectServ.dispatchEvent(new Event('change'));
+    }
+
   } else {
     setVal('turno-fecha',          fechaSeleccionada);
     setVal('turno-servicio-color', '#A85568');
+    setVal('turno-codigo-pais',    '598');
+
+    // Cargar horarios de la fecha seleccionada
+    if (fechaSeleccionada) cargarHorariosDisponibles(fechaSeleccionada);
   }
-  const selectHora = document.getElementById('turno-hora');
-if (selectHora) {
-  selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
-  for (let m = 7 * 60; m <= 20 * 60; m += 15) {
-    const val = minutosAHora(m);
-    const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = val;
-    if (turno?.hora && formatearHora(turno.hora) === val) opt.selected = true;
-    selectHora.appendChild(opt);
-  }
-}
 
   modal?.classList.remove('oculto');
 }
@@ -578,21 +629,36 @@ async function handleSubmitTurno(e) {
   e.preventDefault();
 
   const nombre         = getVal('turno-nombre').trim();
-  const telefono       = getVal('turno-telefono').trim();
+  const telefonoRaw    = getVal('turno-telefono').trim();
+  const codigoPais     = getVal('turno-codigo-pais') || '598';
+  const email          = getVal('turno-email').trim()  || null;
   const fecha          = getVal('turno-fecha');
   const hora           = getVal('turno-hora');
   const duracion       = parseInt(getVal('turno-duracion'));
   const servicioId     = getVal('turno-servicio-id')     || null;
-  const servicioNombre = getVal('turno-servicio-nombre') || null;
   const servicioZona   = getVal('turno-servicio-zona')   || null;
   const servicioColor  = getVal('turno-servicio-color')  || '#A85568';
   const notas          = getVal('turno-notas')           || null;
   const cumpleDia      = parseInt(getVal('turno-cumple-dia')) || null;
   const cumpleMes      = parseInt(getVal('turno-cumple-mes')) || null;
 
+  // Armar teléfono con código de país
+  let telefonoLimpio = telefonoRaw.replace(/\D/g, '');
+  if (telefonoLimpio.startsWith('0')) telefonoLimpio = telefonoLimpio.slice(1);
+  const telefono = '+' + codigoPais + telefonoLimpio;
+
+  // Buscar nombre del servicio por ID (del array local)
+  const servicio       = servicios.find(s => s.id === servicioId);
+  const servicioNombre = servicio?.nombre || null;
+
   // Validaciones frontend
-  if (!nombre || !telefono || !fecha || !hora || !duracion) {
+  if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion) {
     mostrarErrorForm('form-turno-error', 'Completá todos los campos obligatorios');
+    return;
+  }
+
+  if (telefonoLimpio.length < 7) {
+    mostrarErrorForm('form-turno-error', 'Número de teléfono inválido');
     return;
   }
 
@@ -600,11 +666,12 @@ async function handleSubmitTurno(e) {
     mostrarErrorForm('form-turno-error', 'La duración debe ser entre 5 y 480 minutos');
     return;
   }
+
   const horaMinutos = horaAMinutos(hora);
-if (horaMinutos < horaAMinutos('07:00') || horaMinutos > horaAMinutos('20:00')) {
-  mostrarErrorForm('form-turno-error', 'El horario debe ser entre las 7:00 y las 20:00');
-  return;
-}
+  if (horaMinutos < horaAMinutos('07:00') || horaMinutos > horaAMinutos('20:00')) {
+    mostrarErrorForm('form-turno-error', 'El horario debe ser entre las 7:00 y las 20:00');
+    return;
+  }
 
   // Verificar conflicto localmente (feedback inmediato)
   const estado = estadoHorario(fecha, hora, duracion, editandoId);
@@ -613,7 +680,6 @@ if (horaMinutos < horaAMinutos('07:00') || horaMinutos > horaAMinutos('20:00')) 
       `Conflicto de horario con el turno de ${estado.conflicto}`);
     return;
   }
-  
 
   const payload = {
     nombre,
