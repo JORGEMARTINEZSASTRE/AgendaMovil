@@ -315,5 +315,62 @@ async function testRecordatorioManual(turnoId, tipo = '2h') {
     return { ok: false, error: err.message };
   }
 }
+// ═══════════════════════════════════════════════════════════
+//  CONFIRMACIÓN DE TURNO (se dispara al crear turno)
+// ═══════════════════════════════════════════════════════════
+function mensajeConfirmacion(turno) {
+  const fecha = formatearFecha(turno.fecha);
+  const hora  = formatearHora(turno.hora);
 
-module.exports = { procesarRecordatorios, testRecordatorioManual };
+  let msg = `🌸 *Confirmación de turno*\n\n`;
+  msg += `¡Hola ${turno.nombre}! 👋\n\n`;
+  msg += `Tu turno quedó agendado para:\n\n`;
+  msg += `📅 *${fecha}*\n`;
+  msg += `🕐 *${hora} hs*\n`;
+  if (turno.servicio_nombre) {
+    msg += `✂️ *${turno.servicio_nombre}`;
+    if (turno.servicio_zona) msg += ` · ${turno.servicio_zona}`;
+    msg += `*\n`;
+  }
+  msg += `⏱ *${turno.duracion} minutos*\n\n`;
+  msg += `¡Te esperamos! Si necesitás cancelar o reprogramar, avisanos con tiempo. 🌸`;
+  return msg;
+}
+
+async function enviarConfirmacionTurno(turno) {
+  try {
+    if (!turno.telefono) {
+      console.log(`[WA-CONFIRM] Turno ${turno.id} sin teléfono, skip`);
+      return { ok: false, error: 'sin_telefono' };
+    }
+
+    const instance = `user_${turno.user_id}`;
+    const estadoRes = await evolution.estadoInstancia(instance);
+
+    if (!estadoRes.ok || estadoRes.estado !== 'open') {
+      console.log(`[WA-CONFIRM] Usuario ${turno.user_id} sin WhatsApp conectado`);
+      return { ok: false, error: 'wa_desconectado' };
+    }
+
+    const mensaje = mensajeConfirmacion(turno);
+    const resultado = await evolution.enviarMensaje(instance, turno.telefono, mensaje);
+
+    if (!resultado.ok) {
+      console.error(`[WA-CONFIRM] ❌ Error:`, resultado.error);
+      return { ok: false, error: resultado.error };
+    }
+
+    console.log(`[WA-CONFIRM] ✅ Confirmación enviada a ${turno.nombre} (${turno.telefono})`);
+    return { ok: true };
+
+  } catch (err) {
+    console.error(`[WA-CONFIRM] Error general:`, err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+module.exports = { 
+  procesarRecordatorios, 
+  testRecordatorioManual,
+  enviarConfirmacionTurno   // ← NUEVO
+};

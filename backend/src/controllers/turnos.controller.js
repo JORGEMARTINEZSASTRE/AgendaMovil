@@ -1,6 +1,7 @@
 'use strict';
 
 const { Turnos } = require('../models/queries');
+const { enviarConfirmacionTurno } = require('../../recordatorios');
 
 // ════════════════════════════════════════════════════════════
 //  GET /api/turnos
@@ -85,6 +86,9 @@ async function obtener(req, res) {
 // ════════════════════════════════════════════════════════════
 //  POST /api/turnos
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  POST /api/turnos
+// ════════════════════════════════════════════════════════════
 async function crear(req, res) {
   try {
     const {
@@ -122,6 +126,21 @@ async function crear(req, res) {
       cumpleMes:      cumple_mes,
     });
 
+    // Enviar WhatsApp de confirmación (no bloqueante)
+    enviarConfirmacionTurno({
+      id:              turno.id,
+      user_id:         req.user.id,
+      nombre:          turno.nombre,
+      telefono:        turno.telefono,
+      fecha:           turno.fecha,
+      hora:            turno.hora,
+      servicio_nombre: turno.servicio_nombre,
+      servicio_zona:   turno.servicio_zona,
+      duracion:        turno.duracion,
+    }).catch(err => {
+      console.error('[TURNOS/crear] Error al enviar confirmación:', err.message);
+    });
+
     return res.status(201).json({
       ok:      true,
       mensaje: 'Turno creado exitosamente',
@@ -136,7 +155,6 @@ async function crear(req, res) {
     });
   }
 }
-
 // ════════════════════════════════════════════════════════════
 //  PUT /api/turnos/:id
 // ════════════════════════════════════════════════════════════
