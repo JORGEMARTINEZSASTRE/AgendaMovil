@@ -1,7 +1,11 @@
 'use strict';
 
 const { Turnos } = require('../models/queries');
-const { enviarConfirmacionTurno } = require('../../recordatorios');
+const { 
+  enviarConfirmacionTurno,
+  enviarModificacionTurno,
+  enviarCancelacionTurno,
+} = require('../../recordatorios');
 
 // ════════════════════════════════════════════════════════════
 //  GET /api/turnos
@@ -86,9 +90,6 @@ async function obtener(req, res) {
 // ════════════════════════════════════════════════════════════
 //  POST /api/turnos
 // ════════════════════════════════════════════════════════════
-// ════════════════════════════════════════════════════════════
-//  POST /api/turnos
-// ════════════════════════════════════════════════════════════
 async function crear(req, res) {
   try {
     const {
@@ -158,6 +159,9 @@ async function crear(req, res) {
 // ════════════════════════════════════════════════════════════
 //  PUT /api/turnos/:id
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  PUT /api/turnos/:id
+// ════════════════════════════════════════════════════════════
 async function actualizar(req, res) {
   try {
     const {
@@ -206,6 +210,41 @@ async function actualizar(req, res) {
       estado,
     });
 
+    // ── Detectar qué cambió para decidir qué WhatsApp mandar ──
+    const fechaAnterior = String(existente.fecha).slice(0, 10);
+    const fechaNueva    = String(fecha).slice(0, 10);
+    const horaAnterior  = String(existente.hora).slice(0, 5);
+    const horaNueva     = String(hora).slice(0, 5);
+
+    const fechaCambio  = fechaAnterior !== fechaNueva;
+    const horaCambio   = horaAnterior  !== horaNueva;
+    const cambioEstado = existente.estado !== estado;
+
+    const turnoPayload = {
+      id:              turno.id,
+      user_id:         req.user.id,
+      nombre:          turno.nombre,
+      telefono:        turno.telefono,
+      fecha:           turno.fecha,
+      hora:            turno.hora,
+      servicio_nombre: turno.servicio_nombre,
+      servicio_zona:   turno.servicio_zona,
+      duracion:        turno.duracion,
+    };
+
+    // Si se canceló → aviso de cancelación
+    if (cambioEstado && estado === 'cancelado') {
+      enviarCancelacionTurno(turnoPayload).catch(err => {
+        console.error('[TURNOS/actualizar] Error cancelación:', err.message);
+      });
+    }
+    // Si cambió fecha u hora (y no se canceló) → aviso de modificación
+    else if ((fechaCambio || horaCambio) && estado !== 'cancelado') {
+      enviarModificacionTurno(turnoPayload).catch(err => {
+        console.error('[TURNOS/actualizar] Error modificación:', err.message);
+      });
+    }
+
     return res.json({
       ok:      true,
       mensaje: 'Turno actualizado exitosamente',
@@ -226,6 +265,15 @@ async function actualizar(req, res) {
 // ════════════════════════════════════════════════════════════
 async function eliminar(req, res) {
   try {
+    // Obtener el turno antes de eliminar
+    const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
+    if (!existente) {
+      return res.status(404).json({
+        ok:    false,
+        error: 'Turno no encontrado',
+      });
+    }
+
     const eliminado = await Turnos.eliminar(req.params.id, req.user.id);
 
     if (!eliminado) {
@@ -234,6 +282,20 @@ async function eliminar(req, res) {
         error: 'Turno no encontrado',
       });
     }
+
+    // Avisar cancelación por WhatsApp
+    enviarCancelacionTurno({
+      id:              existente.id,
+      user_id:         req.user.id,
+      nombre:          existente.nombre,
+      telefono:        existente.telefono,
+      fecha:           existente.fecha,
+      hora:            existente.hora,
+      servicio_nombre: existente.servicio_nombre,
+      duracion:        existente.duracion,
+    }).catch(err => {
+      console.error('[TURNOS/eliminar] Error WA cancelación:', err.message);
+    });
 
     return res.json({
       ok:      true,

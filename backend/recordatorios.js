@@ -368,9 +368,127 @@ async function enviarConfirmacionTurno(turno) {
     return { ok: false, error: err.message };
   }
 }
+// ═══════════════════════════════════════════════════════════
+//  CONFIRMACIÓN DE SEÑA
+// ═══════════════════════════════════════════════════════════
+async function enviarConfirmacionSenia(turno) {
+  try {
+    if (!turno.telefono) return { ok: false, error: 'sin_telefono' };
+
+    const instance = `user_${turno.user_id}`;
+    const estadoRes = await evolution.estadoInstancia(instance);
+    if (!estadoRes.ok || estadoRes.estado !== 'open') {
+      console.log(`[WA-SENIA] Usuario ${turno.user_id} sin WhatsApp conectado`);
+      return { ok: false, error: 'wa_desconectado' };
+    }
+
+    const fecha = formatearFecha(turno.fecha);
+    const hora  = formatearHora(turno.hora);
+
+    let msg = `🌸 *¡Seña recibida!*\n\n`;
+    msg += `¡Hola ${turno.nombre}! 💰\n\n`;
+    msg += `Tu seña fue confirmada. Tu turno queda *CONFIRMADO* ✅\n\n`;
+    msg += `📅 *${fecha}*\n`;
+    msg += `🕐 *${hora} hs*\n`;
+    if (turno.servicio_nombre) msg += `✂️ *${turno.servicio_nombre}*\n`;
+    msg += `⏱ *${turno.duracion} minutos*\n\n`;
+    msg += `¡Te esperamos! 🌸`;
+
+    const resultado = await evolution.enviarMensaje(instance, turno.telefono, msg);
+    if (resultado.ok) {
+      console.log(`[WA-SENIA] ✅ Confirmación enviada a ${turno.nombre}`);
+    } else {
+      console.error(`[WA-SENIA] ❌ Error:`, resultado.error);
+    }
+    return resultado;
+  } catch (err) {
+    console.error(`[WA-SENIA] Error:`, err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODIFICACIÓN DE TURNO
+// ═══════════════════════════════════════════════════════════
+async function enviarModificacionTurno(turno) {
+  try {
+    if (!turno.telefono) return { ok: false, error: 'sin_telefono' };
+
+    const instance = `user_${turno.user_id}`;
+    const estadoRes = await evolution.estadoInstancia(instance);
+    if (!estadoRes.ok || estadoRes.estado !== 'open') {
+      console.log(`[WA-MOD] Usuario ${turno.user_id} sin WhatsApp conectado`);
+      return { ok: false, error: 'wa_desconectado' };
+    }
+
+    const fecha = formatearFecha(turno.fecha);
+    const hora  = formatearHora(turno.hora);
+
+    let msg = `🌸 *Turno reprogramado*\n\n`;
+    msg += `¡Hola ${turno.nombre}! ✏️\n\n`;
+    msg += `Tu turno fue modificado. Los nuevos datos son:\n\n`;
+    msg += `📅 *${fecha}*\n`;
+    msg += `🕐 *${hora} hs*\n`;
+    if (turno.servicio_nombre) msg += `✂️ *${turno.servicio_nombre}*\n`;
+    msg += `⏱ *${turno.duracion} minutos*\n\n`;
+    msg += `Si tenés alguna duda, respondé este mensaje. 🌸`;
+
+    const resultado = await evolution.enviarMensaje(instance, turno.telefono, msg);
+    if (resultado.ok) {
+      console.log(`[WA-MOD] ✅ Modificación enviada a ${turno.nombre}`);
+    } else {
+      console.error(`[WA-MOD] ❌ Error:`, resultado.error);
+    }
+    return resultado;
+  } catch (err) {
+    console.error(`[WA-MOD] Error:`, err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CANCELACIÓN DE TURNO
+// ═══════════════════════════════════════════════════════════
+async function enviarCancelacionTurno(turno) {
+  try {
+    if (!turno.telefono) return { ok: false, error: 'sin_telefono' };
+
+    const instance = `user_${turno.user_id}`;
+    const estadoRes = await evolution.estadoInstancia(instance);
+    if (!estadoRes.ok || estadoRes.estado !== 'open') {
+      console.log(`[WA-CANCEL] Usuario ${turno.user_id} sin WhatsApp conectado`);
+      return { ok: false, error: 'wa_desconectado' };
+    }
+
+    const fecha = formatearFecha(turno.fecha);
+    const hora  = formatearHora(turno.hora);
+
+    let msg = `🌸 *Turno cancelado*\n\n`;
+    msg += `Hola ${turno.nombre}, 😔\n\n`;
+    msg += `Te informamos que tu turno fue cancelado:\n\n`;
+    msg += `📅 ~${fecha}~\n`;
+    msg += `🕐 ~${hora} hs~\n`;
+    if (turno.servicio_nombre) msg += `✂️ ~${turno.servicio_nombre}~\n`;
+    msg += `\nSi querés reprogramar, contactanos. ¡Gracias! 🌸`;
+
+    const resultado = await evolution.enviarMensaje(instance, turno.telefono, msg);
+    if (resultado.ok) {
+      console.log(`[WA-CANCEL] ✅ Cancelación enviada a ${turno.nombre}`);
+    } else {
+      console.error(`[WA-CANCEL] ❌ Error:`, resultado.error);
+    }
+    return resultado;
+  } catch (err) {
+    console.error(`[WA-CANCEL] Error:`, err.message);
+    return { ok: false, error: err.message };
+  }
+}
 
 module.exports = { 
   procesarRecordatorios, 
   testRecordatorioManual,
-  enviarConfirmacionTurno   // ← NUEVO
+  enviarConfirmacionTurno,
+  enviarConfirmacionSenia,
+  enviarModificacionTurno,
+  enviarCancelacionTurno,
 };

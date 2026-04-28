@@ -7,6 +7,7 @@ const { planActivo }  = require('../middleware/planGuard');
 const { validar }     = require('../middleware/validate');
 const { apiLimiter }  = require('../middleware/rateLimiter');
 const { query }       = require('../config/db');
+const { enviarConfirmacionSenia } = require('../../recordatorios');
 
 router.use(autenticar);
 router.use(planActivo);
@@ -193,6 +194,29 @@ router.post('/turnos/:id/pagar-senia',
         return res.status(500).json({ ok: false, error: 'No se pudo actualizar la seña' });
       }
 
+      // ── Pasar a estado activo si estaba en pendiente_senia ──
+      if (turnoActualizado.estado === 'pendiente_senia') {
+        await query(
+          `UPDATE turnos SET estado = 'activo' WHERE id = $1 AND user_id = $2`,
+          [req.params.id, req.user.id]
+        );
+        turnoActualizado.estado = 'activo';
+      }
+
+      // ── WhatsApp automático a la clienta ──
+      enviarConfirmacionSenia({
+        id:              turnoActualizado.id,
+        user_id:         req.user.id,
+        nombre:          turnoActualizado.nombre,
+        telefono:        turnoActualizado.telefono,
+        fecha:           turnoActualizado.fecha,
+        hora:            turnoActualizado.hora,
+        servicio_nombre: turnoActualizado.servicio_nombre,
+        duracion:        turnoActualizado.duracion,
+      }).catch(err => {
+        console.error('[SENIA/pagarSenia] Error WA:', err.message);
+      });
+
       return res.json({
         ok:      true,
         mensaje: '✅ Seña registrada. Turno confirmado.',
@@ -205,7 +229,6 @@ router.post('/turnos/:id/pagar-senia',
     }
   }
 );
-
 // ═══════════════════════════════════════════════════════════
 //  GET /api/senia/turnos/pendientes — turnos sin seña pagar
 // ═══════════════════════════════════════════════════════════
