@@ -770,6 +770,25 @@ body {
 }
 
 .ayuda-seccion p:last-child { margin-bottom: 0 }
+.ayuda-subseccion {
+  background: var(--crema2);
+  border-radius: var(--radio-sm);
+  padding: 10px 14px;
+  margin: 8px 0;
+  border-left: 3px solid var(--rosa-polvo);
+}
+
+.ayuda-subseccion p:first-child {
+  margin-bottom: 4px;
+  color: var(--marron);
+}
+
+.ayuda-subseccion p:last-child {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris);
+  line-height: 1.5;
+}
 
 /* ─── Sección destacada (WhatsApp) ─ */
 .ayuda-seccion.destacada {
