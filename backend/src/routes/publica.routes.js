@@ -9,6 +9,7 @@ const { validarRegistro } = require('../middleware/validate');
 const { body, validationResult } = require('express-validator');
 const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
+const evolution = require('../services/evolution.service');
 
 const pool = new Pool({
   host:     process.env.DB_HOST,
@@ -104,7 +105,82 @@ async function enviarMailSeniaPendienteClienta({ emailClienta, nombreClienta, no
     console.log(`[MAILER] Mail seña clienta enviado a ${emailClienta}`);
   } catch(err) { console.error('[MAILER] Error mail seña clienta:', err.message); }
 }
+// ═══════════════════════════════════════════════════════════
+//  WHATSAPP — Reserva confirmada (sin seña)
+// ═══════════════════════════════════════════════════════════
+async function enviarWAReservaConfirmada({ userId, telefono, nombre, fecha, hora, servicio, duracion }) {
+  try {
+    if (!telefono) return;
 
+    const instance = `user_${userId}`;
+    const estado = await evolution.estadoInstancia(instance);
+    if (!estado.ok || estado.estado !== 'open') {
+      console.log(`[WA-PUB] Usuario ${userId} sin WhatsApp conectado`);
+      return;
+    }
+
+    const fechaStr = formatearFecha(fecha);
+    const horaStr  = hora.slice(0, 5);
+
+    let msg = `🌸 *Turno confirmado*\n\n`;
+    msg += `¡Hola ${nombre}! 👋\n\n`;
+    msg += `Tu turno quedó agendado:\n\n`;
+    msg += `📅 *${fechaStr}*\n`;
+    msg += `🕐 *${horaStr} hs*\n`;
+    if (servicio) msg += `✂️ *${servicio}*\n`;
+    if (duracion) msg += `⏱ *${duracion} minutos*\n`;
+    msg += `\n¡Te esperamos! 🌸\n`;
+    msg += `Si necesitás cancelar o reprogramar, avisanos con tiempo.`;
+
+    const result = await evolution.enviarMensaje(instance, telefono, msg);
+    if (result.ok) {
+      console.log(`[WA-PUB] ✅ Confirmación enviada a ${nombre} (${telefono})`);
+    } else {
+      console.error(`[WA-PUB] ❌ Error:`, result.error);
+    }
+  } catch (err) {
+    console.error(`[WA-PUB] Error general:`, err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WHATSAPP — Reserva con seña pendiente
+// ═══════════════════════════════════════════════════════════
+async function enviarWAReservaPendienteSenia({ userId, telefono, nombre, fecha, hora, servicio, montoSenia, nombreEstetica }) {
+  try {
+    if (!telefono) return;
+
+    const instance = `user_${userId}`;
+    const estado = await evolution.estadoInstancia(instance);
+    if (!estado.ok || estado.estado !== 'open') {
+      console.log(`[WA-PUB] Usuario ${userId} sin WhatsApp conectado`);
+      return;
+    }
+
+    const fechaStr = formatearFecha(fecha);
+    const horaStr  = hora.slice(0, 5);
+
+    let msg = `🌸 *Solicitud recibida*\n\n`;
+    msg += `¡Hola ${nombre}! 👋\n\n`;
+    msg += `Tu solicitud de turno fue recibida:\n\n`;
+    msg += `📅 *${fechaStr}*\n`;
+    msg += `🕐 *${horaStr} hs*\n`;
+    if (servicio) msg += `✂️ *${servicio}*\n`;
+    msg += `\n⚠️ *Tu turno aún NO está confirmado*\n\n`;
+    msg += `Para confirmarlo, necesitás abonar la seña de *$${montoSenia}*.\n\n`;
+    msg += `Respondé este mensaje para coordinar el pago. 💰\n\n`;
+    msg += `Una vez abonada, recibirás la confirmación 🌸`;
+
+    const result = await evolution.enviarMensaje(instance, telefono, msg);
+    if (result.ok) {
+      console.log(`[WA-PUB] ✅ Aviso seña enviado a ${nombre} (${telefono})`);
+    } else {
+      console.error(`[WA-PUB] ❌ Error:`, result.error);
+    }
+  } catch (err) {
+    console.error(`[WA-PUB] Error general:`, err.message);
+  }
+}
 // ═══════════════════════════════════════════════════════════
 // RUTAS ESTÁTICAS (van ANTES de las rutas con :userId)
 // ═══════════════════════════════════════════════════════════
@@ -290,6 +366,29 @@ router.post('/:userId/turno', [
         telefono,
         datos: [turno, estetica],
         fechaEvento: fecha,
+      });
+    }
+        // ── WhatsApp automático a la clienta ──
+    if (seniaRequerida) {
+      enviarWAReservaPendienteSenia({
+        userId,
+        telefono,
+        nombre,
+        fecha,
+        hora,
+        servicio: servicioLabel,
+        montoSenia,
+        nombreEstetica: estetica.nombre_negocio || estetica.nombre,
+      });
+    } else {
+      enviarWAReservaConfirmada({
+        userId,
+        telefono,
+        nombre,
+        fecha,
+        hora,
+        servicio: servicioLabel,
+        duracion,
       });
     }
 
