@@ -945,9 +945,19 @@ function renderCalendario() {
 }
 function capitalizarDia(fechaStr) {
   try {
-    const fecha = new Date(fechaStr + 'T12:00:00');
-    const dia = fecha.toLocaleDateString('es-AR', { weekday: 'long' });
-    return dia.charAt(0).toUpperCase() + dia.slice(1);
+    if (!fechaStr) return '';
+
+    // Normalizar: dejar solo YYYY-MM-DD
+    const soloFecha = String(fechaStr).split('T')[0];
+
+    // Parsear como fecha local (para evitar problemas de zona horaria)
+    const [anio, mes, dia] = soloFecha.split('-').map(Number);
+    const fecha = new Date(anio, mes - 1, dia, 12, 0, 0);
+
+    if (isNaN(fecha.getTime())) return '';
+
+    const nombreDia = fecha.toLocaleDateString('es-AR', { weekday: 'long' });
+    return nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1);
   } catch {
     return '';
   }
