@@ -1076,7 +1076,7 @@ function cardServicioHTML(s) {
       <div class="serv-info">
         <p class="serv-nombre">${escaparHTML(s.nombre)}</p>
         <p class="serv-zona">📍 ${escaparHTML(s.zona || '')}</p>
-        <p class="serv-duracion">⏱ ${s.duracion} min${s.requiere_senia ? ` · 💰 Seña $${s.monto_senia}` : ''}</p>
+        <p class="serv-duracion">⏱ ${s.duracion} min${s.precio ? ` · 💲 $${Number(s.precio).toLocaleString('es-AR')}` : ''}${s.requiere_senia ? ` · 💰 Seña $${s.monto_senia}` : ''}</p>
         ${s.descripcion ? `<p class="serv-desc">${escaparHTML(s.descripcion)}</p>` : ''}
       </div>
       <div class="serv-acciones">
