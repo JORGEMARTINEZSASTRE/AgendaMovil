@@ -33,6 +33,10 @@ const validarServicio = [
   body('duracion')
     .isInt({ min: 5, max: 480 }).withMessage('Duración entre 5 y 480 minutos'),
 
+  body('precio')                                              // ← agregá esto
+  .optional()
+  .isFloat({ min: 0 }).withMessage('El precio debe ser un número positivo'),
+
   body('color')
     .optional()
     .matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Color inválido. Formato: #RRGGBB'),

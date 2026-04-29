@@ -1132,6 +1132,7 @@ function bindFormServicio() {
   if (!form) return;
   form.addEventListener('submit', handleSubmitServicio);
 
+  // Toggle seña
   const toggleSenia = document.getElementById('serv-requiere-senia');
   const montoWrap   = document.getElementById('serv-senia-monto-wrap');
   if (toggleSenia && montoWrap) {
@@ -1158,6 +1159,7 @@ function abrirFormServicio(serv = null) {
 
  if (serv) {
   setVal('serv-nombre',      serv.nombre);
+  setVal('serv-precio',      serv.precio ?? '');   
   setVal('serv-categoria',   serv.categoria || '');
   setVal('serv-zona',        serv.zona);
   setVal('serv-duracion',    serv.duracion);
@@ -1195,6 +1197,7 @@ async function handleSubmitServicio(e) {
   const color       = getVal('serv-color')       || '#A85568';
   const descripcion = getVal('serv-descripcion') || null;
   const categoria = getVal('serv-categoria').trim() || 'Sin categoría';
+  const precio    = parseFloat(getVal('serv-precio')) || 0; 
   // Validaciones
   if (!nombre || !zona || !duracion) {
     mostrarErrorForm('form-servicio-error', 'Completá todos los campos obligatorios');
@@ -1228,6 +1231,7 @@ const payload = {
   descripcion,
   requiere_senia: requiereSenia,
   monto_senia:    montoSenia,
+  precio:           precio,
 };
 
   setBtnLoading('btn-guardar-servicio', true);

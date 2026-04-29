@@ -319,19 +319,19 @@ const Turnos = {
 const Servicios = {
 
   async listar(userId) {
-  const { rows } = await query(
-    `SELECT id, user_id, nombre, zona, duracion,
-            color, descripcion, activo, creado_en,
-            requiere_senia, monto_senia,
-            COALESCE(categoria, 'General') as categoria
-     FROM servicios
-     WHERE user_id = $1
-       AND activo  = true
-     ORDER BY categoria ASC, nombre ASC`,
-    [userId]
-  );
-  return rows;
-},
+    const { rows } = await query(
+      `SELECT id, user_id, nombre, zona, duracion,
+              color, descripcion, activo, creado_en,
+              requiere_senia, monto_senia, precio,
+              COALESCE(categoria, 'General') as categoria
+       FROM servicios
+       WHERE user_id = $1
+         AND activo  = true
+       ORDER BY categoria ASC, nombre ASC`,
+      [userId]
+    );
+    return rows;
+  },
 
   async buscarPorId(id, userId) {
     const { rows } = await query(
@@ -343,90 +343,85 @@ const Servicios = {
   },
 
   async crear(userId, datos) {
-  const {
-    nombre,
-    zona,
-    duracion,
-    color,
-    descripcion,
-    categoria,
-    requiereSenia,
-    montoSenia
-  } = datos;
-
-  const { rows } = await query(
-    `INSERT INTO servicios
-       (
-         user_id,
-         nombre,
-         zona,
-         duracion,
-         color,
-         descripcion,
-         categoria,
-         requiere_senia,
-         monto_senia
-       )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-     RETURNING *`,
-    [
-      userId,
+    const {
       nombre,
       zona,
       duracion,
-      color || '#A85568',
-      descripcion || null,
-      categoria?.trim() || 'General',
-      requiereSenia || false,
-      montoSenia || 0,
-    ]
-  );
+      color,
+      descripcion,
+      categoria,
+      requiereSenia,
+      montoSenia,
+      precio,
+    } = datos;
 
-  return rows[0];
-},
+    const { rows } = await query(
+      `INSERT INTO servicios
+         (user_id, nombre, precio, zona, duracion,
+          color, descripcion, categoria,
+          requiere_senia, monto_senia)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *`,
+      [
+        userId,
+        nombre,
+        precio        || 0,
+        zona,
+        duracion,
+        color         || '#A85568',
+        descripcion   || null,
+        categoria?.trim() || 'General',
+        requiereSenia || false,
+        montoSenia    || 0,
+      ]
+    );
+    return rows[0];
+  },
 
- async actualizar(id, userId, datos) {
-  const {
-    nombre,
-    zona,
-    duracion,
-    color,
-    descripcion,
-    categoria,
-    requiereSenia,
-    montoSenia
-  } = datos;
-
-  const { rows } = await query(
-    `UPDATE servicios SET
-       nombre         = $1,
-       zona           = $2,
-       duracion       = $3,
-       color          = $4,
-       descripcion    = $5,
-       categoria      = $6,
-       requiere_senia = $7,
-       monto_senia    = $8,
-       editado_en     = NOW()
-     WHERE id = $9
-       AND user_id = $10
-     RETURNING *`,
-    [
+  async actualizar(id, userId, datos) {
+    const {
       nombre,
       zona,
       duracion,
-      color || '#A85568',
-      descripcion || null,
-      categoria?.trim() || 'General',
-      requiereSenia || false,
-      montoSenia || 0,
-      id,
-      userId
-    ]
-  );
+      color,
+      descripcion,
+      categoria,
+      requiereSenia,
+      montoSenia,
+      precio,
+    } = datos;
 
-  return rows[0] || null;
-},
+    const { rows } = await query(
+      `UPDATE servicios SET
+         nombre         = $1,
+         zona           = $2,
+         duracion       = $3,
+         color          = $4,
+         descripcion    = $5,
+         categoria      = $6,
+         requiere_senia = $7,
+         monto_senia    = $8,
+         precio         = $9,
+         editado_en     = NOW()
+       WHERE id = $10
+         AND user_id = $11
+       RETURNING *`,
+      [
+        nombre,
+        zona,
+        duracion,
+        color         || '#A85568',
+        descripcion   || null,
+        categoria?.trim() || 'General',
+        requiereSenia || false,
+        montoSenia    || 0,
+        precio        || 0,
+        id,
+        userId,
+      ]
+    );
+    return rows[0] || null;
+  },
 
   async eliminar(id, userId) {
     const { rowCount } = await query(

@@ -27,13 +27,16 @@ async function obtener(req, res) {
 
 async function crear(req, res) {
   try {
-    const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria } = req.body;
-    const servicio = await Servicios.crear(req.user.id, {
-      nombre, zona, duracion, color, descripcion,
-      requiereSenia: !!requiere_senia,
-      montoSenia:    monto_senia || 0,
-      categoria:     (categoria && categoria.trim()) || 'General',
-    });
+   const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria, precio } = req.body;
+
+  const servicio = await Servicios.crear(req.user.id, {
+  nombre, zona, duracion, color, descripcion,
+  precio: parseFloat(precio) || 0,   // ← agregá
+  requiereSenia: !!requiere_senia,
+  montoSenia:    monto_senia || 0,
+  categoria:     (categoria && categoria.trim()) || 'General',
+
+});
     return res.status(201).json({ ok: true, mensaje: 'Servicio creado exitosamente', servicio });
   } catch (err) {
     console.error('[SERVICIOS/crear]', err.message);
@@ -47,13 +50,16 @@ async function actualizar(req, res) {
     if (!existente) {
       return res.status(404).json({ ok: false, error: 'Servicio no encontrado' });
     }
-    const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria } = req.body;
-    const servicio = await Servicios.actualizar(req.params.id, req.user.id, {
-      nombre, zona, duracion, color, descripcion,
-      requiereSenia: !!requiere_senia,
-      montoSenia:    monto_senia || 0,
-      categoria:     (categoria && categoria.trim()) || 'General',
-    });
+    const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria, precio } = req.body;
+
+const servicio = await Servicios.actualizar(req.params.id, req.user.id, {
+  nombre, zona, duracion, color, descripcion,
+  precio: parseFloat(precio) || 0,   // ← agregá
+  requiereSenia: !!requiere_senia,
+  montoSenia:    monto_senia || 0,
+  categoria:     (categoria && categoria.trim()) || 'General',
+  });
+
     return res.json({ ok: true, mensaje: 'Servicio actualizado exitosamente', servicio });
   } catch (err) {
     console.error('[SERVICIOS/actualizar]', err.message);
