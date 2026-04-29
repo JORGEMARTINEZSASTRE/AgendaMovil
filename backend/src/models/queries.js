@@ -366,7 +366,7 @@ const Servicios = {
         userId,
         nombre,
         precio        || 0,
-        zona,
+          zona          || 'Sin zona',
         duracion,
         color         || '#A85568',
         descripcion   || null,
@@ -408,7 +408,7 @@ const Servicios = {
        RETURNING *`,
       [
         nombre,
-        zona,
+          zona          || 'Sin zona',
         duracion,
         color         || '#A85568',
         descripcion   || null,

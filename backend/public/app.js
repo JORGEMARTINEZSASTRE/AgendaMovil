@@ -1199,7 +1199,7 @@ async function handleSubmitServicio(e) {
   const categoria = getVal('serv-categoria').trim() || 'Sin categoría';
   const precio    = parseFloat(getVal('serv-precio')) || 0; 
   // Validaciones
-  if (!nombre || !zona || !duracion) {
+  if (!nombre || !duracion) {
     mostrarErrorForm('form-servicio-error', 'Completá todos los campos obligatorios');
     return;
   }

@@ -25,10 +25,10 @@ const validarServicio = [
     .isLength({ max: 100 }).withMessage('Categoría demasiado larga')
     .trim(),
 
-  body('zona')
-    .notEmpty().withMessage('La zona es requerida')
-    .isLength({ min: 2, max: 255 }).withMessage('Zona entre 2 y 255 caracteres')
-    .trim(),
+ body('zona')
+  .optional()
+  .isLength({ min: 2, max: 255 }).withMessage('Zona entre 2 y 255 caracteres')
+  .trim(),
 
   body('duracion')
     .isInt({ min: 5, max: 480 }).withMessage('Duración entre 5 y 480 minutos'),
