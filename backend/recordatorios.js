@@ -264,22 +264,21 @@ async function procesarRecordatorios() {
     console.error('[DEBUG] Error:', err.message);
   }
   // ── FIN DEBUG ──
-  
+
   // ── 24 horas ──
-  try {
+   try {
     const turnos24h = await getTurnosPendientes24h();
     for (const turno of turnos24h) {
-      try {
-        await enviarEmailRecordatorio(turno, '24h');
-        await enviarWhatsAppAutomatico(turno, '24h');
-        await marcarEnviado24h(turno.id);
-        console.log(`[CRON] ✅ Recordatorio 24h enviado: ${turno.nombre} (${turno.id})`);
-      } catch (err) {
-        console.error(`[CRON] ❌ Error 24h para ${turno.id}:`, err.message);
-      }
-    }
-          await new Promise(r => setTimeout(r, 1500));
+      try { await enviarEmailRecordatorio(turno, '24h'); }
+      catch (err) { console.error(`[CRON] ❌ Email 24h para ${turno.id}:`, err.message); }
 
+      try { await enviarWhatsAppAutomatico(turno, '24h'); }
+      catch (err) { console.error(`[CRON] ❌ WA 24h para ${turno.id}:`, err.message); }
+
+      await marcarEnviado24h(turno.id);
+      console.log(`[CRON] ✅ Recordatorio 24h: ${turno.nombre} (${turno.id})`);
+    }
+    await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
     console.error('[CRON] Error al obtener turnos 24h:', err.message);
   }
@@ -288,17 +287,16 @@ async function procesarRecordatorios() {
   try {
     const turnos2h = await getTurnosPendientes2h();
     for (const turno of turnos2h) {
-      try {
-        await enviarEmailRecordatorio(turno, '2h');
-        await enviarWhatsAppAutomatico(turno, '2h');   // ← CAMBIÓ
-        await marcarEnviado2h(turno.id);
-        console.log(`[CRON] ✅ Recordatorio 2h enviado: ${turno.nombre} (${turno.id})`);
-      } catch (err) {
-        console.error(`[CRON] ❌ Error 2h para ${turno.id}:`, err.message);
-      }
-    }
-          await new Promise(r => setTimeout(r, 1500));
+      try { await enviarEmailRecordatorio(turno, '2h'); }
+      catch (err) { console.error(`[CRON] ❌ Email 2h para ${turno.id}:`, err.message); }
 
+      try { await enviarWhatsAppAutomatico(turno, '2h'); }
+      catch (err) { console.error(`[CRON] ❌ WA 2h para ${turno.id}:`, err.message); }
+
+      await marcarEnviado2h(turno.id);
+      console.log(`[CRON] ✅ Recordatorio 2h: ${turno.nombre} (${turno.id})`);
+    }
+    await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
     console.error('[CRON] Error al obtener turnos 2h:', err.message);
   }
