@@ -243,6 +243,28 @@ async function procesarRecordatorios() {
   const ahora = new Date().toISOString();
   console.log(`[CRON] Verificando recordatorios... ${ahora}`);
 
+    // ── DEBUG TEMPORAL ──
+  try {
+    const { rows } = await query(`
+      SELECT 
+        id, nombre, fecha, hora,
+        (fecha + hora) AS datetime_turno,
+        NOW() AS ahora_db,
+        EXTRACT(EPOCH FROM ((fecha + hora) - NOW())) / 3600 AS horas_hasta_turno,
+        recordatorio_24h_enviado,
+        recordatorio_2h_enviado,
+        estado
+      FROM turnos
+      WHERE estado != 'cancelado'
+      ORDER BY fecha, hora
+      LIMIT 10
+    `);
+    console.log('[DEBUG] Turnos:', JSON.stringify(rows, null, 2));
+  } catch (err) {
+    console.error('[DEBUG] Error:', err.message);
+  }
+  // ── FIN DEBUG ──
+  
   // ── 24 horas ──
   try {
     const turnos24h = await getTurnosPendientes24h();
