@@ -492,3 +492,4 @@ module.exports = {
   enviarModificacionTurno,
   enviarCancelacionTurno,
 };
+procesarRecordatorios().then(() => console.log('[TEST] Ciclo manual OK'));
