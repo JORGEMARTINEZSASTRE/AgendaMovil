@@ -9,7 +9,6 @@ const { validationResult } = require('express-validator');
 function validar(req, res, next) {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
-    console.error('[VALIDACION ERROR]', JSON.stringify(errores.array())); // ← agregá
     return res.status(422).json({
       ok: false,
       error: 'Datos inválidos',
