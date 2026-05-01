@@ -13,6 +13,10 @@ router.use(planActivo);
 
 router.get('/', ctrl.listar);
 
+router.post('/',
+  ctrl.crear
+);
+
 router.get('/:id/horarios',
   [param('id').isUUID().withMessage('ID inválido')],
   validar,

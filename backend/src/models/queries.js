@@ -345,6 +345,16 @@ const Turnos = {
 // ─── SERVICIOS ───────────────────────────────────────────────
 const Sucursales = {
 
+  async crear(userId, { nombre, maxTurnosHora = 1 }) {
+    const { rows } = await query(
+      `INSERT INTO sucursales (user_id, nombre, horarios, max_turnos_hora, activo)
+       VALUES ($1, $2, '[]'::jsonb, $3, true)
+       RETURNING id, user_id, nombre, horarios, max_turnos_hora, activo, created_at`,
+      [userId, nombre, maxTurnosHora]
+    );
+    return rows[0];
+  },
+
   async listar(userId) {
     const { rows } = await query(
       `SELECT id, user_id, nombre, horarios, max_turnos_hora, activo, created_at

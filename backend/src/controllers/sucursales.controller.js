@@ -21,6 +21,26 @@ function normalizarHorarios(horarios) {
     );
 }
 
+async function crear(req, res) {
+  try {
+    const nombre = String(req.body?.nombre || '').trim();
+    const maxTurnosHora = Number(req.body?.max_turnos_hora || 1);
+
+    if (!nombre) {
+      return res.status(422).json({ ok: false, error: 'Nombre de sucursal requerido' });
+    }
+    if (!Number.isInteger(maxTurnosHora) || maxTurnosHora < 1 || maxTurnosHora > 20) {
+      return res.status(422).json({ ok: false, error: 'max_turnos_hora inválido (1-20)' });
+    }
+
+    const sucursal = await Sucursales.crear(req.user.id, { nombre, maxTurnosHora });
+    return res.status(201).json({ ok: true, sucursal });
+  } catch (err) {
+    console.error('[SUCURSALES/crear]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al crear sucursal' });
+  }
+}
+
 async function listar(req, res) {
   try {
     const sucursales = await Sucursales.listar(req.user.id);
@@ -69,6 +89,7 @@ async function guardarHorarios(req, res) {
 }
 
 module.exports = {
+  crear,
   listar,
   obtenerHorarios,
   guardarHorarios,

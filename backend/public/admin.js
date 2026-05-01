@@ -297,6 +297,9 @@ function bindBotones() {
     document.getElementById('modal-nueva-clienta').classList.remove('oculto');
   });
 
+  // Nueva sucursal
+  document.getElementById('btn-nueva-sucursal')?.addEventListener('click', abrirModalNuevaSucursal);
+
   // Cerrar modales
   document.querySelectorAll('.btn-cerrar-modal').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -655,6 +658,85 @@ function normalizarHorariosUI(horarios) {
     .filter(h => Number.isInteger(h.dia) && h.dia >= 0 && h.dia <= 6 && /^\d{2}:\d{2}$/.test(h.desde) && /^\d{2}:\d{2}$/.test(h.hasta));
 }
 
+function abrirModalNuevaSucursal() {
+  const existente = document.getElementById('modal-nueva-sucursal');
+  if (existente) {
+    existente.classList.remove('oculto');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-nueva-sucursal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal">
+      <button class="btn-cerrar-modal" type="button">✕</button>
+      <h3>➕ Nueva sucursal</h3>
+      <form id="form-nueva-sucursal">
+        <div class="campo">
+          <label for="sucursal-nombre">Nombre</label>
+          <input id="sucursal-nombre" type="text" required maxlength="100" placeholder="Ej: Centro">
+        </div>
+        <div class="campo">
+          <label for="sucursal-max-turnos">Máx. turnos por hora</label>
+          <input id="sucursal-max-turnos" type="number" min="1" max="20" value="1" required>
+        </div>
+        <p id="form-sucursal-error" class="form-error oculto"></p>
+        <button class="btn-admin" type="submit">Guardar sucursal</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.btn-cerrar-modal')?.addEventListener('click', () => modal.classList.add('oculto'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('oculto'); });
+  modal.querySelector('#form-nueva-sucursal')?.addEventListener('submit', handleNuevaSucursal);
+}
+
+async function handleNuevaSucursal(e) {
+  e.preventDefault();
+
+  const nombre = document.getElementById('sucursal-nombre')?.value?.trim() || '';
+  const maxTurnosHora = Number(document.getElementById('sucursal-max-turnos')?.value || 1);
+
+  if (!nombre) {
+    mostrarFormError('form-sucursal-error', 'Ingresá un nombre de sucursal');
+    return;
+  }
+  if (!Number.isInteger(maxTurnosHora) || maxTurnosHora < 1 || maxTurnosHora > 20) {
+    mostrarFormError('form-sucursal-error', 'Máx. turnos por hora inválido (1-20)');
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${API_URL}/sucursales`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokenAdmin}`,
+      },
+      body: JSON.stringify({
+        nombre,
+        max_turnos_hora: maxTurnosHora,
+      }),
+    });
+
+    const data = await resp.json();
+    if (!data.ok) {
+      mostrarFormError('form-sucursal-error', data.error || 'No se pudo crear la sucursal');
+      return;
+    }
+
+    const modal = document.getElementById('modal-nueva-sucursal');
+    modal?.classList.add('oculto');
+    document.getElementById('form-nueva-sucursal')?.reset();
+    mostrarToast('✅ Sucursal creada');
+    await cargarSucursalesAdmin();
+  } catch {
+    mostrarFormError('form-sucursal-error', 'Error de conexión');
+  }
+}
+
 async function cargarSucursalesAdmin() {
   const cont = document.getElementById('sucursales-admin');
   if (!cont) return;
@@ -720,7 +802,7 @@ async function precargarHorariosSucursal(sucursalId) {
     const data = await resp.json();
     if (!data.ok) return;
 
-    const horarios = normalizarHorariosUI(data.horarios);
+    const horarios = normalizarHorariosUI(data.sucursal?.horarios);
     horarios.forEach(h => {
       const desde = document.querySelector(`.horario-desde[data-id="${sucursalId}"][data-dia="${h.dia}"]`);
       const hasta = document.querySelector(`.horario-hasta[data-id="${sucursalId}"][data-dia="${h.dia}"]`);
