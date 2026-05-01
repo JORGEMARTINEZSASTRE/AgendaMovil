@@ -299,6 +299,31 @@ const WaAPI = {
 // ═══════════════════════════════════════════════════════════
 //  WHATSAPP CONEXIÓN API
 // ═══════════════════════════════════════════════════════════
+const SucursalesAPI = {
+  async listar() {
+    const data = await fetchAPI('/sucursales');
+    return data?.sucursales ?? [];
+  },
+
+  async crear(payload) {
+    return await fetchAPI('/sucursales', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async obtenerHorarios(id) {
+    return await fetchAPI(`/sucursales/${id}/horarios`);
+  },
+
+  async guardarHorarios(id, horarios) {
+    return await fetchAPI(`/sucursales/${id}/horarios`, {
+      method: 'PUT',
+      body: JSON.stringify({ horarios }),
+    });
+  },
+};
+
 const WhatsAppAPI = {
   async obtenerEstado() {
     return await fetchAPI('/whatsapp/estado');

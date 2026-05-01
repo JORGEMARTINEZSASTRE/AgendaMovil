@@ -1,7 +1,7 @@
-- [x] Revisar archivos actuales del panel admin (HTML/JS/CSS).
-- [x] Definir plan de cambios para módulo de sucursales y horarios.
-- [x] Agregar sección "Sucursales y horarios" en `backend/public/admin.html`.
-- [x] Extender `backend/public/admin.js` para listar sucursales, editar horarios semanales y guardar por API.
-- [x] Corregir bloque duplicado de inicialización en `backend/public/admin.js`.
-- [x] Agregar estilos CSS para el nuevo módulo en `backend/public/admin.css`.
-- [x] Validar flujo funcional básico y dejar guía de prueba desde página.
+# TODO - Sucursales en panel operadora
+
+- [ ] Agregar tab "🏪 Sucursales" y panel en `backend/public/index.html`
+- [ ] Agregar `SucursalesAPI` en `backend/public/api.js`
+- [ ] Implementar lógica UI de sucursales (listar/crear/guardar horarios) en `backend/public/app.js`
+- [ ] Agregar estilos del módulo en `backend/public/styles.css`
+- [ ] Verificación rápida de consistencia (sin testing exhaustivo)

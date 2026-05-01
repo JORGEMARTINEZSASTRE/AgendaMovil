@@ -19,6 +19,7 @@ let editandoId        = null;
 let editandoServId    = null;
 let mesCalendario     = new Date();
 let cargando          = false;
+const DIAS_SEMANA_SUC = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
 // ─── INIT ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -167,6 +168,7 @@ function renderTabActual() {
     case 'calendario': renderCalendario(); break;
     case 'servicios':  renderServicios();  break;
     case 'cumples':    renderCumples();    break;
+    case 'sucursales': renderSucursalesOperadora(); break;
   }
 }
 
@@ -189,6 +191,11 @@ function bindBotonesHeader() {
   const btnNuevoServ = document.getElementById('btn-nuevo-servicio');
   if (btnNuevoServ) {
     btnNuevoServ.addEventListener('click', () => abrirFormServicio());
+  }
+
+  const btnNuevaSucursal = document.getElementById('btn-nueva-sucursal-operadora');
+  if (btnNuevaSucursal) {
+    btnNuevaSucursal.addEventListener('click', abrirModalNuevaSucursalOperadora);
   }
 
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -1775,6 +1782,185 @@ async function cargarWaPendientes() {
   } catch (err) {
     console.error('[wa] cargarWaPendientes:', err.message);
     lista.innerHTML = '<p class="wa-vacio">Error al cargar mensajes</p>';
+  }
+}
+
+function abrirModalNuevaSucursalOperadora() {
+  const existente = document.getElementById('modal-nueva-sucursal-operadora');
+  if (existente) {
+    existente.classList.remove('oculto');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-nueva-sucursal-operadora';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-titulo">➕ Nueva sucursal</h2>
+        <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+      </div>
+      <form id="form-nueva-sucursal-operadora" class="form-modal">
+        <div id="form-sucursal-operadora-error" class="form-error oculto"></div>
+        <div class="campo">
+          <label for="sucursal-operadora-nombre">Nombre</label>
+          <input id="sucursal-operadora-nombre" type="text" maxlength="100" required placeholder="Ej: Centro">
+        </div>
+        <div class="campo">
+          <label for="sucursal-operadora-max">Máx. turnos por hora</label>
+          <input id="sucursal-operadora-max" type="number" min="1" max="20" value="1" required>
+        </div>
+        <button type="submit" class="btn-primario">Guardar sucursal</button>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.btn-cerrar-modal')?.addEventListener('click', () => modal.classList.add('oculto'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('oculto'); });
+  modal.querySelector('#form-nueva-sucursal-operadora')?.addEventListener('submit', handleCrearSucursalOperadora);
+}
+
+async function handleCrearSucursalOperadora(e) {
+  e.preventDefault();
+  const nombre = getVal('sucursal-operadora-nombre').trim();
+  const maxTurnos = Number(getVal('sucursal-operadora-max') || 1);
+
+  if (!nombre) {
+    mostrarErrorForm('form-sucursal-operadora-error', 'Ingresá un nombre');
+    return;
+  }
+
+  if (!Number.isInteger(maxTurnos) || maxTurnos < 1 || maxTurnos > 20) {
+    mostrarErrorForm('form-sucursal-operadora-error', 'Máx. turnos por hora inválido');
+    return;
+  }
+
+  try {
+    const data = await SucursalesAPI.crear({ nombre, max_turnos_hora: maxTurnos });
+    if (!data?.ok) {
+      mostrarErrorForm('form-sucursal-operadora-error', data?.error || 'No se pudo crear');
+      return;
+    }
+    document.getElementById('modal-nueva-sucursal-operadora')?.classList.add('oculto');
+    mostrarToast('Sucursal creada ✅', 'exito');
+    await renderSucursalesOperadora();
+  } catch (err) {
+    mostrarErrorForm('form-sucursal-operadora-error', err.message || 'Error al crear');
+  }
+}
+
+function normalizarHorariosSucursalUI(horarios) {
+  if (!Array.isArray(horarios)) return [];
+  return horarios
+    .map(h => ({
+      dia: Number(h?.dia),
+      desde: String(h?.desde || '').slice(0, 5),
+      hasta: String(h?.hasta || '').slice(0, 5),
+    }))
+    .filter(h =>
+      Number.isInteger(h.dia) &&
+      h.dia >= 0 && h.dia <= 6 &&
+      /^\d{2}:\d{2}$/.test(h.desde) &&
+      /^\d{2}:\d{2}$/.test(h.hasta) &&
+      h.desde < h.hasta
+    );
+}
+
+async function renderSucursalesOperadora() {
+  const cont = document.getElementById('sucursales-operadora-wrap');
+  if (!cont) return;
+
+  cont.innerHTML = `<div class="empty-state"><p class="empty-sub">Cargando sucursales...</p></div>`;
+
+  try {
+    const sucursales = await SucursalesAPI.listar();
+
+    if (!Array.isArray(sucursales) || sucursales.length === 0) {
+      cont.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-icono">🏪</span>
+          <p class="empty-titulo">Sin sucursales</p>
+          <p class="empty-sub">Tocá + para crear tu primera sucursal.</p>
+        </div>`;
+      return;
+    }
+
+    cont.innerHTML = sucursales.map(s => `
+      <div class="sucursal-card" data-id="${s.id}">
+        <div class="sucursal-card-head">
+          <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
+          <button class="btn-primario btn-sucursal-guardar" data-id="${s.id}">💾 Guardar horarios</button>
+        </div>
+        <div class="horarios-grid">
+          ${DIAS_SEMANA_SUC.map((dia, idx) => `
+            <div class="horario-item">
+              <label>${dia}</label>
+              <div class="horario-rango">
+                <input type="time" class="horario-desde" data-id="${s.id}" data-dia="${idx}">
+                <span>a</span>
+                <input type="time" class="horario-hasta" data-id="${s.id}" data-dia="${idx}">
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    for (const s of sucursales) {
+      try {
+        const detalle = await SucursalesAPI.obtenerHorarios(s.id);
+        const horarios = normalizarHorariosSucursalUI(detalle?.sucursal?.horarios);
+        horarios.forEach(h => {
+          const d = document.querySelector(`.horario-desde[data-id="${s.id}"][data-dia="${h.dia}"]`);
+          const hst = document.querySelector(`.horario-hasta[data-id="${s.id}"][data-dia="${h.dia}"]`);
+          if (d) d.value = h.desde;
+          if (hst) hst.value = h.hasta;
+        });
+      } catch {}
+    }
+
+    cont.querySelectorAll('.btn-sucursal-guardar').forEach(btn => {
+      btn.addEventListener('click', () => guardarHorariosSucursalOperadora(btn.dataset.id));
+    });
+
+  } catch (err) {
+    cont.innerHTML = `<div class="empty-state"><p class="empty-sub">Error al cargar sucursales.</p></div>`;
+  }
+}
+
+async function guardarHorariosSucursalOperadora(sucursalId) {
+  const desdes = [...document.querySelectorAll(`.horario-desde[data-id="${sucursalId}"]`)];
+  const horarios = [];
+
+  for (const inputDesde of desdes) {
+    const dia = Number(inputDesde.dataset.dia);
+    const desde = inputDesde.value;
+    const hasta = document.querySelector(`.horario-hasta[data-id="${sucursalId}"][data-dia="${dia}"]`)?.value || '';
+
+    if (!desde && !hasta) continue;
+    if (!desde || !hasta) {
+      mostrarToast('Completá desde/hasta en ambos campos', 'error');
+      return;
+    }
+    if (desde >= hasta) {
+      mostrarToast(`Rango inválido en ${DIAS_SEMANA_SUC[dia]}`, 'error');
+      return;
+    }
+
+    horarios.push({ dia, desde, hasta });
+  }
+
+  try {
+    const data = await SucursalesAPI.guardarHorarios(sucursalId, horarios);
+    if (!data?.ok) {
+      mostrarToast(data?.error || 'No se pudo guardar horarios', 'error');
+      return;
+    }
+    mostrarToast('Horarios guardados ✅', 'exito');
+  } catch (err) {
+    mostrarToast(err.message || 'Error al guardar horarios', 'error');
   }
 }
 
