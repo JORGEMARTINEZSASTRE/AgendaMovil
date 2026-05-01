@@ -20,6 +20,44 @@ const pool = new Pool({
 });
 
 // ─── Helpers ─────────────────────────────────────────────────
+function toMin(hhmm) {
+  const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number);
+  return (h * 60) + m;
+}
+
+function diaSemanaNumero(fechaStr) {
+  const d = new Date(`${fechaStr}T00:00:00`);
+  return d.getDay(); // 0..6
+}
+
+function normalizarHorarios(horarios) {
+  if (!Array.isArray(horarios)) return [];
+  return horarios
+    .map(h => ({
+      dia: Number(h?.dia),
+      desde: String(h?.desde || '').slice(0, 5),
+      hasta: String(h?.hasta || '').slice(0, 5),
+    }))
+    .filter(h =>
+      Number.isInteger(h.dia) &&
+      h.dia >= 0 && h.dia <= 6 &&
+      /^\d{2}:\d{2}$/.test(h.desde) &&
+      /^\d{2}:\d{2}$/.test(h.hasta) &&
+      h.desde < h.hasta
+    );
+}
+
+function estaDentroHorario(horarios, fecha, hora, duracion) {
+  const hs = normalizarHorarios(horarios);
+  if (!hs.length) return true;
+  const dia = diaSemanaNumero(fecha);
+
+  const inicioTurno = toMin(hora);
+  const finTurno = inicioTurno + Number(duracion || 0);
+
+  return hs.some(b => Number(b.dia) === dia && inicioTurno >= toMin(b.desde) && finTurno <= toMin(b.hasta));
+}
+
 function formatearFecha(fechaStr) {
   const [a, m, d] = fechaStr.toString().split('T')[0].split('-');
   const meses = ['enero','febrero','marzo','abril','mayo','junio',
@@ -208,17 +246,52 @@ router.get('/:userId/info', async (req, res) => {
   }
 });
 
+router.get('/:userId/sucursales', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, nombre, horarios
+       FROM sucursales
+       WHERE user_id = $1 AND activo = true
+       ORDER BY created_at DESC`,
+      [req.params.userId]
+    );
+    return res.json({ ok: true, sucursales: rows });
+  } catch (err) {
+    console.error('[PUBLICA/sucursales]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
 // ─── GET /api/publica/:userId/disponibilidad ─────────────────
 router.get('/:userId/disponibilidad', async (req, res) => {
   try {
-    const { fecha } = req.query;
+    const { fecha, sucursal_id } = req.query;
     if (!fecha) return res.status(400).json({ ok: false, error: 'Fecha requerida' });
-    const { rows } = await pool.query(
-      `SELECT hora, duracion FROM turnos
-       WHERE user_id = $1 AND fecha = $2 AND estado != 'cancelado'`,
-      [req.params.userId, fecha]
+    if (!sucursal_id) return res.status(400).json({ ok: false, error: 'Sucursal requerida' });
+
+    const { rows: sucRows } = await pool.query(
+      `SELECT id, horarios
+       FROM sucursales
+       WHERE id = $1 AND user_id = $2 AND activo = true`,
+      [sucursal_id, req.params.userId]
     );
-        return res.json({ ok: true, ocupados: rows });
+    if (!sucRows.length) return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+
+    const horarios = normalizarHorarios(sucRows[0].horarios || []);
+    const dia = diaSemanaNumero(fecha);
+    const bloquesDia = horarios.filter(h => h.dia === dia);
+
+    const { rows } = await pool.query(
+      `SELECT hora, duracion
+       FROM turnos
+       WHERE user_id = $1
+         AND fecha = $2
+         AND estado != 'cancelado'
+         AND sucursal_id = $3`,
+      [req.params.userId, fecha, sucursal_id]
+    );
+
+    return res.json({ ok: true, ocupados: rows, bloques: bloquesDia });
   } catch(err) {
     console.error('[PUBLICA/disponibilidad]', err.message);
     return res.status(500).json({ ok: false, error: 'Error interno' });
@@ -247,6 +320,7 @@ router.post('/:userId/turno', [
   body('fecha').matches(/^\d{4}-\d{2}-\d{2}$/),
   body('hora').matches(/^\d{2}:\d{2}$/),
   body('duracion').isInt({ min: 5, max: 480 }),
+  body('sucursal_id').trim().notEmpty(),
 ], async (req, res) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
@@ -257,7 +331,7 @@ router.post('/:userId/turno', [
     const { userId } = req.params;
     const { nombre, telefono, fecha, hora, duracion,
             servicio_id, servicio_nombre, servicio_zona,
-            servicio_color, notas, email_clienta } = req.body;
+            servicio_color, notas, email_clienta, sucursal_id } = req.body;
 
     // Verificar usuario
     const { rows: usuRows } = await pool.query(
@@ -268,13 +342,35 @@ router.post('/:userId/turno', [
     if (!usuRows.length) return res.status(404).json({ ok: false, error: 'Agenda no encontrada' });
     const estetica = usuRows[0];
 
+    // Validar sucursal y horarios
+    const { rows: sucRows } = await pool.query(
+      `SELECT id, horarios
+       FROM sucursales
+       WHERE id = $1 AND user_id = $2 AND activo = true`,
+      [sucursal_id, userId]
+    );
+    if (!sucRows.length) {
+      return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+    }
+
+    if (!estaDentroHorario(sucRows[0].horarios, fecha, hora, duracion)) {
+      return res.status(409).json({
+        ok: false,
+        error: 'Ese horario está fuera de disponibilidad de la sucursal',
+      });
+    }
+
     // Verificar conflicto
     const horaMin = parseInt(hora.split(':')[0])*60 + parseInt(hora.split(':')[1]);
     const horaFin = horaMin + parseInt(duracion);
     const { rows: ocupados } = await pool.query(
-      `SELECT hora, duracion FROM turnos
-       WHERE user_id = $1 AND fecha = $2 AND estado != 'cancelado'`,
-      [userId, fecha]
+      `SELECT hora, duracion
+       FROM turnos
+       WHERE user_id = $1
+         AND fecha = $2
+         AND estado != 'cancelado'
+         AND sucursal_id = $3`,
+      [userId, fecha, sucursal_id]
     );
     for (const t of ocupados) {
       const tMin = parseInt(t.hora.split(':')[0])*60 + parseInt(t.hora.split(':')[1]);
@@ -307,15 +403,15 @@ router.post('/:userId/turno', [
       `INSERT INTO turnos
          (user_id, nombre, telefono, fecha, hora, duracion,
           servicio_id, servicio_nombre, servicio_zona, servicio_color,
-          notas, estado,
+          notas, estado, sucursal_id,
           senia_requerida, senia_pagada, monto_senia, estado_pago)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING *`,
       [
         userId, nombre, telefono, fecha, hora, duracion,
         servicio_id || null, servicio_nombre || null,
         servicio_zona || null, servicio_color || '#A85568',
-        notas || null, estadoTurno,
+        notas || null, estadoTurno, sucursal_id,
         seniaRequerida, false, montoSenia, estadoPago,
       ]
     );

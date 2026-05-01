@@ -1,7 +1,8 @@
-# TODO - Sucursales en panel operadora
+# TODO - Sucursales reflejadas al agendar (privado + pública)
 
-- [ ] Agregar tab "🏪 Sucursales" y panel en `backend/public/index.html`
-- [ ] Agregar `SucursalesAPI` en `backend/public/api.js`
-- [ ] Implementar lógica UI de sucursales (listar/crear/guardar horarios) en `backend/public/app.js`
-- [ ] Agregar estilos del módulo en `backend/public/styles.css`
-- [ ] Verificación rápida de consistencia (sin testing exhaustivo)
+- [ ] Backend pública: agregar endpoint de sucursales públicas activas del user
+- [ ] Backend pública: filtrar disponibilidad por sucursal + horarios configurados
+- [ ] Backend pública: crear turno con `sucursal_id` validado y conflicto por sucursal
+- [ ] Frontend agenda pública: selector de sucursal + carga + envío de `sucursal_id`
+- [ ] Frontend panel privado: selector de sucursal en modal de turno + integración
+- [ ] Revisión final de consistencia (sin testing profundo)

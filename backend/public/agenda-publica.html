@@ -114,6 +114,14 @@
         <span class="campo-ayuda">Si lo dejás, te mandamos un mail cuando confirmen tu turno.</span>
       </div>
 
+      <!-- Sucursal -->
+      <div class="campo">
+        <label for="pub-sucursal">🏪 Sucursal *</label>
+        <select id="pub-sucursal" required>
+          <option value="">— Elegí sucursal —</option>
+        </select>
+      </div>
+
       <!-- Fecha -->
       <div class="campo">
         <label for="pub-fecha">📅 Fecha *</label>
@@ -152,9 +160,10 @@
 'use strict';
 
 const API_URL = 'https://agendamovil-production.up.railway.app/api';
-let userId    = null;
-let servicios = [];
-let ocupados  = [];
+let userId      = null;
+let servicios   = [];
+let ocupados    = [];
+let sucursales  = [];
 let infoNegocio = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -162,6 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   userId = params.get('u');
   if (!userId) { mostrarError('Link inválido. Pedile el link correcto a tu profesional.'); return; }
   await cargarInfo();
+  await cargarSucursales();
   await cargarServicios();
   bindForm();
 });
@@ -176,6 +186,29 @@ async function cargarInfo() {
     document.getElementById('publica-negocio').textContent = negocio;
     document.title = `🌸 Reservar turno — ${negocio}`;
   } catch { mostrarError('No se pudo conectar. Intentá más tarde.'); }
+}
+
+async function cargarSucursales() {
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/sucursales`);
+    const data = await resp.json();
+    if (!data.ok) return;
+
+    sucursales = Array.isArray(data.sucursales) ? data.sucursales : [];
+    const select = document.getElementById('pub-sucursal');
+    select.innerHTML = '<option value="">— Elegí sucursal —</option>';
+
+    sucursales.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nombre;
+      select.appendChild(opt);
+    });
+
+    if (sucursales.length === 1) {
+      select.value = sucursales[0].id;
+    }
+  } catch {}
 }
 
 async function cargarServicios() {
@@ -216,8 +249,14 @@ function bindForm() {
     if (fecha) cargarHorarios(fecha);
   });
 
+  document.getElementById('pub-sucursal').addEventListener('change', function() {
+    const fecha = document.getElementById('pub-fecha').value;
+    if (fecha && this.value) cargarHorarios(fecha);
+  });
+
   document.getElementById('pub-fecha').addEventListener('change', function() {
-    if (this.value) cargarHorarios(this.value);
+    const sucursalId = document.getElementById('pub-sucursal').value;
+    if (this.value && sucursalId) cargarHorarios(this.value);
   });
 
   document.getElementById('pub-fecha').min = new Date().toISOString().split('T')[0];
@@ -227,29 +266,56 @@ function bindForm() {
 async function cargarHorarios(fecha) {
   const selectHora = document.getElementById('pub-hora');
   selectHora.innerHTML = '<option value="">Cargando...</option>';
+  const sucursalId = document.getElementById('pub-sucursal').value;
+  if (!sucursalId) {
+    selectHora.innerHTML = '<option value="">— Primero elegí sucursal —</option>';
+    return;
+  }
+
+  let bloques = [];
   try {
-    const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${fecha}`);
+    const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`);
     const data = await resp.json();
     ocupados = data.ok ? data.ocupados : [];
-  } catch { ocupados = []; }
+    bloques = data.ok ? (data.bloques || []) : [];
+  } catch {
+    ocupados = [];
+    bloques = [];
+  }
 
   const duracion = parseInt(document.getElementById('pub-duracion').value) || 30;
   selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
 
-  for (let m = 7 * 60; m <= 20 * 60; m += 15) {
-    const hora    = minutosAHora(m);
-    const horaFin = m + duracion;
-    if (horaFin > 20 * 60) continue;
-    const ocupado = ocupados.some(t => {
-      const tMin = horaAMinutos(t.hora.slice(0,5));
-      return m < tMin + parseInt(t.duracion) && horaFin > tMin;
-    });
+  if (!bloques.length) {
     const opt = document.createElement('option');
-    opt.value       = hora;
-    opt.textContent = ocupado ? `${hora} — Ocupado` : `${hora} — Disponible`;
-    opt.disabled    = ocupado;
-    if (ocupado) opt.style.color = '#B09590';
+    opt.value = '';
+    opt.textContent = '— Sin horarios disponibles en esta sucursal para ese día —';
+    opt.disabled = true;
     selectHora.appendChild(opt);
+    return;
+  }
+
+  for (const b of bloques) {
+    const inicio = horaAMinutos(String(b.desde).slice(0, 5));
+    const finBloque = horaAMinutos(String(b.hasta).slice(0, 5));
+
+    for (let m = inicio; m <= finBloque; m += 15) {
+      const hora    = minutosAHora(m);
+      const horaFin = m + duracion;
+      if (horaFin > finBloque) continue;
+
+      const ocupado = ocupados.some(t => {
+        const tMin = horaAMinutos(t.hora.slice(0, 5));
+        return m < tMin + parseInt(t.duracion) && horaFin > tMin;
+      });
+
+      const opt = document.createElement('option');
+      opt.value       = hora;
+      opt.textContent = ocupado ? `${hora} — Ocupado` : `${hora} — Disponible`;
+      opt.disabled    = ocupado;
+      if (ocupado) opt.style.color = '#B09590';
+      selectHora.appendChild(opt);
+    }
   }
 }
 
@@ -260,6 +326,7 @@ async function handleSubmit(e) {
   const telefono = document.getElementById('pub-telefono').value.trim();
   const codigoPais = document.getElementById('codigo-pais').value;
 
+  const sucursalId = document.getElementById('pub-sucursal').value;
   const fecha    = document.getElementById('pub-fecha').value;
   const hora     = document.getElementById('pub-hora').value;
   const duracion = parseInt(document.getElementById('pub-duracion').value) || 30;
@@ -285,6 +352,7 @@ async function handleSubmit(e) {
     mostrarFormError('Número inválido'); 
     return; 
   }
+  if (!sucursalId) { mostrarFormError('La sucursal es requerida'); return; }
   if (!fecha)    { mostrarFormError('La fecha es requerida');    return; }
   if (!hora)     { mostrarFormError('El horario es requerido');  return; }
 
@@ -307,6 +375,7 @@ async function handleSubmit(e) {
         servicio_nombre: serv?.nombre || null,
         servicio_zona:   serv?.zona   || null,
         servicio_color:  serv?.color  || '#A85568',
+        sucursal_id:     sucursalId,
       }),
     });
 
