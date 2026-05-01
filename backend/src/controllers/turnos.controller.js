@@ -203,7 +203,20 @@ async function crear(req, res) {
 //  PUT /api/turnos/:id
 // ════════════════════════════════════════════════════════════
 async function actualizar(req, res) {
-  const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
+  try {
+    const {
+      servicio_id,     nombre,        telefono,
+      servicio_nombre, servicio_zona, servicio_color,
+      duracion,        fecha,         hora,
+      notas,           cumple_dia,    cumple_mes,
+      estado,          sucursal_id,
+    } = req.body;
+
+    const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
+    if (!existente) {
+      return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
+    }
+      const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
 
 console.log('[DEBUG actualizar]', {
   body_fecha:    fecha,
@@ -221,19 +234,6 @@ console.log('[DEBUG actualizar]', {
     sucursal: sucursal_id !== undefined && sucursal_id      !== existente?.sucursal_id,
   }
 });
-  try {
-    const {
-      servicio_id,     nombre,        telefono,
-      servicio_nombre, servicio_zona, servicio_color,
-      duracion,        fecha,         hora,
-      notas,           cumple_dia,    cumple_mes,
-      estado,          sucursal_id,
-    } = req.body;
-
-    const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
-    if (!existente) {
-      return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
-    }
 
     const sucursalObjetivo = sucursal_id ?? existente.sucursal_id ?? null;
 
