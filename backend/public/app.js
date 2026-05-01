@@ -1994,7 +1994,7 @@ async function guardarHorariosSucursalOperadora(sucursalId) {
       return;
     }
 
-    horarios.push({ dia, desde, hasta });
+    horarios.push({ dia, desde, hasta, activo: true });
   }
 
   try {
