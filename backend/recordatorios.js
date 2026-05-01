@@ -24,9 +24,11 @@ ALTER TABLE turnos
 // ─── QUERIES ─────────────────────────────────────────────────
 async function getTurnosPendientes24h() {
   const { rows } = await query(`
-    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio
+    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio,
+           s.nombre AS sucursal_nombre
     FROM turnos t
     JOIN usuarios u ON u.id = t.user_id
+    LEFT JOIN sucursales s ON s.id = t.sucursal_id
     WHERE t.estado != 'cancelado'
       AND t.recordatorio_24h_enviado = FALSE
       AND (t.fecha + t.hora) BETWEEN (NOW() + INTERVAL '23 hours 50 minutes')
@@ -35,11 +37,14 @@ async function getTurnosPendientes24h() {
   return rows;
 }
 
+
 async function getTurnosPendientes2h() {
   const { rows } = await query(`
-    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio
+    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio,
+           s.nombre AS sucursal_nombre
     FROM turnos t
     JOIN usuarios u ON u.id = t.user_id
+    LEFT JOIN sucursales s ON s.id = t.sucursal_id
     WHERE t.estado != 'cancelado'
       AND t.recordatorio_2h_enviado = FALSE
       AND (t.fecha + t.hora) BETWEEN (NOW() + INTERVAL '1 hour 50 minutes')
@@ -47,7 +52,6 @@ async function getTurnosPendientes2h() {
   `);
   return rows;
 }
-
 async function marcarEnviado24h(id) {
   await query(
     `UPDATE turnos SET recordatorio_24h_enviado = TRUE WHERE id = $1`,
