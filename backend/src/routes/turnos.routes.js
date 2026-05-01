@@ -52,6 +52,47 @@ const validarTurno = [
     .isInt({ min: 1, max: 12 }).withMessage('Mes de cumpleaños inválido'),
 ];
 
+const validarTurnoActualizar = [
+  body('nombre')
+    .optional()
+    .isLength({ min: 2, max: 255 }).withMessage('Nombre entre 2 y 255 caracteres')
+    .trim(),
+  body('telefono')
+    .optional()
+    .isLength({ min: 6, max: 50 }).withMessage('Teléfono inválido')
+    .trim(),
+  body('duracion')
+    .optional()
+    .isInt({ min: 5, max: 480 }).withMessage('Duración entre 5 y 480 minutos'),
+  body('fecha')
+    .optional()
+    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Fecha inválida. Formato: YYYY-MM-DD'),
+  body('hora')
+    .optional()
+    .matches(/^\d{2}:\d{2}(:\d{2})?$/).withMessage('Hora inválida. Formato: HH:MM'),
+  body('servicio_nombre')
+    .optional()
+    .isLength({ max: 255 }).withMessage('Nombre de servicio muy largo')
+    .trim(),
+  body('servicio_zona')
+    .optional()
+    .isLength({ max: 255 }).withMessage('Zona muy larga')
+    .trim(),
+  body('servicio_color')
+    .optional()
+    .matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Color inválido. Formato: #RRGGBB'),
+  body('notas')
+    .optional()
+    .isLength({ max: 1000 }).withMessage('Notas muy largas')
+    .trim(),
+  body('cumple_dia')
+    .optional({ nullable: true })
+    .isInt({ min: 1, max: 31 }).withMessage('Día de cumpleaños inválido'),
+  body('cumple_mes')
+    .optional({ nullable: true })
+    .isInt({ min: 1, max: 12 }).withMessage('Mes de cumpleaños inválido'),
+];
+
 const validarId = [
   param('id')
     .isUUID().withMessage('ID inválido'),
@@ -82,7 +123,7 @@ router.post('/',
 // PUT /api/turnos/:id
 router.put('/:id',
   validarId,
-  validarTurno,
+  validarTurnoActualizar,
   validar,
   ctrl.actualizar
 );
