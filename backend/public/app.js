@@ -6,9 +6,10 @@
 // ═══════════════════════════════════════════════════════════
 
 // ─── ESTADO EN MEMORIA ───────────────────────────────────────
-let turnos    = [];
-let servicios = [];
-let config    = {
+let turnos      = [];
+let servicios   = [];
+let sucursales  = [];
+let config      = {
   plantilla_turno:  '',
   plantilla_cumple: '',
 };
@@ -58,14 +59,16 @@ function limpiarDatosEnMemoria() {
 async function cargarDatosIniciales() {
   mostrarCargando(true);
   try {
-    const [turnosData, serviciosData, configData] = await Promise.all([
-      apiCall(() => TurnosAPI.getAll(),    'Error al cargar turnos'),
-      apiCall(() => ServiciosAPI.getAll(), 'Error al cargar servicios'),
-      apiCall(() => ConfigAPI.get(),       'Error al cargar configuración'),
+    const [turnosData, serviciosData, configData, sucursalesData] = await Promise.all([
+      apiCall(() => TurnosAPI.getAll(),      'Error al cargar turnos'),
+      apiCall(() => ServiciosAPI.getAll(),   'Error al cargar servicios'),
+      apiCall(() => ConfigAPI.get(),         'Error al cargar configuración'),
+      apiCall(() => SucursalesAPI.listar(),  'Error al cargar sucursales'),
     ]);
 
-    turnos    = turnosData    || [];
-    servicios = serviciosData || [];
+    turnos     = turnosData     || [];
+    servicios  = serviciosData  || [];
+    sucursales = sucursalesData || [];
 
     if (configData) {
       config.plantilla_turno  = configData.plantilla_turno;
@@ -534,11 +537,20 @@ function bindFormTurno() {
     });
   }
 
+  const selectSucursal = document.getElementById('turno-sucursal-id');
+  if (selectSucursal) {
+    selectSucursal.addEventListener('change', () => {
+      const fecha = getVal('turno-fecha');
+      if (fecha && selectSucursal.value) cargarHorariosDisponibles(fecha);
+    });
+  }
+
   // Al cambiar fecha: cargar horarios disponibles
   const inputFecha = document.getElementById('turno-fecha');
   if (inputFecha) {
     inputFecha.addEventListener('change', () => {
-      if (inputFecha.value) cargarHorariosDisponibles(inputFecha.value);
+      const sucId = getVal('turno-sucursal-id');
+      if (inputFecha.value && sucId) cargarHorariosDisponibles(inputFecha.value);
     });
   }
 
@@ -562,6 +574,17 @@ function abrirFormTurno(turno = null) {
 
   if (titulo)    titulo.textContent     = turno ? '✏️ Editar turno'   : '➕ Nuevo turno';
   if (btnGuardar) btnGuardar.textContent = turno ? 'Guardar cambios'   : 'Guardar turno';
+
+  // Poblar selector de sucursales
+  const selectSucursal = document.getElementById('turno-sucursal-id');
+  if (selectSucursal) {
+    selectSucursal.innerHTML = '<option value="">— Elegí sucursal —</option>' +
+      (sucursales || []).map(s => `
+        <option value="${s.id}" ${String(turno?.sucursal_id || '') === String(s.id) ? 'selected' : ''}>
+          ${escaparHTML(s.nombre || 'Sucursal')}
+        </option>
+      `).join('');
+  }
 
   // Poblar selector de servicios (con indicador de seña)
   const selectServ = document.getElementById('turno-servicio-id');
@@ -606,7 +629,9 @@ function abrirFormTurno(turno = null) {
     setVal('turno-cumple-mes',     turno.cumple_mes      || '');
 
     // Cargar horarios disponibles y seleccionar el del turno
-    cargarHorariosDisponibles(turno.fecha, formatearHora(turno.hora));
+    if (getVal('turno-sucursal-id')) {
+      cargarHorariosDisponibles(turno.fecha, formatearHora(turno.hora));
+    }
 
     // Disparar el change del servicio para mostrar aviso de seña si aplica
     if (turno.servicio_id && selectServ) {
@@ -618,8 +643,15 @@ function abrirFormTurno(turno = null) {
     setVal('turno-servicio-color', '#A85568');
     setVal('turno-codigo-pais',    '598');
 
+    // Si hay una sola sucursal, seleccionarla por defecto
+    if (!turno && (sucursales || []).length === 1) {
+      setVal('turno-sucursal-id', sucursales[0].id);
+    }
+
     // Cargar horarios de la fecha seleccionada
-    if (fechaSeleccionada) cargarHorariosDisponibles(fechaSeleccionada);
+    if (fechaSeleccionada && getVal('turno-sucursal-id')) {
+      cargarHorariosDisponibles(fechaSeleccionada);
+    }
   }
 
   modal?.classList.remove('oculto');
@@ -640,6 +672,12 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
 
   selectHora.innerHTML = '<option value="">Cargando...</option>';
 
+  const sucursalId = getVal('turno-sucursal-id');
+  if (!sucursalId) {
+    selectHora.innerHTML = '<option value="">— Primero elegí sucursal —</option>';
+    return;
+  }
+
   // Traer los turnos del día
   let ocupados = [];
   try {
@@ -647,7 +685,8 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
     ocupados = (turnosDelDia || []).filter(t => {
       // Si estoy editando, excluir el propio turno
       if (editandoId && t.id === editandoId) return false;
-      return t.estado !== 'cancelado';
+      if (t.estado === 'cancelado') return false;
+      return String(t.sucursal_id || '') === String(sucursalId);
     });
   } catch (err) {
     console.warn('[horarios] error cargando turnos del día:', err.message);
@@ -682,6 +721,7 @@ async function handleSubmitTurno(e) {
   e.preventDefault();
 
   const nombre         = getVal('turno-nombre').trim();
+  const sucursalId     = getVal('turno-sucursal-id');
   const telefonoRaw    = getVal('turno-telefono').trim();
   const codigoPais     = getVal('turno-codigo-pais') || '598';
   const email          = getVal('turno-email').trim()  || null;
@@ -705,7 +745,7 @@ async function handleSubmitTurno(e) {
   const servicioNombre = servicio?.nombre || null;
 
   // Validaciones frontend
-  if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion) {
+  if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion || !sucursalId) {
     mostrarErrorForm('form-turno-error', 'Completá todos los campos obligatorios');
     return;
   }
@@ -747,6 +787,7 @@ async function handleSubmitTurno(e) {
     notas,
     cumple_dia:      cumpleDia,
     cumple_mes:      cumpleMes,
+    sucursal_id:     sucursalId,
   };
 
   setBtnLoading('btn-guardar-turno', true);
