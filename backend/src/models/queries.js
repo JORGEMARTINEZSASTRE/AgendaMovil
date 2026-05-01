@@ -145,15 +145,18 @@ const Turnos = {
 
   async listar(userId, filtros = {}) {
     let sql = `
-      SELECT id, user_id, servicio_id,
-             nombre, telefono,
-             servicio_nombre, servicio_zona, servicio_color,
-             duracion, fecha, hora, notas,
-             cumple_dia, cumple_mes,
-             estado, creado_en, editado_en
-      FROM turnos
-      WHERE user_id = $1
-        AND estado != 'cancelado'
+      SELECT t.id, t.user_id, t.servicio_id,
+             t.nombre, t.telefono,
+             t.servicio_nombre, t.servicio_zona, t.servicio_color,
+             t.duracion, t.fecha, t.hora, t.notas,
+             t.cumple_dia, t.cumple_mes,
+             t.estado, t.creado_en, t.editado_en,
+             t.sucursal_id,
+             s.nombre AS sucursal_nombre
+      FROM turnos t
+      LEFT JOIN sucursales s ON s.id = t.sucursal_id
+      WHERE t.user_id = $1
+        AND t.estado != 'cancelado'
     `;
     const params = [userId];
     let idx = 2;
@@ -179,8 +182,11 @@ const Turnos = {
 
   async buscarPorId(id, userId) {
     const { rows } = await query(
-      `SELECT * FROM turnos
-       WHERE id = $1 AND user_id = $2`,
+      `SELECT t.*,
+              s.nombre AS sucursal_nombre
+       FROM turnos t
+       LEFT JOIN sucursales s ON s.id = t.sucursal_id
+       WHERE t.id = $1 AND t.user_id = $2`,
       [id, userId]
     );
     return rows[0] || null;

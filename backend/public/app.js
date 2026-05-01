@@ -456,6 +456,7 @@ function cardTurno(t) {
             ✂️ ${escaparHTML(t.servicio_nombre)}
             ${t.servicio_zona ? `· ${escaparHTML(t.servicio_zona)}` : ''}
           </p>` : ''}
+        ${t.sucursal_nombre ? `<p class="turno-duracion">🏪 ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
         <p class="turno-duracion">⏱ ${t.duracion} min</p>
         ${t.notas ? `<p class="turno-notas">📝 ${escaparHTML(t.notas)}</p>` : ''}
         ${t.senia_requerida ? `
@@ -1046,6 +1047,9 @@ function renderTimelineMes(anio, mes) {
           <span class="timeline-nombre">${escaparHTML(t.nombre)}</span>
           ${t.servicio_nombre
             ? `<span class="timeline-serv">${escaparHTML(t.servicio_nombre)}</span>`
+            : ''}
+          ${t.sucursal_nombre
+            ? `<span class="timeline-serv">🏪 ${escaparHTML(t.sucursal_nombre)}</span>`
             : ''}
         </div>`).join('')}
     </div>`).join('');

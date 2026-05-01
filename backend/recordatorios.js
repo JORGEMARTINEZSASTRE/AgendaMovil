@@ -188,6 +188,9 @@ function mensajeWhatsApp(turno, tipo) {
   msg += `Te recordamos que tu turno es en *${etiqueta}*:\n\n`;
   msg += `📅 *${fecha}*\n`;
   msg += `🕐 *${hora} hs*\n`;
+  if (turno.sucursal_nombre) {
+    msg += `🏪 *${turno.sucursal_nombre}*\n`;
+  }
   if (turno.servicio_nombre) {
     msg += `✂️ *${turno.servicio_nombre}`;
     if (turno.servicio_zona) msg += ` · ${turno.servicio_zona}`;
@@ -326,6 +329,9 @@ function mensajeConfirmacion(turno) {
   msg += `Tu turno quedó agendado para:\n\n`;
   msg += `📅 *${fecha}*\n`;
   msg += `🕐 *${hora} hs*\n`;
+  if (turno.sucursal_nombre) {
+    msg += `🏪 *${turno.sucursal_nombre}*\n`;
+  }
   if (turno.servicio_nombre) {
     msg += `✂️ *${turno.servicio_nombre}`;
     if (turno.servicio_zona) msg += ` · ${turno.servicio_zona}`;
@@ -389,6 +395,7 @@ async function enviarConfirmacionSenia(turno) {
     msg += `Tu seña fue confirmada. Tu turno queda *CONFIRMADO* ✅\n\n`;
     msg += `📅 *${fecha}*\n`;
     msg += `🕐 *${hora} hs*\n`;
+    if (turno.sucursal_nombre) msg += `🏪 *${turno.sucursal_nombre}*\n`;
     if (turno.servicio_nombre) msg += `✂️ *${turno.servicio_nombre}*\n`;
     msg += `⏱ *${turno.duracion} minutos*\n\n`;
     msg += `¡Te esperamos! 🌸`;
@@ -428,6 +435,7 @@ async function enviarModificacionTurno(turno) {
     msg += `Tu turno fue modificado. Los nuevos datos son:\n\n`;
     msg += `📅 *${fecha}*\n`;
     msg += `🕐 *${hora} hs*\n`;
+    if (turno.sucursal_nombre) msg += `🏪 *${turno.sucursal_nombre}*\n`;
     if (turno.servicio_nombre) msg += `✂️ *${turno.servicio_nombre}*\n`;
     msg += `⏱ *${turno.duracion} minutos*\n\n`;
     msg += `Si tenés alguna duda, respondé este mensaje. 🌸`;
@@ -467,6 +475,7 @@ async function enviarCancelacionTurno(turno) {
     msg += `Te informamos que tu turno fue cancelado:\n\n`;
     msg += `📅 ~${fecha}~\n`;
     msg += `🕐 ~${hora} hs~\n`;
+    if (turno.sucursal_nombre) msg += `🏪 ~${turno.sucursal_nombre}~\n`;
     if (turno.servicio_nombre) msg += `✂️ ~${turno.servicio_nombre}~\n`;
     msg += `\nSi querés reprogramar, contactanos. ¡Gracias! 🌸`;
 
