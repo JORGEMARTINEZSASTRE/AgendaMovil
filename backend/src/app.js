@@ -14,6 +14,7 @@ const publicaRoutes   = require('./routes/publica.routes');
 const seniaRoutes = require('./routes/senia.routes');
 const waRoutes = require('./routes/wa.routes');
 const whatsappRoutes = require('./routes/whatsapp.routes');
+const sucursalesRoutes = require('./routes/sucursales.routes');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/publica',   publicaRoutes);
 app.use('/api/senia', seniaRoutes);
 app.use('/api/wa', waRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/sucursales', sucursalesRoutes);
 
 
 

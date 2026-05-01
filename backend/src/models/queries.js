@@ -316,6 +316,51 @@ const Turnos = {
 };
 
 // ─── SERVICIOS ───────────────────────────────────────────────
+const Sucursales = {
+
+  async listar(userId) {
+    const { rows } = await query(
+      `SELECT id, user_id, nombre, horarios, max_turnos_hora, activo, created_at
+       FROM sucursales
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+    return rows;
+  },
+
+  async buscarPorId(id, userId) {
+    const { rows } = await query(
+      `SELECT id, user_id, nombre, horarios, max_turnos_hora, activo, created_at
+       FROM sucursales
+       WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+    return rows[0] || null;
+  },
+
+  async obtenerHorarios(id, userId) {
+    const { rows } = await query(
+      `SELECT id, nombre, horarios
+       FROM sucursales
+       WHERE id = $1 AND user_id = $2 AND activo = true`,
+      [id, userId]
+    );
+    return rows[0] || null;
+  },
+
+  async guardarHorarios(id, userId, horarios) {
+    const { rows } = await query(
+      `UPDATE sucursales
+       SET horarios = $1::jsonb
+       WHERE id = $2 AND user_id = $3
+       RETURNING id, nombre, horarios`,
+      [JSON.stringify(horarios || []), id, userId]
+    );
+    return rows[0] || null;
+  },
+};
+
 const Servicios = {
 
   async listar(userId) {
@@ -650,5 +695,6 @@ module.exports = {
   LoginIntentos,
   crearUsuarioAutoRegistro,
   buscarUsuarioPorEmail,
-  WaPendientes 
+  WaPendientes,
+  Sucursales
 };
