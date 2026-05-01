@@ -24,7 +24,7 @@ ALTER TABLE turnos
 // ─── QUERIES ─────────────────────────────────────────────────
 async function getTurnosPendientes24h() {
   const { rows } = await query(`
-    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre
+    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio
     FROM turnos t
     JOIN usuarios u ON u.id = t.user_id
     WHERE t.estado != 'cancelado'
@@ -37,7 +37,7 @@ async function getTurnosPendientes24h() {
 
 async function getTurnosPendientes2h() {
   const { rows } = await query(`
-    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre
+    SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio
     FROM turnos t
     JOIN usuarios u ON u.id = t.user_id
     WHERE t.estado != 'cancelado'
@@ -181,8 +181,9 @@ function mensajeWhatsApp(turno, tipo) {
   const etiqueta = tipo === '24h' ? '24 horas' : '2 horas';
   const fecha    = formatearFecha(turno.fecha);
   const hora     = formatearHora(turno.hora);
+  const negocio  = turno.nombre_negocio || 'Tu estética';
 
-  let msg = `🌸 *AGENDAMOVIL PRO*\n\n`;
+  let msg = `🌸 *${negocio}*\n\n`;
   msg += `Hola ${turno.nombre}! 👋\n`;
   msg += `Te recordamos que tu turno es en *${etiqueta}*:\n\n`;
   msg += `📅 *${fecha}*\n`;
@@ -242,28 +243,6 @@ async function enviarWhatsAppAutomatico(turno, tipo) {
 async function procesarRecordatorios() {
   const ahora = new Date().toISOString();
   console.log(`[CRON] Verificando recordatorios... ${ahora}`);
-
-    // ── DEBUG TEMPORAL ──
-  try {
-    const { rows } = await query(`
-      SELECT 
-        id, nombre, fecha, hora,
-        (fecha + hora) AS datetime_turno,
-        NOW() AS ahora_db,
-        EXTRACT(EPOCH FROM ((fecha + hora) - NOW())) / 3600 AS horas_hasta_turno,
-        recordatorio_24h_enviado,
-        recordatorio_2h_enviado,
-        estado
-      FROM turnos
-      WHERE estado != 'cancelado'
-      ORDER BY fecha, hora
-      LIMIT 10
-    `);
-    console.log('[DEBUG] Turnos:', JSON.stringify(rows, null, 2));
-  } catch (err) {
-    console.error('[DEBUG] Error:', err.message);
-  }
-  // ── FIN DEBUG ──
 
   // ── 24 horas ──
    try {
