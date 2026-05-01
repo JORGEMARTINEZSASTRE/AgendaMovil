@@ -191,7 +191,7 @@ const Turnos = {
       servicioId, nombre, telefono,
       servicioNombre, servicioZona, servicioColor,
       duracion, fecha, hora, notas,
-      cumpleDia, cumpleMes,
+      cumpleDia, cumpleMes, sucursalId,
     } = datos;
 
     const { rows } = await query(
@@ -199,8 +199,8 @@ const Turnos = {
          (user_id, servicio_id, nombre, telefono,
           servicio_nombre, servicio_zona, servicio_color,
           duracion, fecha, hora, notas,
-          cumple_dia, cumple_mes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          cumple_dia, cumple_mes, sucursal_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         userId,
@@ -216,6 +216,7 @@ const Turnos = {
         notas          || null,
         cumpleDia      || null,
         cumpleMes      || null,
+        sucursalId     || null,
       ]
     );
     return rows[0];
@@ -226,7 +227,7 @@ const Turnos = {
       servicioId, nombre, telefono,
       servicioNombre, servicioZona, servicioColor,
       duracion, fecha, hora, notas,
-      cumpleDia, cumpleMes, estado,
+      cumpleDia, cumpleMes, estado, sucursalId,
     } = datos;
 
     const { rows } = await query(
@@ -244,8 +245,9 @@ const Turnos = {
          cumple_dia      = $11,
          cumple_mes      = $12,
          estado          = COALESCE($13, estado),
+         sucursal_id     = COALESCE($14, sucursal_id),
          editado_en      = NOW()
-       WHERE id = $14 AND user_id = $15
+       WHERE id = $15 AND user_id = $16
        RETURNING *`,
       [
         servicioId     || null,
@@ -261,6 +263,7 @@ const Turnos = {
         cumpleDia      || null,
         cumpleMes      || null,
         estado         || null,
+        sucursalId     || null,
         id,
         userId,
       ]
@@ -307,6 +310,30 @@ const Turnos = {
 
     if (excludeId) {
       sql += ` AND id != $5`;
+      params.push(excludeId);
+    }
+
+    const { rows } = await query(sql, params);
+    return rows;
+  },
+
+  async verificarConflictoPorSucursal(userId, sucursalId, fecha, hora, duracion, excludeId = null) {
+    let sql = `
+      SELECT id, nombre, hora, duracion
+      FROM turnos
+      WHERE user_id = $1
+        AND sucursal_id = $2
+        AND fecha = $3
+        AND estado != 'cancelado'
+        AND (
+          hora < ($4::time + ($5 || ' minutes')::interval)
+          AND (hora + (duracion || ' minutes')::interval) > $4::time
+        )
+    `;
+    const params = [userId, sucursalId, fecha, hora, duracion];
+
+    if (excludeId) {
+      sql += ` AND id != $6`;
       params.push(excludeId);
     }
 

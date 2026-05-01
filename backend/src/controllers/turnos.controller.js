@@ -1,6 +1,6 @@
 'use strict';
 
-const { Turnos } = require('../models/queries');
+const { Turnos, Sucursales } = require('../models/queries');
 const { 
   enviarConfirmacionTurno,
   enviarModificacionTurno,
@@ -90,6 +90,32 @@ async function obtener(req, res) {
 // ════════════════════════════════════════════════════════════
 //  POST /api/turnos
 // ════════════════════════════════════════════════════════════
+function toMin(hhmm) {
+  const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number);
+  return (h * 60) + m;
+}
+
+function diaSemanaNumero(fechaStr) {
+  const d = new Date(`${fechaStr}T00:00:00`);
+  return d.getDay(); // 0 domingo .. 6 sábado
+}
+
+function estaDentroHorario(horarios, fecha, hora, duracion) {
+  if (!Array.isArray(horarios) || horarios.length === 0) return true;
+
+  const dia = diaSemanaNumero(fecha);
+  const bloque = horarios.find(h => Number(h.dia) === dia && h.activo);
+
+  if (!bloque) return false;
+
+  const inicioTurno = toMin(hora);
+  const finTurno = inicioTurno + Number(duracion || 0);
+  const inicioBloque = toMin(bloque.desde);
+  const finBloque = toMin(bloque.hasta);
+
+  return inicioTurno >= inicioBloque && finTurno <= finBloque;
+}
+
 async function crear(req, res) {
   try {
     const {
@@ -97,12 +123,28 @@ async function crear(req, res) {
       servicio_nombre, servicio_zona, servicio_color,
       duracion,       fecha,          hora,
       notas,          cumple_dia,     cumple_mes,
+      sucursal_id,
     } = req.body;
 
+    if (sucursal_id) {
+      const sucursal = await Sucursales.obtenerHorarios(sucursal_id, req.user.id);
+      if (!sucursal) {
+        return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+      }
+
+      const disponible = estaDentroHorario(sucursal.horarios, fecha, hora, duracion);
+      if (!disponible) {
+        return res.status(409).json({
+          ok: false,
+          error: 'El horario está fuera de la disponibilidad configurada para la sucursal',
+        });
+      }
+    }
+
     // Verificar conflicto de horarios
-    const conflictos = await Turnos.verificarConflicto(
-      req.user.id, fecha, hora, duracion
-    );
+    const conflictos = sucursal_id
+      ? await Turnos.verificarConflictoPorSucursal(req.user.id, sucursal_id, fecha, hora, duracion)
+      : await Turnos.verificarConflicto(req.user.id, fecha, hora, duracion);
 
     if (conflictos.length > 0) {
       return res.status(409).json({
@@ -125,6 +167,7 @@ async function crear(req, res) {
       notas,
       cumpleDia:      cumple_dia,
       cumpleMes:      cumple_mes,
+      sucursalId:     sucursal_id || null,
     });
 
     // Enviar WhatsApp de confirmación (no bloqueante)
@@ -169,7 +212,7 @@ async function actualizar(req, res) {
       servicio_nombre, servicio_zona, servicio_color,
       duracion,        fecha,         hora,
       notas,           cumple_dia,    cumple_mes,
-      estado,
+      estado,          sucursal_id,
     } = req.body;
 
     // Verificar que existe y pertenece al usuario
@@ -181,10 +224,31 @@ async function actualizar(req, res) {
       });
     }
 
+    const sucursalObjetivo = sucursal_id || existente.sucursal_id || null;
+
+    if (sucursalObjetivo) {
+      const sucursal = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
+      if (!sucursal) {
+        return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+      }
+
+      const disponible = estaDentroHorario(sucursal.horarios, fecha, hora, duracion);
+      if (!disponible) {
+        return res.status(409).json({
+          ok: false,
+          error: 'El horario está fuera de la disponibilidad configurada para la sucursal',
+        });
+      }
+    }
+
     // Verificar conflicto excluyendo el turno actual
-    const conflictos = await Turnos.verificarConflicto(
-      req.user.id, fecha, hora, duracion, req.params.id
-    );
+    const conflictos = sucursalObjetivo
+      ? await Turnos.verificarConflictoPorSucursal(
+          req.user.id, sucursalObjetivo, fecha, hora, duracion, req.params.id
+        )
+      : await Turnos.verificarConflicto(
+          req.user.id, fecha, hora, duracion, req.params.id
+        );
 
     if (conflictos.length > 0) {
       return res.status(409).json({
@@ -208,6 +272,7 @@ async function actualizar(req, res) {
       cumpleDia:      cumple_dia,
       cumpleMes:      cumple_mes,
       estado,
+      sucursalId: sucursalObjetivo,
     });
 
     // ── Detectar qué cambió para decidir qué WhatsApp mandar ──
