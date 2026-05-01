@@ -216,28 +216,27 @@ async function actualizar(req, res) {
     if (!existente) {
       return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
     }
-      const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
 
-console.log('[DEBUG actualizar]', {
-  body_fecha:    fecha,
-  body_hora:     hora,
-  body_duracion: duracion,
-  body_sucursal: sucursal_id,
-  db_fecha:      existente?.fecha,
-  db_hora:       existente?.hora,
-  db_duracion:   existente?.duracion,
-  db_sucursal:   existente?.sucursal_id,
-  cambioHorario: {
-    fecha:    String(fecha ?? existente?.fecha).slice(0,10) !== String(existente?.fecha).slice(0,10),
-    hora:     String(hora ?? existente?.hora).slice(0,5)   !== String(existente?.hora).slice(0,5),
-    duracion: String(duracion ?? existente?.duracion)       !== String(existente?.duracion),
-    sucursal: sucursal_id !== undefined && sucursal_id      !== existente?.sucursal_id,
-  }
-});
+    // ── LOG TEMPORAL ──
+    console.log('[DEBUG actualizar]', {
+      body_fecha:    fecha,
+      body_hora:     hora,
+      body_duracion: duracion,
+      body_sucursal: sucursal_id,
+      db_fecha:      existente.fecha,
+      db_hora:       existente.hora,
+      db_duracion:   existente.duracion,
+      db_sucursal:   existente.sucursal_id,
+      cambioHorario: {
+        fecha:    String(fecha ?? existente.fecha).slice(0,10) !== String(existente.fecha).slice(0,10),
+        hora:     String(hora ?? existente.hora).slice(0,5)   !== String(existente.hora).slice(0,5),
+        duracion: String(duracion ?? existente.duracion)       !== String(existente.duracion),
+        sucursal: sucursal_id !== undefined && sucursal_id     !== existente.sucursal_id,
+      }
+    });
 
     const sucursalObjetivo = sucursal_id ?? existente.sucursal_id ?? null;
 
-    // ── Solo validar horario si realmente cambió algo relevante ──
     const fechaFinal    = fecha    ?? existente.fecha;
     const horaFinal     = hora     ?? existente.hora;
     const duracionFinal = duracion ?? existente.duracion;
@@ -298,7 +297,6 @@ console.log('[DEBUG actualizar]', {
       sucursalId:     sucursalObjetivo,
     });
 
-    // ── Detectar qué cambió para decidir qué WhatsApp mandar ──
     const fechaAnterior = String(existente.fecha).slice(0, 10);
     const fechaNueva    = String(fecha).slice(0, 10);
     const horaAnterior  = String(existente.hora).slice(0, 5);
