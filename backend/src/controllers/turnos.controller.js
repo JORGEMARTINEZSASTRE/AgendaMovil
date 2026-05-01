@@ -203,6 +203,24 @@ async function crear(req, res) {
 //  PUT /api/turnos/:id
 // ════════════════════════════════════════════════════════════
 async function actualizar(req, res) {
+  const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
+
+console.log('[DEBUG actualizar]', {
+  body_fecha:    fecha,
+  body_hora:     hora,
+  body_duracion: duracion,
+  body_sucursal: sucursal_id,
+  db_fecha:      existente?.fecha,
+  db_hora:       existente?.hora,
+  db_duracion:   existente?.duracion,
+  db_sucursal:   existente?.sucursal_id,
+  cambioHorario: {
+    fecha:    String(fecha ?? existente?.fecha).slice(0,10) !== String(existente?.fecha).slice(0,10),
+    hora:     String(hora ?? existente?.hora).slice(0,5)   !== String(existente?.hora).slice(0,5),
+    duracion: String(duracion ?? existente?.duracion)       !== String(existente?.duracion),
+    sucursal: sucursal_id !== undefined && sucursal_id      !== existente?.sucursal_id,
+  }
+});
   try {
     const {
       servicio_id,     nombre,        telefono,
