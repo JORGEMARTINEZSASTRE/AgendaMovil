@@ -249,12 +249,21 @@ async function actualizar(req, res) {
 
     if (cambioHorario) {
       if (sucursalObjetivo) {
-        const sucursal = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
-        if (!sucursal) {
-          return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
-        }
+  const sucursal = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
+  if (!sucursal) {
+    return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+  }
 
-        const disponible = estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal);
+  // ── LOG TEMPORAL ──
+  console.log('[DEBUG horarios sucursal]', JSON.stringify(sucursal.horarios, null, 2));
+  console.log('[DEBUG estaDentro]', {
+    fecha: fechaFinal,
+    hora: horaFinal,
+    duracion: duracionFinal,
+    resultado: estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal),
+  });
+
+  const disponible = estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal);
         if (!disponible) {
           return res.status(409).json({
             ok: false,
