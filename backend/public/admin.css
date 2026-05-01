@@ -129,7 +129,106 @@
 }
 
 /* ─── RESPONSIVE ─────────────────────── */
+.admin-bloque {
+  margin: 0 16px 24px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 14px;
+}
+
+.admin-bloque-header h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  color: var(--marron);
+  margin-bottom: 4px;
+}
+
+.admin-bloque-header p {
+  font-size: 12px;
+  color: var(--gris);
+  margin-bottom: 12px;
+}
+
+.sucursales-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sucursal-card {
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.sucursal-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sucursal-card-head h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--marron);
+}
+
+.horarios-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.horario-item {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--crema2);
+}
+
+.horario-item label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 6px;
+}
+
+.horario-rango {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.horario-rango input[type="time"] {
+  flex: 1;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--marron);
+}
+
+.horario-rango span {
+  font-size: 12px;
+  color: var(--gris);
+}
+
 @media(max-width:380px) {
   .admin-stats { grid-template-columns:repeat(2,1fr) }
   .stat-num { font-size:26px }
+}
+
+@media(max-width:780px) {
+  .horarios-grid { grid-template-columns: 1fr; }
+  .sucursal-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

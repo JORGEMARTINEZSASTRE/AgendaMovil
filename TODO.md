@@ -1,10 +1,7 @@
-# TODO - Fase 1 Horarios por sucursal/operadora
-
-- [x] Revisar y agregar soporte de horarios en modelo (queries)
-- [ ] Crear endpoints GET/PUT para horarios de sucursal
-- [ ] Validar disponibilidad en creación/edición de turnos internos
-- [ ] Validar disponibilidad en creación de turnos públicos
-- [ ] Ajustar app.js para registrar rutas nuevas si aplica
-- [ ] Agregar UI mínima en admin para editar horarios
-- [ ] Probar flujo crítico backend (happy/error)
-- [ ] Ajustar según feedback
+- [x] Revisar archivos actuales del panel admin (HTML/JS/CSS).
+- [x] Definir plan de cambios para módulo de sucursales y horarios.
+- [x] Agregar sección "Sucursales y horarios" en `backend/public/admin.html`.
+- [x] Extender `backend/public/admin.js` para listar sucursales, editar horarios semanales y guardar por API.
+- [x] Corregir bloque duplicado de inicialización en `backend/public/admin.js`.
+- [x] Agregar estilos CSS para el nuevo módulo en `backend/public/admin.css`.
+- [x] Validar flujo funcional básico y dejar guía de prueba desde página.

@@ -65,7 +65,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await cargarUsuarios();
   bindBotones();
-  inicializarLinkRegistro();   // ← AGREGAR ESTA LÍNEA
+  inicializarLinkRegistro();
+  await cargarSucursalesAdmin();
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -332,36 +333,6 @@ function bindBotones() {
     const campoDias = document.getElementById('campo-edit-dias');
     campoDias.style.display = this.value === 'trial' ? 'flex' : 'none';
   });
-  document.addEventListener('DOMContentLoaded', async () => {
-  tokenAdmin = localStorage.getItem('depimovil_token');
-
-  if (!tokenAdmin) {
-    window.location.href = '/login.html';
-    return;
-  }
-
-  try {
-    const resp = await fetch(`${API_URL}/auth/me`, {
-      headers: { 'Authorization': `Bearer ${tokenAdmin}` }
-    });
-    const data = await resp.json();
-
-    if (!data.ok || data.usuario.rol !== 'admin') {
-      window.location.href = '/index.html';
-      return;
-    }
-  } catch {
-    window.location.href = '/login.html';
-    return;
-  }
-
-  document.getElementById('admin-splash').style.display = 'none';
-  document.getElementById('admin-contenido').style.display = 'block';
-
-  await cargarUsuarios();
-  bindBotones();
-  inicializarLinkRegistro();   // ← agregar esta línea
-});
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -669,6 +640,138 @@ function escaparHTML(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function normalizarHorariosUI(horarios) {
+  if (!Array.isArray(horarios)) return [];
+  return horarios
+    .map(h => ({
+      dia: Number(h?.dia),
+      desde: String(h?.desde || '').slice(0, 5),
+      hasta: String(h?.hasta || '').slice(0, 5),
+    }))
+    .filter(h => Number.isInteger(h.dia) && h.dia >= 0 && h.dia <= 6 && /^\d{2}:\d{2}$/.test(h.desde) && /^\d{2}:\d{2}$/.test(h.hasta));
+}
+
+async function cargarSucursalesAdmin() {
+  const cont = document.getElementById('sucursales-admin');
+  if (!cont) return;
+
+  cont.innerHTML = `<div class="empty-state"><p class="empty-sub">Cargando sucursales...</p></div>`;
+
+  try {
+    const resp = await fetch(`${API_URL}/sucursales`, {
+      headers: { 'Authorization': `Bearer ${tokenAdmin}` }
+    });
+    const data = await resp.json();
+
+    if (!data.ok) {
+      cont.innerHTML = `<div class="empty-state"><p class="empty-sub">No se pudieron cargar sucursales.</p></div>`;
+      return;
+    }
+
+    const sucursales = Array.isArray(data.sucursales) ? data.sucursales : [];
+    if (sucursales.length === 0) {
+      cont.innerHTML = `<div class="empty-state"><span class="empty-icono">🏪</span><p class="empty-titulo">Sin sucursales</p><p class="empty-sub">Creá una sucursal para configurar horarios.</p></div>`;
+      return;
+    }
+
+    cont.innerHTML = sucursales.map(s => `
+      <div class="sucursal-card" data-sucursal-id="${s.id}">
+        <div class="sucursal-card-head">
+          <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
+          <button class="btn-admin btn-guardar-horarios" data-id="${s.id}">💾 Guardar horarios</button>
+        </div>
+        <div class="horarios-grid">
+          ${DIAS.map((diaNombre, idx) => `
+            <div class="horario-item">
+              <label>${diaNombre}</label>
+              <div class="horario-rango">
+                <input type="time" class="horario-desde" data-dia="${idx}" data-id="${s.id}">
+                <span>a</span>
+                <input type="time" class="horario-hasta" data-dia="${idx}" data-id="${s.id}">
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    for (const s of sucursales) {
+      await precargarHorariosSucursal(s.id);
+    }
+
+    document.querySelectorAll('.btn-guardar-horarios').forEach(btn => {
+      btn.addEventListener('click', () => guardarHorariosSucursal(btn.dataset.id));
+    });
+
+  } catch (err) {
+    cont.innerHTML = `<div class="empty-state"><p class="empty-sub">Error de conexión al cargar sucursales.</p></div>`;
+  }
+}
+
+async function precargarHorariosSucursal(sucursalId) {
+  try {
+    const resp = await fetch(`${API_URL}/sucursales/${sucursalId}/horarios`, {
+      headers: { 'Authorization': `Bearer ${tokenAdmin}` }
+    });
+    const data = await resp.json();
+    if (!data.ok) return;
+
+    const horarios = normalizarHorariosUI(data.horarios);
+    horarios.forEach(h => {
+      const desde = document.querySelector(`.horario-desde[data-id="${sucursalId}"][data-dia="${h.dia}"]`);
+      const hasta = document.querySelector(`.horario-hasta[data-id="${sucursalId}"][data-dia="${h.dia}"]`);
+      if (desde) desde.value = h.desde;
+      if (hasta) hasta.value = h.hasta;
+    });
+  } catch {}
+}
+
+async function guardarHorariosSucursal(sucursalId) {
+  const desdeInputs = [...document.querySelectorAll(`.horario-desde[data-id="${sucursalId}"]`)];
+  const horarios = [];
+
+  for (const d of desdeInputs) {
+    const dia = Number(d.dataset.dia);
+    const desde = d.value;
+    const hasta = document.querySelector(`.horario-hasta[data-id="${sucursalId}"][data-dia="${dia}"]`)?.value || '';
+
+    if (!desde && !hasta) continue;
+    if (!desde || !hasta) {
+      mostrarToast('Completá desde/hasta en ambos campos', 'error');
+      return;
+    }
+    if (desde >= hasta) {
+      mostrarToast(`Rango inválido en ${DIAS[dia]}`, 'error');
+      return;
+    }
+
+    horarios.push({ dia, desde, hasta });
+  }
+
+  try {
+    const resp = await fetch(`${API_URL}/sucursales/${sucursalId}/horarios`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokenAdmin}`
+      },
+      body: JSON.stringify({ horarios })
+    });
+
+    const data = await resp.json();
+    if (!data.ok) {
+      mostrarToast(data.error || 'No se pudo guardar horarios', 'error');
+      return;
+    }
+
+    mostrarToast('✅ Horarios guardados');
+  } catch {
+    mostrarToast('Error de conexión al guardar horarios', 'error');
+  }
 }
 
 let toastTimer = null;
