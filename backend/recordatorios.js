@@ -29,8 +29,8 @@ async function getTurnosPendientes24h() {
     JOIN usuarios u ON u.id = t.user_id
     WHERE t.estado != 'cancelado'
       AND t.recordatorio_24h_enviado = FALSE
-      AND (t.fecha + t.hora) BETWEEN (NOW() + INTERVAL '23 hours 50 minutes')
-                                 AND (NOW() + INTERVAL '24 hours 10 minutes')
+      AND (t.fecha + t.hora) BETWEEN (NOW() + INTERVAL '23 hours 58 minutes')
+                           AND (NOW() + INTERVAL '24 hours 2 minutes')
   `);
   return rows;
 }
@@ -42,8 +42,8 @@ async function getTurnosPendientes2h() {
     JOIN usuarios u ON u.id = t.user_id
     WHERE t.estado != 'cancelado'
       AND t.recordatorio_2h_enviado = FALSE
-      AND (t.fecha + t.hora) BETWEEN (NOW() + INTERVAL '1 hour 50 minutes')
-                                 AND (NOW() + INTERVAL '2 hours 10 minutes')
+      AND (t.fecha + t.hora) BETWEEN (NOW() + INTERVAL '1 hour 58 minutes')
+                           AND (NOW() + INTERVAL '2 hours 2 minutes')
   `);
   return rows;
 }
