@@ -97,7 +97,7 @@ function toMin(hhmm) {
 
 function diaSemanaNumero(fechaStr) {
   const d = new Date(`${fechaStr}T00:00:00`);
-  return d.getDay(); // 0 domingo .. 6 sábado
+  return d.getDay();
 }
 
 function estaDentroHorario(horarios, fecha, hora, duracion) {
@@ -108,10 +108,10 @@ function estaDentroHorario(horarios, fecha, hora, duracion) {
 
   if (!bloque) return false;
 
-  const inicioTurno = toMin(hora);
-  const finTurno = inicioTurno + Number(duracion || 0);
+  const inicioTurno  = toMin(hora);
+  const finTurno     = inicioTurno + Number(duracion || 0);
   const inicioBloque = toMin(bloque.desde);
-  const finBloque = toMin(bloque.hasta);
+  const finBloque    = toMin(bloque.hasta);
 
   return inicioTurno >= inicioBloque && finTurno <= finBloque;
 }
@@ -119,18 +119,22 @@ function estaDentroHorario(horarios, fecha, hora, duracion) {
 async function crear(req, res) {
   try {
     const {
-      servicio_id,    nombre,         telefono,
+      servicio_id,     nombre,        telefono,
       servicio_nombre, servicio_zona, servicio_color,
-      duracion,       fecha,          hora,
-      notas,          cumple_dia,     cumple_mes,
+      duracion,        fecha,         hora,
+      notas,           cumple_dia,    cumple_mes,
       sucursal_id,
     } = req.body;
+
+    let sucursalNombre = null;
 
     if (sucursal_id) {
       const sucursal = await Sucursales.obtenerHorarios(sucursal_id, req.user.id);
       if (!sucursal) {
         return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
       }
+
+      sucursalNombre = sucursal.nombre || null;
 
       const disponible = estaDentroHorario(sucursal.horarios, fecha, hora, duracion);
       if (!disponible) {
@@ -141,7 +145,6 @@ async function crear(req, res) {
       }
     }
 
-    // Verificar conflicto de horarios
     const conflictos = sucursal_id
       ? await Turnos.verificarConflictoPorSucursal(req.user.id, sucursal_id, fecha, hora, duracion)
       : await Turnos.verificarConflicto(req.user.id, fecha, hora, duracion);
@@ -170,7 +173,6 @@ async function crear(req, res) {
       sucursalId:     sucursal_id || null,
     });
 
-    // Enviar WhatsApp de confirmación (no bloqueante)
     enviarConfirmacionTurno({
       id:              turno.id,
       user_id:         req.user.id,
@@ -181,6 +183,7 @@ async function crear(req, res) {
       servicio_nombre: turno.servicio_nombre,
       servicio_zona:   turno.servicio_zona,
       duracion:        turno.duracion,
+      sucursal_nombre: sucursalNombre,
     }).catch(err => {
       console.error('[TURNOS/crear] Error al enviar confirmación:', err.message);
     });
@@ -199,6 +202,7 @@ async function crear(req, res) {
     });
   }
 }
+
 // ════════════════════════════════════════════════════════════
 //  PUT /api/turnos/:id
 // ════════════════════════════════════════════════════════════
@@ -217,24 +221,6 @@ async function actualizar(req, res) {
       return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
     }
 
-    // ── LOG TEMPORAL ──
-    console.log('[DEBUG actualizar]', {
-      body_fecha:    fecha,
-      body_hora:     hora,
-      body_duracion: duracion,
-      body_sucursal: sucursal_id,
-      db_fecha:      existente.fecha,
-      db_hora:       existente.hora,
-      db_duracion:   existente.duracion,
-      db_sucursal:   existente.sucursal_id,
-      cambioHorario: {
-        fecha:    String(fecha ?? existente.fecha).slice(0,10) !== String(existente.fecha).slice(0,10),
-        hora:     String(hora ?? existente.hora).slice(0,5)   !== String(existente.hora).slice(0,5),
-        duracion: String(duracion ?? existente.duracion)       !== String(existente.duracion),
-        sucursal: sucursal_id !== undefined && sucursal_id     !== existente.sucursal_id,
-      }
-    });
-
     const sucursalObjetivo = sucursal_id ?? existente.sucursal_id ?? null;
 
     const fechaFinal    = fecha    ?? existente.fecha;
@@ -249,21 +235,12 @@ async function actualizar(req, res) {
 
     if (cambioHorario) {
       if (sucursalObjetivo) {
-  const sucursal = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
-  if (!sucursal) {
-    return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
-  }
+        const sucursal = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
+        if (!sucursal) {
+          return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+        }
 
-  // ── LOG TEMPORAL ──
-  console.log('[DEBUG horarios sucursal]', JSON.stringify(sucursal.horarios, null, 2));
-  console.log('[DEBUG estaDentro]', {
-    fecha: fechaFinal,
-    hora: horaFinal,
-    duracion: duracionFinal,
-    resultado: estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal),
-  });
-
-  const disponible = estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal);
+        const disponible = estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal);
         if (!disponible) {
           return res.status(409).json({
             ok: false,
@@ -315,6 +292,13 @@ async function actualizar(req, res) {
     const horaCambio   = horaAnterior  !== horaNueva;
     const cambioEstado = existente.estado !== estado;
 
+    // Buscar nombre de sucursal para el mensaje
+    let sucursalNombre = null;
+    if (sucursalObjetivo) {
+      const sucursalData = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
+      sucursalNombre = sucursalData?.nombre || null;
+    }
+
     const turnoPayload = {
       id:              turno.id,
       user_id:         req.user.id,
@@ -325,6 +309,7 @@ async function actualizar(req, res) {
       servicio_nombre: turno.servicio_nombre,
       servicio_zona:   turno.servicio_zona,
       duracion:        turno.duracion,
+      sucursal_nombre: sucursalNombre,
     };
 
     if (cambioEstado && estado === 'cancelado') {
@@ -357,7 +342,6 @@ async function actualizar(req, res) {
 // ════════════════════════════════════════════════════════════
 async function eliminar(req, res) {
   try {
-    // Obtener el turno antes de eliminar
     const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
     if (!existente) {
       return res.status(404).json({
@@ -375,7 +359,13 @@ async function eliminar(req, res) {
       });
     }
 
-    // Avisar cancelación por WhatsApp
+    // Buscar nombre de sucursal para el mensaje
+    let sucursalNombre = null;
+    if (existente.sucursal_id) {
+      const sucursalData = await Sucursales.obtenerHorarios(existente.sucursal_id, req.user.id);
+      sucursalNombre = sucursalData?.nombre || null;
+    }
+
     enviarCancelacionTurno({
       id:              existente.id,
       user_id:         req.user.id,
@@ -385,6 +375,7 @@ async function eliminar(req, res) {
       hora:            existente.hora,
       servicio_nombre: existente.servicio_nombre,
       duracion:        existente.duracion,
+      sucursal_nombre: sucursalNombre,
     }).catch(err => {
       console.error('[TURNOS/eliminar] Error WA cancelación:', err.message);
     });
