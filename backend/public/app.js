@@ -457,7 +457,7 @@ function cardTurno(t) {
             ✂️ ${escaparHTML(t.servicio_nombre)}
             ${t.servicio_zona ? `· ${escaparHTML(t.servicio_zona)}` : ''}
           </p>` : ''}
-        ${t.sucursal_nombre ? `<p class="turno-duracion">🏪 ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
+        ${t.sucursal_nombre ? `<p class="turno-duracion">${t.sucursal_tipo === 'profesional' ? '👤' : '🏪'} ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
         <p class="turno-duracion">⏱ ${t.duracion} min</p>
         ${t.notas ? `<p class="turno-notas">📝 ${escaparHTML(t.notas)}</p>` : ''}
         ${t.senia_requerida ? `
@@ -580,12 +580,14 @@ function abrirFormTurno(turno = null) {
   // Poblar selector de sucursales
   const selectSucursal = document.getElementById('turno-sucursal-id');
   if (selectSucursal) {
-    selectSucursal.innerHTML = '<option value="">— Elegí sucursal —</option>' +
-      (sucursales || []).map(s => `
-        <option value="${s.id}" ${String(turno?.sucursal_id || '') === String(s.id) ? 'selected' : ''}>
-          ${escaparHTML(s.nombre || 'Sucursal')}
-        </option>
-      `).join('');
+    selectSucursal.innerHTML = '<option value="">— Elegí ubicación —</option>' +
+      (sucursales || []).map(s => {
+        const icono = s.tipo === 'profesional' ? '👤' : '🏪';
+        return `
+          <option value="${s.id}" ${String(turno?.sucursal_id || '') === String(s.id) ? 'selected' : ''}>
+            ${icono} ${escaparHTML(s.nombre || 'Sucursal')}
+          </option>`;
+      }).join('');
   }
 
   // Poblar selector de servicios (con indicador de seña)
@@ -1925,20 +1927,29 @@ function abrirModalNuevaSucursalOperadora() {
   modal.innerHTML = `
     <div class="modal-card">
       <div class="modal-header">
-        <h2 class="modal-titulo">➕ Nueva sucursal</h2>
+        <h2 class="modal-titulo">➕ Nueva ubicación</h2>
         <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
       </div>
       <form id="form-nueva-sucursal-operadora" class="form-modal">
         <div id="form-sucursal-operadora-error" class="form-error oculto"></div>
         <div class="campo">
+          <label for="sucursal-operadora-tipo">Tipo</label>
+          <select id="sucursal-operadora-tipo" required>
+            <option value="">— Elegí tipo —</option>
+            <option value="profesional">👤 Profesional</option>
+            <option value="sucursal">🏪 Sucursal</option>
+          </select>
+        </div>
+        <div class="campo">
           <label for="sucursal-operadora-nombre">Nombre</label>
-          <input id="sucursal-operadora-nombre" type="text" maxlength="100" required placeholder="Ej: Centro">
+          <input id="sucursal-operadora-nombre" type="text" maxlength="100" required placeholder="Ej: Andy Lashes Apodaca">
+          <small id="sucursal-nombre-hint" style="font-size:11px;color:var(--gris);margin-top:4px;display:block"></small>
         </div>
         <div class="campo">
           <label for="sucursal-operadora-max">Máx. turnos por hora</label>
           <input id="sucursal-operadora-max" type="number" min="1" max="20" value="1" required>
         </div>
-        <button type="submit" class="btn-primario">Guardar sucursal</button>
+        <button type="submit" class="btn-primario">Guardar</button>
       </form>
     </div>
   `;
@@ -1946,13 +1957,39 @@ function abrirModalNuevaSucursalOperadora() {
 
   modal.querySelector('.btn-cerrar-modal')?.addEventListener('click', () => modal.classList.add('oculto'));
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('oculto'); });
+
+  // Cambiar placeholder según tipo
+  const selectTipo = modal.querySelector('#sucursal-operadora-tipo');
+  const inputNombre = modal.querySelector('#sucursal-operadora-nombre');
+  const hint = modal.querySelector('#sucursal-nombre-hint');
+  if (selectTipo && inputNombre && hint) {
+    selectTipo.addEventListener('change', () => {
+      if (selectTipo.value === 'profesional') {
+        inputNombre.placeholder = 'Ej: Andy Lashes Apodaca';
+        hint.textContent = 'Nombre de la profesional o profesional independiente';
+      } else if (selectTipo.value === 'sucursal') {
+        inputNombre.placeholder = 'Ej: Andy Lashes San Nicolás';
+        hint.textContent = 'Nombre de la sucursal o local';
+      } else {
+        inputNombre.placeholder = '';
+        hint.textContent = '';
+      }
+    });
+  }
+
   modal.querySelector('#form-nueva-sucursal-operadora')?.addEventListener('submit', handleCrearSucursalOperadora);
 }
 
 async function handleCrearSucursalOperadora(e) {
   e.preventDefault();
+  const tipo = getVal('sucursal-operadora-tipo').trim();
   const nombre = getVal('sucursal-operadora-nombre').trim();
   const maxTurnos = Number(getVal('sucursal-operadora-max') || 1);
+
+  if (!tipo) {
+    mostrarErrorForm('form-sucursal-operadora-error', 'Seleccioná un tipo');
+    return;
+  }
 
   if (!nombre) {
     mostrarErrorForm('form-sucursal-operadora-error', 'Ingresá un nombre');
@@ -1965,13 +2002,13 @@ async function handleCrearSucursalOperadora(e) {
   }
 
   try {
-    const data = await SucursalesAPI.crear({ nombre, max_turnos_hora: maxTurnos });
+    const data = await SucursalesAPI.crear({ nombre, tipo, max_turnos_hora: maxTurnos });
     if (!data?.ok) {
       mostrarErrorForm('form-sucursal-operadora-error', data?.error || 'No se pudo crear');
       return;
     }
     document.getElementById('modal-nueva-sucursal-operadora')?.classList.add('oculto');
-    mostrarToast('Sucursal creada ✅', 'exito');
+    mostrarToast('Ubicación creada ✅', 'exito');
     await renderSucursalesOperadora();
   } catch (err) {
     mostrarErrorForm('form-sucursal-operadora-error', err.message || 'Error al crear');
@@ -2014,13 +2051,18 @@ async function renderSucursalesOperadora() {
       return;
     }
 
-    cont.innerHTML = sucursales.map(s => `
-      <div class="sucursal-card" data-id="${s.id}">
-        <div class="sucursal-card-head">
-          <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
-          <button class="btn-primario btn-sucursal-guardar" data-id="${s.id}">💾 Guardar horarios</button>
-        </div>
-        <div class="horarios-grid">
+    cont.innerHTML = sucursales.map(s => {
+      const tipoBadge = s.tipo === 'profesional'
+        ? '<span class="sucursal-tipo-badge profesional">👤 Profesional</span>'
+        : '<span class="sucursal-tipo-badge sucursal">🏪 Sucursal</span>';
+      return `
+        <div class="sucursal-card" data-id="${s.id}">
+          <div class="sucursal-card-head">
+            <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
+            ${tipoBadge}
+            <button class="btn-primario btn-sucursal-guardar" data-id="${s.id}">💾 Guardar horarios</button>
+          </div>
+          <div class="horarios-grid">
           ${DIAS_SEMANA_SUC.map((dia, idx) => `
             <div class="horario-item">
               <label>${dia}</label>
@@ -2031,9 +2073,10 @@ async function renderSucursalesOperadora() {
               </div>
             </div>
           `).join('')}
+          </div>
         </div>
       </div>
-    `).join('');
+    `}).join('');
 
     for (const s of sucursales) {
       try {

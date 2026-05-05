@@ -152,7 +152,8 @@ const Turnos = {
              t.cumple_dia, t.cumple_mes,
              t.estado, t.creado_en, t.editado_en,
              t.sucursal_id,
-             s.nombre AS sucursal_nombre
+             s.nombre AS sucursal_nombre,
+             s.tipo AS sucursal_tipo
       FROM turnos t
       LEFT JOIN sucursales s ON s.id = t.sucursal_id
       WHERE t.user_id = $1
@@ -351,19 +352,19 @@ const Turnos = {
 // ─── SERVICIOS ───────────────────────────────────────────────
 const Sucursales = {
 
-  async crear(userId, { nombre, maxTurnosHora = 1 }) {
+  async crear(userId, { nombre, tipo = 'sucursal', maxTurnosHora = 1 }) {
     const { rows } = await query(
-      `INSERT INTO sucursales (user_id, nombre, horarios, max_turnos_hora, activo)
-       VALUES ($1, $2, '[]'::jsonb, $3, true)
-       RETURNING id, user_id, nombre, horarios, max_turnos_hora, activo, created_at`,
-      [userId, nombre, maxTurnosHora]
+      `INSERT INTO sucursales (user_id, nombre, tipo, horarios, max_turnos_hora, activo)
+       VALUES ($1, $2, $3, '[]'::jsonb, $4, true)
+       RETURNING id, user_id, nombre, tipo, horarios, max_turnos_hora, activo, created_at`,
+      [userId, nombre, tipo, maxTurnosHora]
     );
     return rows[0];
   },
 
   async listar(userId) {
     const { rows } = await query(
-      `SELECT id, user_id, nombre, horarios, max_turnos_hora, activo, created_at
+      `SELECT id, user_id, nombre, tipo, horarios, max_turnos_hora, activo, created_at
        FROM sucursales
        WHERE user_id = $1
        ORDER BY created_at DESC`,

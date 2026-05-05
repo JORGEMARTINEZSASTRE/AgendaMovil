@@ -24,20 +24,24 @@ function normalizarHorarios(horarios) {
 async function crear(req, res) {
   try {
     const nombre = String(req.body?.nombre || '').trim();
+    const tipo = String(req.body?.tipo || 'sucursal').trim();
     const maxTurnosHora = Number(req.body?.max_turnos_hora || 1);
 
     if (!nombre) {
-      return res.status(422).json({ ok: false, error: 'Nombre de sucursal requerido' });
+      return res.status(422).json({ ok: false, error: 'Nombre requerido' });
+    }
+    if (!['profesional', 'sucursal'].includes(tipo)) {
+      return res.status(422).json({ ok: false, error: 'Tipo inválido. Usá "profesional" o "sucursal"' });
     }
     if (!Number.isInteger(maxTurnosHora) || maxTurnosHora < 1 || maxTurnosHora > 20) {
       return res.status(422).json({ ok: false, error: 'max_turnos_hora inválido (1-20)' });
     }
 
-    const sucursal = await Sucursales.crear(req.user.id, { nombre, maxTurnosHora });
+    const sucursal = await Sucursales.crear(req.user.id, { nombre, tipo, maxTurnosHora });
     return res.status(201).json({ ok: true, sucursal });
   } catch (err) {
     console.error('[SUCURSALES/crear]', err.message);
-    return res.status(500).json({ ok: false, error: 'Error al crear sucursal' });
+    return res.status(500).json({ ok: false, error: 'Error al crear' });
   }
 }
 

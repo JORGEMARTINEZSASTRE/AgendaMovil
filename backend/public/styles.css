@@ -1750,6 +1750,7 @@ body {
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .sucursal-card-head h3 {
@@ -2087,4 +2088,26 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Badge tipo sucursal */
+.sucursal-tipo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sucursal-tipo-badge.profesional {
+  background: rgba(168,85,104,.12);
+  color: var(--rosa-vino);
+  border: 1px solid rgba(168,85,104,.25);
+}
+.sucursal-tipo-badge.sucursal {
+  background: rgba(90,120,180,.12);
+  color: #3B5998;
+  border: 1px solid rgba(90,120,180,.25);
 }
