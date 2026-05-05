@@ -135,7 +135,7 @@ router.post('/ficha', autenticar, async (req, res) => {
 
 router.post('/sesion', autenticar, uploadSesion.array('fotos', 10), async (req, res) => {
   try {
-    const { ficha_id, turno_id, tratamiento, parametros, observaciones, profesional } = req.body;
+    const { ficha_id, turno_id, tratamiento, parametros, observaciones, profesional, proxima_fecha, proxima_hora } = req.body;
     const fotos = req.files ? req.files.map(f => `/fichas_medicas/${f.filename}`) : [];
 
     const { rows } = await query(
@@ -143,6 +143,61 @@ router.post('/sesion', autenticar, uploadSesion.array('fotos', 10), async (req, 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [ficha_id, turno_id || null, tratamiento, parametros, observaciones, profesional, fotos]
     );
+
+    // Si hay próxima fecha/hora, crear turno en la agenda
+    if (proxima_fecha && proxima_hora) {
+      const fichaRes = await query(
+        'SELECT nombre, telefono FROM fichas_clinicas WHERE id = $1 AND user_id = $2',
+        [ficha_id, req.user.id]
+      );
+
+      if (fichaRes.rows.length) {
+        const { nombre, telefono } = fichaRes.rows[0];
+
+        // Obtener duración y servicio del turno original si existe
+        let duracion = 60;
+        let servicioNombre = tratamiento || 'Sesión de tratamiento';
+        let servicioZona = null;
+        let servicioColor = '#A85568';
+        let sucursalId = null;
+
+        if (turno_id) {
+          const turnoRes = await query(
+            'SELECT duracion, servicio_nombre, servicio_zona, servicio_color, sucursal_id FROM turnos WHERE id = $1 AND user_id = $2',
+            [turno_id, req.user.id]
+          );
+          if (turnoRes.rows.length) {
+            duracion = turnoRes.rows[0].duracion || 60;
+            servicioNombre = turnoRes.rows[0].servicio_nombre || servicioNombre;
+            servicioZona = turnoRes.rows[0].servicio_zona;
+            servicioColor = turnoRes.rows[0].servicio_color || servicioColor;
+            sucursalId = turnoRes.rows[0].sucursal_id;
+          }
+        }
+
+        await query(
+          `INSERT INTO turnos
+           (user_id, nombre, telefono, servicio_nombre, servicio_zona, servicio_color,
+            duracion, fecha, hora, notas, sucursal_id, estado)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            req.user.id,
+            nombre,
+            telefono,
+            servicioNombre,
+            servicioZona,
+            servicioColor,
+            duracion,
+            proxima_fecha,
+            proxima_hora,
+            `Próxima sesión programada desde ficha clínica${tratamiento ? ' — ' + tratamiento : ''}`,
+            sucursalId,
+            'activo'
+          ]
+        );
+      }
+    }
+
     res.json({ ok: true, sesion: rows[0] });
   } catch (e) {
     console.error(e);

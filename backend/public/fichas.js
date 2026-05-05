@@ -176,6 +176,8 @@ document.getElementById('btn-guardar-sesion').addEventListener('click', async ()
     parametros:    document.getElementById('sesion-parametros').value,
     observaciones: document.getElementById('sesion-observaciones').value,
     profesional:   document.getElementById('sesion-profesional').value,
+    proxima_fecha: document.getElementById('sesion-proxima-fecha').value || null,
+    proxima_hora:  document.getElementById('sesion-proxima-hora').value || null,
   };
 
   try {
@@ -189,7 +191,8 @@ document.getElementById('btn-guardar-sesion').addEventListener('click', async ()
     if (!res.ok) throw new Error(result.error);
 
     // Limpiar campos sesión
-    ['sesion-tratamiento','sesion-parametros','sesion-observaciones','sesion-profesional']
+    ['sesion-tratamiento','sesion-parametros','sesion-observaciones','sesion-profesional',
+     'sesion-proxima-fecha','sesion-proxima-hora']
       .forEach(id => document.getElementById(id).value = '');
 
     // Recargar sesiones
@@ -198,7 +201,26 @@ document.getElementById('btn-guardar-sesion').addEventListener('click', async ()
     });
     const data2 = await res2.json();
     renderSesiones(data2.sesiones || []);
-    mostrarMensajeFicha('✅ Sesión registrada');
+
+    // Recargar turnos de la agenda si se programó próxima fecha
+    if (data.proxima_fecha && data.proxima_hora) {
+      try {
+        const resTurnos = await fetch('/api/turnos', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const turnosData = await resTurnos.json();
+        if (turnosData.turnos && typeof turnos !== 'undefined') {
+          turnos = turnosData.turnos;
+        }
+        if (typeof renderAgenda === 'function') {
+          renderAgenda();
+        }
+      } catch (e) {
+        console.error('[FICHA] Error al recargar turnos:', e);
+      }
+    }
+
+    mostrarMensajeFicha('✅ Sesión registrada' + (data.proxima_fecha ? ' — próxima sesión agendada' : ''));
   } catch (err) {
     mostrarMensajeFicha('❌ ' + err.message, 'error');
   }
