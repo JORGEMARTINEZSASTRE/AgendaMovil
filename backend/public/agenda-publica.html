@@ -574,8 +574,10 @@ async function handleSubmit(e) {
   if (!nombre)   { mostrarFormError('El nombre es requerido'); return; }
   if (!telefonoLimpio || telefonoLimpio.length < 11) { mostrarFormError('Número inválido'); return; }
 
-  const serv = datosReserva.serviciosSeleccionados.map(id => servicios.find(s => String(s.id) === String(id))).filter(Boolean)[0];
-  const duracion = datosReserva.duracionTotal || (serv?.duracion || 30);
+  const serviciosSel = datosReserva.serviciosSeleccionados
+    .map(id => servicios.find(s => String(s.id) === String(id)))
+    .filter(Boolean);
+  const duracion = datosReserva.duracionTotal || (serviciosSel[0]?.duracion || 30);
 
   setBtnLoading(true);
   ocultarFormError();
@@ -592,10 +594,10 @@ async function handleSubmit(e) {
         duracion,
         notas: document.getElementById('pub-notas').value.trim() || null,
         email_clienta: document.getElementById('pub-email')?.value.trim() || null,
-        servicio_id: serv?.id || null,
-        servicio_nombre: serv?.nombre || null,
-        servicio_zona: serv?.zona || null,
-        servicio_color: serv?.color || '#A85568',
+        servicio_ids: serviciosSel.map(s => s.id),
+        servicio_nombres: serviciosSel.map(s => s.nombre).join(' + '),
+        servicio_zonas: serviciosSel.map(s => s.zona).filter(Boolean).join(', '),
+        servicio_colores: serviciosSel.map(s => s.color || '#A85568')[0],
         sucursal_id: datosReserva.sucursalId,
       }),
     });
@@ -615,7 +617,8 @@ async function handleSubmit(e) {
       document.getElementById('exito-senia-monto').textContent = `$${data.turno.monto_senia}`;
       document.getElementById('exito-senia-negocio').textContent = negocio;
 
-      const msgWA = encodeURIComponent(`Hola ${negocio}! 🌸 Me agendé para el ${fechaFormateada} a las ${datosReserva.hora} hs${serv ? ` (${serv.nombre})` : ''}. Quería coordinar el pago de la seña de $${data.turno.monto_senia}. ¡Gracias!`);
+      const nombresServ = serviciosSel.map(s => s.nombre).join(', ');
+      const msgWA = encodeURIComponent(`Hola ${negocio}! 🌸 Me agendé para el ${fechaFormateada} a las ${datosReserva.hora} hs${nombresServ ? ` (${nombresServ})` : ''}. Quería coordinar el pago de la seña de $${data.turno.monto_senia}. ¡Gracias!`);
       document.getElementById('exito-senia-wa').href = telNegocio ? `https://wa.me/${telNegocio.replace(/\D/g,'')}?text=${msgWA}` : '#';
       document.getElementById('publica-exito-senia').classList.remove('oculto');
     } else {

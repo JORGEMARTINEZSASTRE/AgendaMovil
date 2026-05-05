@@ -331,8 +331,8 @@ router.post('/:userId/turno', [
   try {
     const { userId } = req.params;
     const { nombre, telefono, fecha, hora, duracion,
-            servicio_id, servicio_nombre, servicio_zona,
-            servicio_color, notas, email_clienta, sucursal_id } = req.body;
+            servicio_ids, servicio_nombres, servicio_zonas,
+            servicio_colores, notas, email_clienta, sucursal_id } = req.body;
 
     // Verificar usuario
     const { rows: usuRows } = await pool.query(
@@ -380,22 +380,26 @@ router.post('/:userId/turno', [
       }
     }
 
-    // Obtener seña del servicio si aplica
+    // Obtener seña de los servicios (si alguno requiere, tomamos el mayor monto)
     let seniaRequerida = false;
     let montoSenia     = 0;
     let estadoPago     = 'no_aplica';
     let estadoTurno    = 'activo';
 
-    if (servicio_id) {
+    if (servicio_ids && servicio_ids.length > 0) {
       const { rows: sRows } = await pool.query(
-        `SELECT requiere_senia, monto_senia FROM servicios WHERE id = $1 AND user_id = $2`,
-        [servicio_id, userId]
+        `SELECT requiere_senia, monto_senia FROM servicios WHERE id = ANY($1) AND user_id = $2 AND activo = true`,
+        [servicio_ids, userId]
       );
-      if (sRows.length && sRows[0].requiere_senia && sRows[0].monto_senia > 0) {
-        seniaRequerida = true;
-        montoSenia     = sRows[0].monto_senia;
-        estadoPago     = 'pendiente';
-        estadoTurno    = 'pendiente_senia';
+      for (const s of sRows) {
+        if (s.requiere_senia && s.monto_senia > 0) {
+          seniaRequerida = true;
+          if (s.monto_senia > montoSenia) montoSenia = s.monto_senia;
+        }
+      }
+      if (seniaRequerida) {
+        estadoPago  = 'pendiente';
+        estadoTurno = 'pendiente_senia';
       }
     }
 
@@ -410,8 +414,8 @@ router.post('/:userId/turno', [
        RETURNING *`,
       [
         userId, nombre, telefono, fecha, hora, duracion,
-        servicio_id || null, servicio_nombre || null,
-        servicio_zona || null, servicio_color || '#A85568',
+        servicio_ids?.[0] || null, servicio_nombres || null,
+        servicio_zonas || null, servicio_colores || '#A85568',
         notas || null, estadoTurno, sucursal_id,
         seniaRequerida, false, montoSenia, estadoPago,
       ]
@@ -419,7 +423,7 @@ router.post('/:userId/turno', [
     const turno = tRows[0];
 
     // ── Mails ──
-    const servicioLabel = servicio_nombre || null;
+    const servicioLabel = servicio_nombres || null;
 
     // Notificar a la estética siempre
     enviarMailNuevaTurnoEstetica({

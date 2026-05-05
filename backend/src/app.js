@@ -84,6 +84,7 @@ console.log('[STATIC] archivos:', fs.existsSync(frontendPath) ? fs.readdirSync(f
 // Carpetas de uploads
 app.use('/fotosServicio', express.static(path.join(__dirname, '../public/fotosServicio')));
 app.use('/fichas_medicas', express.static(path.join(__dirname, '../public/fichas_medicas')));
+app.use('/logos', express.static(path.join(__dirname, '../public/logos')));
 
 app.use(express.static(frontendPath));
 app.use(express.static(frontendPath));
