@@ -300,6 +300,33 @@ const ConfigAPI = {
       body:   JSON.stringify(payload),
     });
   },
+
+  async subirLogo(file) {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const resp = await fetch(`${API_URL}/config/logo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json();
+      throw new Error(data?.error || `Error ${resp.status}`);
+    }
+
+    return await resp.json();
+  },
+
+  async eliminarLogo() {
+    return await fetchAPI('/config/logo', {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ═══════════════════════════════════════════════════════════

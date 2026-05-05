@@ -94,6 +94,12 @@ function mostrarInfoUsuario() {
     nombreEl.textContent = usuario.nombre_negocio || usuario.nombre || 'Mi Agenda';
   }
 
+  // Mostrar logo del usuario
+  const logoImg = document.getElementById('header-logo');
+  if (logoImg && usuario.logo_url) {
+    logoImg.src = usuario.logo_url;
+  }
+
   const planEl = document.getElementById('usuario-plan');
   if (planEl) {
     const esPremium     = usuario.plan === 'premium';
@@ -1625,6 +1631,76 @@ function bindConfiguracion() {
       setBtnLoading('btn-guardar-config', false);
     }
   });
+
+  // Logo preview
+  const logoInput = document.getElementById('config-logo-input');
+  const logoPreview = document.getElementById('config-logo-preview');
+  const logoImg = document.getElementById('config-logo-img');
+
+  // Mostrar logo existente
+  const usuario = Sesion.getUsuario();
+  if (usuario?.logo_url && logoPreview && logoImg) {
+    logoImg.src = usuario.logo_url;
+    logoPreview.classList.remove('oculto');
+  }
+
+  if (logoInput) {
+    logoInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        mostrarToast('Solo se permiten imágenes', 'error');
+        logoInput.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        mostrarToast('La imagen no debe superar 2MB', 'error');
+        logoInput.value = '';
+        return;
+      }
+
+      try {
+        const data = await ConfigAPI.subirLogo(file);
+        const headerLogo = document.getElementById('header-logo');
+        if (headerLogo) headerLogo.src = data.logo_url;
+        if (logoImg) logoImg.src = data.logo_url;
+        if (logoPreview) logoPreview.classList.remove('oculto');
+
+        const user = Sesion.getUsuario();
+        user.logo_url = data.logo_url;
+        localStorage.setItem('depimovil_usuario', JSON.stringify(user));
+
+        mostrarToast('Logo actualizado ✅', 'exito');
+      } catch (err) {
+        mostrarToast(err.message || 'Error al subir logo', 'error');
+      }
+      logoInput.value = '';
+    });
+  }
+
+  // Quitar logo
+  const btnQuitarLogo = document.getElementById('btn-quitar-logo');
+  if (btnQuitarLogo) {
+    btnQuitarLogo.addEventListener('click', async () => {
+      try {
+        await ConfigAPI.eliminarLogo();
+        if (logoPreview) logoPreview.classList.add('oculto');
+        if (logoImg) logoImg.src = '';
+
+        const headerLogo = document.getElementById('header-logo');
+        if (headerLogo) headerLogo.src = 'logo.jpeg';
+
+        const user = Sesion.getUsuario();
+        user.logo_url = null;
+        localStorage.setItem('depimovil_usuario', JSON.stringify(user));
+
+        mostrarToast('Logo eliminado', 'info');
+      } catch (err) {
+        mostrarToast(err.message || 'Error al eliminar logo', 'error');
+      }
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════

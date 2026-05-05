@@ -2111,3 +2111,87 @@ body {
   color: #3B5998;
   border: 1px solid rgba(90,120,180,.25);
 }
+
+/* Logo en config panel */
+.config-logo-wrap {
+  padding: 16px;
+  border-bottom: 1px solid var(--borde);
+}
+.config-logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.config-logo-section > label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--rosa-vino);
+}
+.config-logo-preview {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--rosa-polvo);
+  background: var(--crema);
+}
+.config-logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.btn-quitar-logo {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.6);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s;
+}
+.btn-quitar-logo:hover {
+  background: rgba(168,85,104,.85);
+}
+.btn-subir-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1.5px dashed var(--rosa-polvo);
+  background: rgba(168,85,104,.06);
+  color: var(--rosa-vino);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-subir-logo:hover {
+  background: rgba(168,85,104,.12);
+  border-color: var(--rosa-vino);
+}
+.config-logo-section small {
+  font-size: 11px;
+  color: var(--gris);
+}
+
+/* Header logo dinámico */
+.header-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--rosa-polvo);
+  flex-shrink: 0;
+}

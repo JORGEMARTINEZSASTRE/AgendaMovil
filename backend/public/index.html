@@ -194,7 +194,7 @@
   <!-- ─── HEADER ─────────────────────────────── -->
   <header class="header">
     <div class="header-izq">
-      <img src="logo.jpeg" alt="DepiMóvil" class="header-logo">
+      <img id="header-logo" src="logo.jpeg" alt="Logo" class="header-logo">
       <div class="header-textos">
         <p id="usuario-nombre" class="header-negocio">Mi Agenda</p>
         <span id="usuario-plan" class="plan-badge trial">🕐 Trial</span>
@@ -370,6 +370,23 @@
       <p class="config-titulo">⚙️ Configuración</p>
       <button id="btn-cerrar-config" class="btn-cerrar-config">✕</button>
     </div>
+
+    <!-- Logo del negocio -->
+    <div class="config-logo-wrap">
+      <div class="config-logo-section">
+        <label>🖼️ Logo de tu negocio</label>
+        <div id="config-logo-preview" class="config-logo-preview oculto">
+          <img id="config-logo-img" src="" alt="Logo">
+          <button type="button" id="btn-quitar-logo" class="btn-quitar-logo" title="Quitar logo">✕</button>
+        </div>
+        <label for="config-logo-input" class="btn-subir-logo">
+          📷 Subir logo
+        </label>
+        <input type="file" id="config-logo-input" accept="image/*" class="oculto">
+        <small>PNG, JPG o WebP — Máx 2MB</small>
+      </div>
+    </div>
+
     <form id="form-config" class="form-config">
       <div class="campo">
         <label for="config-plantilla-turno">

@@ -30,6 +30,7 @@ function datosPublicos(u) {
     trial_fin:      u.trial_fin,
     activo:         u.activo,
     nombre_negocio: u.nombre_negocio,
+    logo_url:       u.logo_url,
   };
 }
 

@@ -7,6 +7,30 @@ const { planActivo } = require('../middleware/planGuard');
 const { validar }    = require('../middleware/validate');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const { Configuracion } = require('../models/queries');
+const multer   = require('multer');
+const path     = require('path');
+const fs       = require('fs');
+const { query } = require('../config/db');
+
+// ── Multer: logo de usuario ──────────────────────────
+const storageLogo = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../../public/logos');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `user_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+const uploadLogo = multer({
+  storage: storageLogo,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Solo imágenes'));
+  }
+});
 
 router.use(autenticar);
 router.use(planActivo);
@@ -87,3 +111,52 @@ router.put('/',
 );
 
 module.exports = router;
+
+// ════════════════════════════════════════════════
+// LOGO DE USUARIO
+// ════════════════════════════════════════════════
+
+router.post('/logo', uploadLogo.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: 'No se recibió imagen' });
+
+    const { rows } = await query(
+      'SELECT logo_url FROM usuarios WHERE id = $1',
+      [req.user.id]
+    );
+
+    // Eliminar logo anterior si existe
+    if (rows[0]?.logo_url) {
+      const oldPath = path.join(__dirname, '../../public', rows[0].logo_url);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const url = `/logos/${req.file.filename}`;
+    await query('UPDATE usuarios SET logo_url = $1 WHERE id = $2', [url, req.user.id]);
+
+    res.json({ ok: true, logo_url: url });
+  } catch (e) {
+    console.error('[CONFIG/logo]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.delete('/logo', async (req, res) => {
+  try {
+    const { rows } = await query(
+      'SELECT logo_url FROM usuarios WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (rows[0]?.logo_url) {
+      const filePath = path.join(__dirname, '../../public', rows[0].logo_url);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+    await query('UPDATE usuarios SET logo_url = NULL WHERE id = $1', [req.user.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[CONFIG/eliminar-logo]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});

@@ -26,7 +26,7 @@ const Usuarios = {
     const { rows } = await query(
       `SELECT id, email, nombre, rol, plan,
               trial_inicio, trial_fin, activo,
-              nombre_negocio, telefono, creado_en
+              nombre_negocio, telefono, logo_url, creado_en
        FROM usuarios
        WHERE id = $1`,
       [id]
