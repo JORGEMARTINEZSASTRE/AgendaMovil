@@ -1837,6 +1837,9 @@ body {
   padding-bottom: 8px;
   margin-bottom: 14px;
   scrollbar-width: none;
+  scroll-behavior: smooth;
+  cursor: grab;
+  -webkit-overflow-scrolling: touch;
 }
 .ficha-tabs::-webkit-scrollbar { display: none; }
 
@@ -1853,6 +1856,8 @@ body {
   cursor: pointer;
   transition: all .2s;
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .ficha-tab.activo {
   background: linear-gradient(135deg, var(--rosa-vino), var(--rosa-polvo));

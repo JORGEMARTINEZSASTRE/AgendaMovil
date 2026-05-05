@@ -243,3 +243,36 @@ document.getElementById('modal-ficha').querySelectorAll('.btn-cerrar-modal').for
     document.getElementById('modal-ficha').classList.add('oculto');
   });
 });
+
+// ── Drag-to-scroll en tabs (PC con mouse) ────────
+const tabsContainer = document.querySelector('.ficha-tabs');
+if (tabsContainer) {
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  tabsContainer.addEventListener('mousedown', (e) => {
+    isDown = true;
+    tabsContainer.style.cursor = 'grabbing';
+    startX = e.pageX - tabsContainer.offsetLeft;
+    scrollLeft = tabsContainer.scrollLeft;
+  });
+
+  tabsContainer.addEventListener('mouseleave', () => {
+    isDown = false;
+    tabsContainer.style.cursor = '';
+  });
+
+  tabsContainer.addEventListener('mouseup', () => {
+    isDown = false;
+    tabsContainer.style.cursor = '';
+  });
+
+  tabsContainer.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - tabsContainer.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    tabsContainer.scrollLeft = scrollLeft - walk;
+  });
+}
