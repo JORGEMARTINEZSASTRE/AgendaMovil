@@ -1189,6 +1189,8 @@ function bindAccordionServicios() {
 // ═══════════════════════════════════════════════════════════
 //  FORMULARIO SERVICIO
 // ═══════════════════════════════════════════════════════════
+let fotoQuitadaExplicitamente = false;
+
 function bindFormServicio() {
   const form = document.getElementById('form-servicio');
   if (!form) return;
@@ -1222,6 +1224,7 @@ function bindFormServicio() {
         fotoInput.value = '';
         return;
       }
+      fotoQuitadaExplicitamente = false;
       const reader = new FileReader();
       reader.onload = (ev) => {
         fotoImg.src = ev.target.result;
@@ -1238,12 +1241,14 @@ function bindFormServicio() {
       fotoPreview.classList.add('oculto');
       fotoImg.src = '';
       fotoInput.value = '';
+      fotoQuitadaExplicitamente = true;
     });
   }
 }
 
  function abrirFormServicio(serv = null) {
   editandoServId = serv?.id || null;
+  fotoQuitadaExplicitamente = false;
   limpiarFormServicio();
 
   const modal      = document.getElementById('modal-servicio');
@@ -1298,6 +1303,7 @@ function limpiarFormServicio() {
   const input   = document.getElementById('serv-foto-input');
   if (preview) preview.classList.add('oculto');
   if (input)   input.value = '';
+  fotoQuitadaExplicitamente = false;
 }
 
 async function handleSubmitServicio(e) {
@@ -1386,8 +1392,8 @@ const payload = {
       }
     }
 
-    // Eliminar foto si se quitó
-    if (servId && !fotoInput?.value) {
+    // Eliminar foto solo si el usuario la quitó explícitamente
+    if (servId && fotoQuitadaExplicitamente) {
       const servActual = servicios.find(s => String(s.id) === String(servId));
       if (servActual?.foto_url) {
         try {
