@@ -44,9 +44,7 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212,132,122,.18) 0%, transparent 70%),
-    linear-gradient(170deg, var(--crema) 0%, var(--crema2) 55%, var(--blush) 100%);
+  background: linear-gradient(170deg, var(--crema) 0%, var(--crema2) 55%, var(--blush) 100%);
   font-family: 'Nunito', sans-serif;
   color: var(--texto);
 }
@@ -55,7 +53,9 @@
 .publica-header {
   background: linear-gradient(135deg, var(--rosa-vino2) 0%, var(--rosa-vino) 50%, var(--rosa-polvo) 100%);
   padding: 18px 24px 20px;
-  box-shadow: 0 4px 24px rgba(142,63,84,.30);
+  box-shadow: 0 2px 12px rgba(142,63,84,.20);
+  border-radius: 0;
+  width: 100%;
 }
 .publica-header-inner {
   display: flex;
