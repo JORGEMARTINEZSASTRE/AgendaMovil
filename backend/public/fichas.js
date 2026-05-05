@@ -30,7 +30,7 @@ async function abrirFicha(telefono, nombre, turnoId = null) {
 
   // Cargar ficha si existe
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('depimovil_token');
     const res   = await fetch(`/api/fichas/ficha/${encodeURIComponent(telefono)}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -130,7 +130,7 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
   });
 
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('depimovil_token');
     const res   = await fetch('/api/fichas/ficha', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
