@@ -945,6 +945,7 @@
 
       <div class="ficha-footer" id="ficha-footer-guardar">
         <div id="ficha-msg" class="ficha-msg oculto"></div>
+        <button type="button" id="btn-cancelar-ficha" class="btn-secundario">Cancelar</button>
         <button type="submit" class="btn-primario">💾 Guardar ficha</button>
       </div>
 
@@ -952,6 +953,23 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════
+     MODAL: CONFIRMAR SALIR DE FICHA
+════════════════════════════════════════════════ -->
+<div id="modal-ficha-confirmar" class="modal-overlay oculto">
+  <div class="modal-card modal-ficha-confirmar-card">
+    <div class="modal-header">
+      <h2 class="modal-titulo">⚠️ ¿Salir sin guardar?</h2>
+    </div>
+    <div class="ficha-confirmar-body">
+      <p>Los cambios que no hayas guardado se van a perder.</p>
+    </div>
+    <div class="ficha-confirmar-actions">
+      <button id="btn-ficha-seguir" class="btn-primario">Seguir editando</button>
+      <button id="btn-ficha-salir" class="btn-secundario">Salir sin guardar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════
      MODAL: PREVIEW WHATSAPP

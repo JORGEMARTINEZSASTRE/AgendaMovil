@@ -1973,3 +1973,42 @@ body {
   background: rgba(168,85,104,.2);
   border-color: var(--rosa-vino);
 }
+
+/* Footer ficha con cancelar */
+#ficha-footer-guardar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde);
+  margin-top: 16px;
+}
+#ficha-footer-guardar .btn-primario {
+  flex: 1;
+}
+#ficha-footer-guardar .btn-secundario {
+  white-space: nowrap;
+}
+
+/* Modal confirmar salir de ficha */
+.modal-ficha-confirmar-card {
+  max-width: 340px;
+  padding: 24px;
+  text-align: center;
+}
+.ficha-confirmar-body {
+  padding: 12px 0 20px;
+  color: var(--gris);
+  font-size: 14px;
+}
+.ficha-confirmar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ficha-confirmar-actions .btn-primario {
+  width: 100%;
+}
+.ficha-confirmar-actions .btn-secundario {
+  width: 100%;
+}

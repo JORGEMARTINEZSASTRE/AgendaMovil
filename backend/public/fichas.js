@@ -6,12 +6,13 @@ let fichaActual = {
   nombre:   null,
   turnoId:  null,
   fichaId:  null,
-  esNueva:  true
+  esNueva:  true,
+  guardado: true
 };
 
 // ── Abrir modal de ficha ─────────────────────────
 async function abrirFicha(telefono, nombre, turnoId = null) {
-  fichaActual = { telefono, nombre, turnoId, fichaId: null, esNueva: true };
+  fichaActual = { telefono, nombre, turnoId, fichaId: null, esNueva: true, guardado: false };
 
   // Info clienta
   document.getElementById('ficha-clienta-info').innerHTML = `
@@ -27,6 +28,7 @@ async function abrirFicha(telefono, nombre, turnoId = null) {
   document.getElementById('ficha-sesiones-lista').innerHTML = '';
   mostrarFichaTab('datos');
   ocultarMensajeFicha();
+  document.getElementById('modal-ficha-confirmar').classList.add('oculto');
 
   // Cargar ficha si existe
   try {
@@ -39,6 +41,7 @@ async function abrirFicha(telefono, nombre, turnoId = null) {
     if (data.ficha) {
       fichaActual.fichaId = data.ficha.id;
       fichaActual.esNueva = false;
+      fichaActual.guardado = true;
       rellenarFormFicha(data.ficha);
       renderSesiones(data.sesiones || []);
       document.getElementById('ficha-estado-badge').textContent = '✅ Ficha existente';
@@ -158,6 +161,7 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
     }
 
     fichaActual.esNueva = false;
+    fichaActual.guardado = true;
     mostrarMensajeFicha('✅ Ficha guardada correctamente');
     document.getElementById('ficha-estado-badge').textContent = '✅ Ficha existente';
     document.getElementById('ficha-estado-badge').classList.remove('nueva');
@@ -237,11 +241,55 @@ document.querySelectorAll('.ficha-tab').forEach(btn => {
   btn.addEventListener('click', () => mostrarFichaTab(btn.dataset.ftab));
 });
 
-// ── Cerrar modal ─────────────────────────────────
+// Marcar como no guardado al modificar campos
+document.getElementById('form-ficha').addEventListener('input', () => {
+  fichaActual.guardado = false;
+});
+
+// ── Cerrar modal con confirmación ────────────────
+function pedirConfirmacionSalir() {
+  if (fichaActual.guardado) {
+    cerrarFichaModal();
+    return;
+  }
+  document.getElementById('modal-ficha-confirmar').classList.remove('oculto');
+}
+function cerrarFichaModal() {
+  document.getElementById('modal-ficha').classList.add('oculto');
+  document.getElementById('modal-ficha-confirmar').classList.add('oculto');
+}
+
+// Botón X en el modal ficha
 document.getElementById('modal-ficha').querySelectorAll('.btn-cerrar-modal').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.getElementById('modal-ficha').classList.add('oculto');
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    pedirConfirmacionSalir();
   });
+});
+
+// Botón Cancelar en el footer
+const btnCancelar = document.getElementById('btn-cancelar-ficha');
+if (btnCancelar) {
+  btnCancelar.addEventListener('click', pedirConfirmacionSalir);
+}
+
+// Botones del modal de confirmación
+document.getElementById('btn-ficha-seguir').addEventListener('click', () => {
+  document.getElementById('modal-ficha-confirmar').classList.add('oculto');
+});
+document.getElementById('btn-ficha-salir').addEventListener('click', cerrarFichaModal);
+
+// Prevenir cierre al tocar fuera del modal
+document.getElementById('modal-ficha').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal-ficha')) {
+    e.preventDefault();
+    pedirConfirmacionSalir();
+  }
+});
+document.getElementById('modal-ficha-confirmar').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modal-ficha-confirmar')) {
+    document.getElementById('modal-ficha-confirmar').classList.add('oculto');
+  }
 });
 
 // ── Drag-to-scroll en tabs (PC con mouse) ────────
