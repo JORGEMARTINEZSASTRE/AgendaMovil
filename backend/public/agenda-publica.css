@@ -56,16 +56,6 @@
   background: linear-gradient(135deg, var(--rosa-vino2) 0%, var(--rosa-vino) 50%, var(--rosa-polvo) 100%);
   padding: 18px 24px 20px;
   box-shadow: 0 4px 24px rgba(142,63,84,.30);
-  position: relative;
-  overflow: hidden;
-}
-.publica-header::after {
-  content: '';
-  position: absolute;
-  bottom: -18px; left: -5%; right: -5%;
-  height: 36px;
-  background: var(--crema);
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
 .publica-header-inner {
   display: flex;
