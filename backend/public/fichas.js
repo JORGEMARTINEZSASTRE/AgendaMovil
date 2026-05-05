@@ -89,8 +89,14 @@ function renderSesiones(sesiones) {
 
 function formatearFecha(f) {
   if (!f) return '';
-  const d = new Date(f + 'T00:00:00');
-  return d.toLocaleDateString('es-UY', { day:'2-digit', month:'long', year:'numeric' });
+  const raw = String(f);
+  const dateStr = raw.split('T')[0];
+  if (!dateStr || dateStr.length < 10) return '';
+  const [a, m, d] = dateStr.split('-').map(Number);
+  if (!a || !m || !d) return '';
+  const fecha = new Date(a, m - 1, d);
+  if (isNaN(fecha.getTime())) return '';
+  return fecha.toLocaleDateString('es-UY', { day:'2-digit', month:'long', year:'numeric' });
 }
 
 // ── Tabs ─────────────────────────────────────────

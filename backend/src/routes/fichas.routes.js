@@ -139,8 +139,8 @@ router.post('/sesion', autenticar, uploadSesion.array('fotos', 10), async (req, 
     const fotos = req.files ? req.files.map(f => `/fichas_medicas/${f.filename}`) : [];
 
     const { rows } = await query(
-      `INSERT INTO sesiones_clinicas (ficha_id, turno_id, tratamiento, parametros, observaciones, profesional, fotos)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      `INSERT INTO sesiones_clinicas (ficha_id, turno_id, fecha, tratamiento, parametros, observaciones, profesional, fotos)
+       VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, $6, $7) RETURNING *`,
       [ficha_id, turno_id || null, tratamiento, parametros, observaciones, profesional, fotos]
     );
 
