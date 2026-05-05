@@ -802,6 +802,153 @@
     </form>
   </div>
 </div>
+<!-- ═══════════════════════════════════════════════
+     MODAL: FICHA CLÍNICA
+════════════════════════════════════════════════ -->
+<div id="modal-ficha" class="modal-overlay oculto">
+  <div class="modal-card modal-ficha-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">🗂️ Ficha Clínica</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="ficha-clienta-info" class="ficha-clienta-info"></div>
+
+    <div class="ficha-tabs">
+      <button class="ficha-tab activo" data-ftab="datos">👤 Datos</button>
+      <button class="ficha-tab" data-ftab="medicos">🏥 Médicos</button>
+      <button class="ficha-tab" data-ftab="esteticos">✨ Estéticos</button>
+      <button class="ficha-tab" data-ftab="habitos">🌿 Hábitos</button>
+      <button class="ficha-tab" data-ftab="evaluacion">🔬 Evaluación</button>
+      <button class="ficha-tab" data-ftab="plan">📋 Plan</button>
+      <button class="ficha-tab" data-ftab="sesiones">📅 Sesiones</button>
+    </div>
+
+    <form id="form-ficha" novalidate>
+
+      <div class="ficha-panel activo" data-fpanel="datos">
+        <div class="ficha-seccion-titulo">1. Datos Personales</div>
+        <div class="campo"><label>Nombre completo</label><input type="text" name="nombre"></div>
+        <div class="campo"><label>Documento</label><input type="text" name="documento"></div>
+        <div class="campo"><label>Fecha de nacimiento / Edad</label><input type="text" name="fecha_nacimiento"></div>
+        <div class="campo"><label>Email</label><input type="email" name="email"></div>
+        <div class="campo"><label>Dirección</label><input type="text" name="direccion"></div>
+        <div class="campo"><label>Ocupación</label><input type="text" name="ocupacion"></div>
+        <div class="ficha-seccion-titulo">2. Motivo de Consulta</div>
+        <div class="campo"><label>Motivo principal</label><textarea name="motivo_principal" rows="2"></textarea></div>
+        <div class="campo"><label>Zonas a tratar</label><input type="text" name="zonas_a_tratar"></div>
+        <div class="campo"><label>Expectativas</label><textarea name="expectativas" rows="2"></textarea></div>
+        <div class="campo"><label>Tiempo de evolución</label><input type="text" name="tiempo_evolucion"></div>
+      </div>
+
+      <div class="ficha-panel" data-fpanel="medicos">
+        <div class="ficha-seccion-titulo">3. Antecedentes Médicos</div>
+        <div class="campo"><label>Enfermedades actuales</label><textarea name="enfermedades_actuales" rows="2"></textarea></div>
+        <div class="campo"><label>Enfermedades crónicas</label><textarea name="enfermedades_cronicas" rows="2"></textarea></div>
+        <div class="campo"><label>Trastornos hormonales</label><input type="text" name="trastornos_hormonales"></div>
+        <div class="campo"><label>Enfermedades dermatológicas</label><textarea name="enfermedades_dermatologicas" rows="2"></textarea></div>
+        <div class="campo"><label>Alergias</label><textarea name="alergias" rows="2"></textarea></div>
+        <div class="campo"><label>Medicación actual</label><textarea name="medicacion_actual" rows="2"></textarea></div>
+        <div class="campo"><label>Embarazo / Lactancia</label><input type="text" name="embarazo_lactancia"></div>
+        <div class="campo"><label>Cirugías previas</label><textarea name="cirugias_previas" rows="2"></textarea></div>
+        <div class="campo"><label>Implantes / Prótesis</label><input type="text" name="implantes_protesis"></div>
+      </div>
+
+      <div class="ficha-panel" data-fpanel="esteticos">
+        <div class="ficha-seccion-titulo">4. Antecedentes Estéticos</div>
+        <div class="campo"><label>Tratamientos previos</label><textarea name="tratamientos_previos" rows="2"></textarea></div>
+        <div class="campo"><label>Depilación láser / IPL</label><input type="text" name="depilacion_laser_ipl"></div>
+        <div class="campo"><label>Uso de aparatología</label><textarea name="uso_aparatologia" rows="2"></textarea></div>
+        <div class="campo"><label>Peelings / Dermapen / PRP</label><input type="text" name="peelings_dermapen_prp"></div>
+        <div class="campo"><label>Reacciones adversas</label><textarea name="reacciones_adversas" rows="2"></textarea></div>
+        <div class="campo"><label>Frecuencia de tratamientos</label><input type="text" name="frecuencia_tratamientos"></div>
+        <div class="ficha-seccion-titulo">11. Consentimiento Informado</div>
+        <div class="campo"><label>Procedimiento explicado</label><textarea name="procedimiento_explicado" rows="2"></textarea></div>
+        <div class="campo"><label>Riesgos informados</label><textarea name="riesgos_informados" rows="2"></textarea></div>
+        <div class="campo"><label>Firma del paciente</label><input type="text" name="firma_paciente"></div>
+        <div class="campo"><label>Firma del profesional</label><input type="text" name="firma_profesional"></div>
+        <div class="campo"><label>Fecha</label><input type="date" name="fecha_consentimiento"></div>
+      </div>
+
+      <div class="ficha-panel" data-fpanel="habitos">
+        <div class="ficha-seccion-titulo">5. Hábitos y Estilo de Vida</div>
+        <div class="campo"><label>Exposición solar</label><input type="text" name="exposicion_solar"></div>
+        <div class="campo"><label>Uso de protector solar</label><input type="text" name="uso_protector_solar"></div>
+        <div class="campo"><label>Tabaquismo</label><input type="text" name="tabaquismo"></div>
+        <div class="campo"><label>Alcohol</label><input type="text" name="alcohol"></div>
+        <div class="campo"><label>Actividad física</label><input type="text" name="actividad_fisica"></div>
+        <div class="campo"><label>Alimentación</label><textarea name="alimentacion" rows="2"></textarea></div>
+        <div class="campo"><label>Consumo de agua</label><input type="text" name="consumo_agua"></div>
+        <div class="ficha-seccion-titulo">13. Indicaciones Domiciliarias</div>
+        <div class="campo"><label>Rutina cosmética</label><textarea name="rutina_cosmetica" rows="2"></textarea></div>
+        <div class="campo"><label>Cuidados post</label><textarea name="cuidados_post" rows="2"></textarea></div>
+        <div class="campo"><label>Recomendaciones</label><textarea name="recomendaciones" rows="2"></textarea></div>
+        <div class="ficha-seccion-titulo">14. Observaciones Generales</div>
+        <div class="campo"><label>Notas adicionales</label><textarea name="observaciones_generales" rows="3"></textarea></div>
+      </div>
+
+      <div class="ficha-panel" data-fpanel="evaluacion">
+        <div class="ficha-seccion-titulo">6. Evaluación Cutánea</div>
+        <div class="campo"><label>Tipo de piel</label><input type="text" name="tipo_piel" placeholder="Normal, seca, mixta, grasa..."></div>
+        <div class="campo"><label>Fototipo (Fitzpatrick)</label>
+          <select name="fototipo_fitzpatrick">
+            <option value="">— Seleccionar —</option>
+            <option value="I">I — Muy blanca, siempre se quema</option>
+            <option value="II">II — Blanca, casi siempre se quema</option>
+            <option value="III">III — Beige, a veces se quema</option>
+            <option value="IV">IV — Oliva, rara vez se quema</option>
+            <option value="V">V — Marrón, muy rara vez se quema</option>
+            <option value="VI">VI — Negra, nunca se quema</option>
+          </select>
+        </div>
+        <div class="campo"><label>Hidratación</label><input type="text" name="hidratacion"></div>
+        <div class="campo"><label>Elasticidad</label><input type="text" name="elasticidad"></div>
+        <div class="campo"><label>Sebo</label><input type="text" name="sebo"></div>
+        <div class="campo"><label>Alteraciones presentes</label><textarea name="alteraciones_presentes" rows="3"></textarea></div>
+        <div class="ficha-seccion-titulo">7. Diagnóstico Estético</div>
+        <div class="campo"><label>Descripción profesional</label><textarea name="diagnostico_estetico" rows="4"></textarea></div>
+        <div class="ficha-seccion-titulo">10. Evolución y Resultados</div>
+        <div class="campo"><label>Respuesta al tratamiento</label><textarea name="respuesta_tratamiento" rows="2"></textarea></div>
+        <div class="campo"><label>Cambios observados</label><textarea name="cambios_observados" rows="2"></textarea></div>
+        <div class="campo"><label>Ajustes</label><textarea name="ajustes" rows="2"></textarea></div>
+        <div class="ficha-seccion-titulo">12. Registro Fotográfico</div>
+        <div class="campo"><label>Zona documentada</label><input type="text" name="zona_documentada"></div>
+      </div>
+
+      <div class="ficha-panel" data-fpanel="plan">
+        <div class="ficha-seccion-titulo">8. Plan de Tratamiento</div>
+        <div class="campo"><label>Objetivo</label><textarea name="objetivo" rows="2"></textarea></div>
+        <div class="campo"><label>Tratamientos indicados</label><textarea name="tratamientos_indicados" rows="2"></textarea></div>
+        <div class="campo"><label>Zonas</label><input type="text" name="zonas_plan"></div>
+        <div class="campo"><label>Frecuencia</label><input type="text" name="frecuencia_plan"></div>
+        <div class="campo"><label>Duración</label><input type="text" name="duracion_plan"></div>
+        <div class="campo"><label>Combinación de técnicas</label><textarea name="combinacion_tecnicas" rows="2"></textarea></div>
+      </div>
+
+      <div class="ficha-panel" data-fpanel="sesiones">
+        <div class="ficha-seccion-titulo">9. Registro de Sesiones</div>
+        <div id="ficha-sesiones-lista" class="ficha-sesiones-lista"></div>
+        <div class="ficha-nueva-sesion">
+          <p class="ficha-seccion-titulo">➕ Nueva sesión</p>
+          <div class="campo"><label>Tratamiento</label><input type="text" id="sesion-tratamiento" placeholder="Ej: Depilación láser piernas"></div>
+          <div class="campo"><label>Parámetros</label><textarea id="sesion-parametros" rows="2" placeholder="Fluencia, frecuencia, etc."></textarea></div>
+          <div class="campo"><label>Observaciones</label><textarea id="sesion-observaciones" rows="2" placeholder="Evolución, reacciones..."></textarea></div>
+          <div class="campo"><label>Profesional</label><input type="text" id="sesion-profesional" placeholder="Nombre del profesional"></div>
+          <button type="button" id="btn-guardar-sesion" class="btn-secundario" style="margin-top:8px">
+            💾 Guardar sesión
+          </button>
+        </div>
+      </div>
+
+      <div class="ficha-footer" id="ficha-footer-guardar">
+        <div id="ficha-msg" class="ficha-msg oculto"></div>
+        <button type="submit" class="btn-primario">💾 Guardar ficha</button>
+      </div>
+
+    </form>
+  </div>
+</div>
 
 
 <!-- ═══════════════════════════════════════════════
