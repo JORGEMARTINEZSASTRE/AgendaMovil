@@ -181,7 +181,7 @@ document.getElementById('btn-guardar-sesion').addEventListener('click', async ()
   };
 
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('depimovil_token');
     const res   = await fetch('/api/fichas/sesion', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
