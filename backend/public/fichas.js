@@ -156,7 +156,6 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
     document.getElementById('ficha-estado-badge').textContent = '✅ Ficha existente';
     document.getElementById('ficha-estado-badge').classList.remove('nueva');
 
-    console.log('[FICHA] fichaId después de guardar:', fichaActual.fichaId);
   } catch (err) {
     mostrarMensajeFicha('❌ Error al guardar: ' + err.message, 'error');
   }
@@ -164,7 +163,6 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
 
 // ── Guardar sesión ───────────────────────────────
 document.getElementById('btn-guardar-sesion').addEventListener('click', async () => {
-  console.log('[SESION] fichaActual:', fichaActual); // ← agregá esto
   if (!fichaActual.fichaId) {
     mostrarMensajeFicha('⚠️ Primero guardá la ficha antes de agregar una sesión.', 'error');
     mostrarFichaTab('datos');
