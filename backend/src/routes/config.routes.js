@@ -10,18 +10,14 @@ const { Configuracion } = require('../models/queries');
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
+const os       = require('os');
 const { query } = require('../config/db');
+const { subirImagen, eliminarImagen } = require('../services/cloudinary');
 
-// ── Multer: logo de usuario ──────────────────────────
+// ── Multer: logo temporal ──────────────────────────
 const storageLogo = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../../public/logos');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `user_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`);
-  }
+  destination: (req, file, cb) => cb(null, os.tmpdir()),
+  filename: (req, file, cb) => cb(null, `logo_${req.user.id}_${Date.now()}${path.extname(file.originalname)}`)
 });
 const uploadLogo = multer({
   storage: storageLogo,
@@ -125,18 +121,21 @@ router.post('/logo', uploadLogo.single('logo'), async (req, res) => {
       [req.user.id]
     );
 
-    // Eliminar logo anterior si existe
+    // Eliminar logo anterior
     if (rows[0]?.logo_url) {
-      const oldPath = path.join(__dirname, '../../public', rows[0].logo_url);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      await eliminarImagen(rows[0].logo_url);
     }
 
-    const url = `/logos/${req.file.filename}`;
+    // Subir a Cloudinary
+    const url = await subirImagen(req.file.path, 'logos');
+    fs.unlinkSync(req.file.path);
+
     await query('UPDATE usuarios SET logo_url = $1 WHERE id = $2', [url, req.user.id]);
 
     res.json({ ok: true, logo_url: url });
   } catch (e) {
     console.error('[CONFIG/logo]', e.message);
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
@@ -149,8 +148,7 @@ router.delete('/logo', async (req, res) => {
     );
 
     if (rows[0]?.logo_url) {
-      const filePath = path.join(__dirname, '../../public', rows[0].logo_url);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await eliminarImagen(rows[0].logo_url);
     }
 
     await query('UPDATE usuarios SET logo_url = NULL WHERE id = $1', [req.user.id]);

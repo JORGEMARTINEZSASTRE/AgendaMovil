@@ -5,22 +5,24 @@ const router   = express.Router();
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
+const os       = require('os');
 const { query }    = require('../config/db');
 const { autenticar } = require('../middleware/auth');
+const { subirImagen, eliminarImagen } = require('../services/cloudinary');
 
-// ── Multer: fotos de sesión ──────────────────────────
-const storageSesion = multer.diskStorage({
+// ── Multer: storage temporal ──────────────────────────
+const storageTemp = (subfolder) => multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../../public/fichas_medicas');
-    fs.mkdirSync(dir, { recursive: true });
+    const dir = os.tmpdir();
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    cb(null, `sesion_${Date.now()}${path.extname(file.originalname)}`);
+    cb(null, `${subfolder}_${Date.now()}${path.extname(file.originalname)}`);
   }
 });
+
 const uploadSesion = multer({
-  storage: storageSesion,
+  storage: storageTemp('sesion'),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -28,19 +30,8 @@ const uploadSesion = multer({
   }
 });
 
-// ── Multer: foto de servicio ─────────────────────────
-const storageServicio = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../../public/fotosServicio');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `serv_${Date.now()}${path.extname(file.originalname)}`);
-  }
-});
 const uploadServicio = multer({
-  storage: storageServicio,
+  storage: storageTemp('servicio'),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -136,7 +127,15 @@ router.post('/ficha', autenticar, async (req, res) => {
 router.post('/sesion', autenticar, uploadSesion.array('fotos', 10), async (req, res) => {
   try {
     const { ficha_id, turno_id, tratamiento, parametros, observaciones, profesional, proxima_fecha, proxima_hora } = req.body;
-    const fotos = req.files ? req.files.map(f => `/fichas_medicas/${f.filename}`) : [];
+
+    // Subir fotos a Cloudinary
+    let fotos = [];
+    if (req.files && req.files.length) {
+      const uploads = req.files.map(f => subirImagen(f.path, 'fichas'));
+      fotos = await Promise.all(uploads);
+      // Limpiar archivos temporales
+      req.files.forEach(f => fs.unlinkSync(f.path));
+    }
 
     const { rows } = await query(
       `INSERT INTO sesiones_clinicas (ficha_id, turno_id, fecha, tratamiento, parametros, observaciones, profesional, fotos)
@@ -230,16 +229,21 @@ router.post('/servicio/:id/foto', autenticar, uploadServicio.single('foto'), asy
     );
     if (!rows.length) return res.status(403).json({ error: 'Sin permiso' });
 
+    // Eliminar foto anterior en Cloudinary
     if (rows[0].foto_url) {
-      const old = path.join(__dirname, '../../public', rows[0].foto_url);
-      if (fs.existsSync(old)) fs.unlinkSync(old);
+      await eliminarImagen(rows[0].foto_url);
     }
 
-    const url = `/fotosServicio/${req.file.filename}`;
+    // Subir nueva foto
+    const url = await subirImagen(req.file.path, 'servicios');
+    fs.unlinkSync(req.file.path);
+
     await query('UPDATE servicios SET foto_url=$1 WHERE id=$2', [url, req.params.id]);
     res.json({ ok: true, url });
   } catch (e) {
     console.error(e);
+    // Limpiar archivo temporal en caso de error
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ error: e.message });
   }
 });
@@ -253,8 +257,7 @@ router.delete('/servicio/:id/foto', autenticar, async (req, res) => {
     if (!rows.length) return res.status(403).json({ error: 'Sin permiso' });
 
     if (rows[0].foto_url) {
-      const filePath = path.join(__dirname, '../../public', rows[0].foto_url);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await eliminarImagen(rows[0].foto_url);
     }
     await query('UPDATE servicios SET foto_url=NULL WHERE id=$1', [req.params.id]);
     res.json({ ok: true });
