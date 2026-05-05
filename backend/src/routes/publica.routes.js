@@ -234,7 +234,7 @@ router.post('/registro', registroLimiter, validarRegistro, autoRegistro);
 router.get('/:userId/info', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT nombre, nombre_negocio, telefono, email
+      `SELECT nombre, nombre_negocio, telefono, email, logo_url
        FROM usuarios WHERE id = $1 AND activo = true AND rol = 'cliente'`,
       [req.params.userId]
     );
@@ -249,7 +249,7 @@ router.get('/:userId/info', async (req, res) => {
 router.get('/:userId/sucursales', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, nombre, horarios
+      `SELECT id, nombre, tipo, horarios
        FROM sucursales
        WHERE user_id = $1 AND activo = true
        ORDER BY created_at DESC`,
@@ -302,8 +302,9 @@ router.get('/:userId/disponibilidad', async (req, res) => {
 router.get('/:userId/servicios', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, nombre, zona, duracion, color, requiere_senia, monto_senia
-       FROM servicios WHERE user_id = $1 AND activo = true ORDER BY nombre`,
+      `SELECT id, nombre, zona, duracion, color, categoria,
+              requiere_senia, monto_senia, precio, descripcion, foto_url
+       FROM servicios WHERE user_id = $1 AND activo = true ORDER BY categoria, nombre`,
       [req.params.userId]
     );
     return res.json({ ok: true, servicios: rows });

@@ -6,23 +6,22 @@
   <meta name="theme-color" content="#A85568">
   <title>🌸 Reservar turno</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="agenda-publica.css">
 </head>
 <body class="publica-body">
 
 <div class="publica-bg"></div>
 
-<!-- HEADER -->
 <header class="publica-header">
-  <span class="publica-icono">🌸</span>
-  <div>
-    <p class="publica-marca">DEPIMÓVIL PRO</p>
-    <h1 id="publica-negocio" class="publica-titulo">Cargando...</h1>
+  <div class="publica-header-inner">
+    <img id="pub-logo" class="pub-logo" src="logo.jpeg" alt="Logo" onerror="this.style.display='none'">
+    <div>
+      <p class="publica-marca">DEPIMÓVIL PRO</p>
+      <h1 id="publica-negocio" class="publica-titulo">Cargando...</h1>
+    </div>
   </div>
 </header>
 
-<!-- CONTENIDO -->
 <main class="publica-main">
 
   <!-- ERROR -->
@@ -48,110 +47,139 @@
       <p class="senia-aviso-titulo">⚠️ Tu turno no está confirmado todavía</p>
       <p class="senia-aviso-texto">Para confirmar tu lugar, necesitás abonar la seña de <strong id="exito-senia-monto"></strong>.</p>
       <p class="senia-aviso-texto">Contactate con <strong id="exito-senia-negocio"></strong> para coordinar el pago:</p>
-      <a id="exito-senia-wa" href="#" target="_blank" class="btn-wa-senia">
-        💬 Escribir por WhatsApp
-      </a>
+      <a id="exito-senia-wa" href="#" target="_blank" class="btn-wa-senia">💬 Escribir por WhatsApp</a>
     </div>
     <p class="exito-sub">Una vez abonada, recibirás la confirmación 🌸</p>
   </div>
 
-  <!-- FORMULARIO -->
+  <!-- FLUJO MULTI-PASO -->
   <div id="publica-form-wrap" class="publica-card">
 
-    <p class="publica-desc">
-      Completá tus datos para reservar un turno
-    </p>
-
-    <form id="form-publica" novalidate>
-
-      <!-- Servicio -->
-      <div class="campo">
-        <label for="pub-servicio">✂️ Servicio</label>
-        <select id="pub-servicio">
-          <option value="">— Sin servicio —</option>
-        </select>
+    <!-- STEPPER -->
+    <div class="pub-stepper">
+      <div class="pub-step activo" data-step="1">
+        <span class="pub-step-num">1</span>
+        <span class="pub-step-label">Ubicación</span>
       </div>
-
-      <!-- Aviso seña del servicio -->
-      <div id="pub-senia-aviso" class="pub-senia-aviso oculto">
-        <span>💰</span>
-        <p>Este servicio requiere una seña de <strong id="pub-senia-monto"></strong> para confirmar el turno.</p>
+      <div class="pub-step-line"></div>
+      <div class="pub-step" data-step="2">
+        <span class="pub-step-num">2</span>
+        <span class="pub-step-label">Servicios</span>
       </div>
-
-      <!-- Nombre -->
-      <div class="campo">
-        <label for="pub-nombre">👤 Tu nombre *</label>
-        <input type="text" id="pub-nombre" placeholder="Ej: María García" autocomplete="name" required>
+      <div class="pub-step-line"></div>
+      <div class="pub-step" data-step="3">
+        <span class="pub-step-num">3</span>
+        <span class="pub-step-label">Fecha</span>
       </div>
-
-  <!-- Teléfono -->
-<div class="campo">
-  <label for="pub-telefono">📞 Tu teléfono *</label>
-
-  <div style="display:flex; gap:8px;">
-    <select id="codigo-pais" style="max-width:110px;">
-      <option value="598">🇺🇾 +598</option>
-      <option value="54">🇦🇷 +54</option>
-    </select>
-
-    <input 
-      type="tel" 
-      id="pub-telefono" 
-      placeholder="Ej: 9112345678" 
-      autocomplete="tel" 
-      required
-      style="flex:1;"
-    >
-  </div>
-          <span class="campo-ayuda">Coloca el número sin el 0 del inicio</span>
-
-</div>
-
-      <!-- Email -->
-      <div class="campo">
-        <label for="pub-email">📧 Tu email</label>
-        <input type="email" id="pub-email" placeholder="para recibir confirmación" autocomplete="email">
-        <span class="campo-ayuda">Si lo dejás, te mandamos un mail cuando confirmen tu turno.</span>
+      <div class="pub-step-line"></div>
+      <div class="pub-step" data-step="4">
+        <span class="pub-step-num">4</span>
+        <span class="pub-step-label">Hora</span>
       </div>
-
-      <!-- Sucursal -->
-      <div class="campo">
-        <label for="pub-sucursal">🏪 Sucursal *</label>
-        <select id="pub-sucursal" required>
-          <option value="">— Elegí sucursal —</option>
-        </select>
+      <div class="pub-step-line"></div>
+      <div class="pub-step" data-step="5">
+        <span class="pub-step-num">5</span>
+        <span class="pub-step-label">Datos</span>
       </div>
+    </div>
 
-      <!-- Fecha -->
-      <div class="campo">
-        <label for="pub-fecha">📅 Fecha *</label>
-        <input type="date" id="pub-fecha" required>
+    <!-- ===== PASO 1: UBICACIÓN ===== -->
+    <div class="pub-paso activo" id="paso-1">
+      <h2 class="pub-paso-titulo">📍 Elegí tu ubicación</h2>
+      <div id="pub-ubicaciones" class="pub-ubicaciones">
+        <div class="pub-cargando">Cargando ubicaciones...</div>
       </div>
+    </div>
 
-      <!-- Hora -->
-      <div class="campo">
-        <label for="pub-hora">🕐 Horario *</label>
-        <select id="pub-hora" required>
-          <option value="">— Primero elegí una fecha —</option>
-        </select>
+    <!-- ===== PASO 2: SERVICIOS ===== -->
+    <div class="pub-paso" id="paso-2">
+      <h2 class="pub-paso-titulo">✂️ Elegí tus servicios</h2>
+      <p class="pub-paso-desc">Podés elegir uno o más servicios</p>
+      <div id="pub-servicios" class="pub-servicios-acordeon">
+        <div class="pub-cargando">Cargando servicios...</div>
       </div>
+    </div>
 
-      <input type="hidden" id="pub-duracion" value="30">
-
-      <!-- Notas -->
-      <div class="campo">
-        <label for="pub-notas">📝 Notas (opcional)</label>
-        <textarea id="pub-notas" rows="2" placeholder="Alguna indicación especial..."></textarea>
+    <!-- ===== PASO 3: FECHA ===== -->
+    <div class="pub-paso" id="paso-3">
+      <h2 class="pub-paso-titulo">📅 Elegí la fecha</h2>
+      <div class="pub-calendario-wrap">
+        <div class="pub-calendario-header">
+          <button type="button" id="pub-cal-prev" class="pub-cal-btn">◀</button>
+          <span id="pub-cal-mes" class="pub-cal-mes"></span>
+          <button type="button" id="pub-cal-next" class="pub-cal-btn">▶</button>
+        </div>
+        <div class="pub-cal-grid">
+          <div class="pub-cal-dia-h">Lu</div>
+          <div class="pub-cal-dia-h">Ma</div>
+          <div class="pub-cal-dia-h">Mi</div>
+          <div class="pub-cal-dia-h">Ju</div>
+          <div class="pub-cal-dia-h">Vi</div>
+          <div class="pub-cal-dia-h">Sá</div>
+          <div class="pub-cal-dia-h">Do</div>
+        </div>
+        <div id="pub-cal-dias" class="pub-cal-dias"></div>
       </div>
+    </div>
 
-      <div id="pub-form-error" class="form-error oculto"></div>
+    <!-- ===== PASO 4: HORA ===== -->
+    <div class="pub-paso" id="paso-4">
+      <h2 class="pub-paso-titulo">🕐 Elegí el horario</h2>
+      <p id="pub-fecha-seleccionada" class="pub-fecha-label"></p>
+      <div id="pub-horarios" class="pub-horarios-grid">
+        <div class="pub-cargando">Cargando horarios...</div>
+      </div>
+    </div>
 
-      <button type="submit" id="btn-pub-guardar" class="btn-primario">
-        <span id="btn-pub-texto">✅ Reservar turno</span>
-        <span id="btn-pub-loader" class="splash-loader oculto" style="width:18px;height:18px;border-width:2px"></span>
-      </button>
+    <!-- ===== PASO 5: DATOS ===== -->
+    <div class="pub-paso" id="paso-5">
+      <h2 class="pub-paso-titulo">👤 Tus datos</h2>
 
-    </form>
+      <!-- Resumen -->
+      <div class="pub-resumen" id="pub-resumen"></div>
+
+      <form id="form-publica" novalidate>
+        <div class="campo">
+          <label>👤 Tu nombre *</label>
+          <input type="text" id="pub-nombre" placeholder="Ej: María García" autocomplete="name" required>
+        </div>
+
+        <div class="campo">
+          <label>📞 Tu teléfono *</label>
+          <div class="telefono-wrap">
+            <select id="codigo-pais">
+              <option value="598">🇺🇾 +598</option>
+              <option value="54">🇦🇷 +54</option>
+            </select>
+            <input type="tel" id="pub-telefono" placeholder="Ej: 9112345678" autocomplete="tel" required>
+          </div>
+          <small>Coloca el número sin el 0 del inicio</small>
+        </div>
+
+        <div class="campo">
+          <label>📧 Tu email (opcional)</label>
+          <input type="email" id="pub-email" placeholder="para recibir confirmación" autocomplete="email">
+        </div>
+
+        <div class="campo">
+          <label>📝 Notas (opcional)</label>
+          <textarea id="pub-notas" rows="2" placeholder="Alguna indicación especial..."></textarea>
+        </div>
+
+        <div id="pub-form-error" class="form-error oculto"></div>
+
+        <button type="submit" id="btn-pub-guardar" class="btn-primario btn-pub-final">
+          <span id="btn-pub-texto">✅ Confirmar turno</span>
+          <span id="btn-pub-loader" class="splash-loader oculto"></span>
+        </button>
+      </form>
+    </div>
+
+    <!-- BOTONES DE NAVEGACIÓN -->
+    <div class="pub-nav" id="pub-nav">
+      <button type="button" id="pub-prev" class="btn-secundario pub-nav-btn oculto">← Volver</button>
+      <button type="button" id="pub-next" class="btn-primario pub-nav-btn">Continuar</button>
+    </div>
   </div>
 
 </main>
@@ -162,17 +190,34 @@
 const API_URL = 'https://agendamovil-production.up.railway.app/api';
 let userId      = null;
 let servicios   = [];
-let ocupados    = [];
 let sucursales  = [];
 let infoNegocio = {};
+let pasoActual  = 1;
+let totalPasos  = 5;
+let datosReserva = {
+  sucursalId: null,
+  sucursalNombre: '',
+  serviciosSeleccionados: [],
+  fecha: null,
+  hora: null,
+  duracionTotal: 0,
+};
+let mesCalendario, anioCalendario;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   userId = params.get('u');
   if (!userId) { mostrarError('Link inválido. Pedile el link correcto a tu profesional.'); return; }
+
+  const hoy = new Date();
+  mesCalendario = hoy.getMonth();
+  anioCalendario = hoy.getFullYear();
+
   await cargarInfo();
   await cargarSucursales();
   await cargarServicios();
+  renderPaso1();
+  renderPaso2();
   bindForm();
 });
 
@@ -185,6 +230,9 @@ async function cargarInfo() {
     const negocio = data.info.nombre_negocio || data.info.nombre;
     document.getElementById('publica-negocio').textContent = negocio;
     document.title = `🌸 Reservar turno — ${negocio}`;
+    if (data.info.logo_url) {
+      document.getElementById('pub-logo').src = data.info.logo_url;
+    }
   } catch { mostrarError('No se pudo conectar. Intentá más tarde.'); }
 }
 
@@ -193,21 +241,7 @@ async function cargarSucursales() {
     const resp = await fetch(`${API_URL}/publica/${userId}/sucursales`);
     const data = await resp.json();
     if (!data.ok) return;
-
     sucursales = Array.isArray(data.sucursales) ? data.sucursales : [];
-    const select = document.getElementById('pub-sucursal');
-    select.innerHTML = '<option value="">— Elegí sucursal —</option>';
-
-    sucursales.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = s.nombre;
-      select.appendChild(opt);
-    });
-
-    if (sucursales.length === 1) {
-      select.value = sucursales[0].id;
-    }
   } catch {}
 }
 
@@ -217,64 +251,226 @@ async function cargarServicios() {
     const data = await resp.json();
     if (!data.ok) return;
     servicios = data.servicios;
-    const select = document.getElementById('pub-servicio');
-    servicios.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = `${s.nombre}${s.zona ? ' — ' + s.zona : ''} (${s.duracion} min)${s.requiere_senia ? ' 💰' : ''}`;
-      opt.dataset.duracion      = s.duracion;
-      opt.dataset.requiereSenia = s.requiere_senia || false;
-      opt.dataset.montoSenia    = s.monto_senia    || 0;
-      select.appendChild(opt);
-    });
   } catch {}
 }
 
-function bindForm() {
-  const selectServicio = document.getElementById('pub-servicio');
-  const avisoSenia     = document.getElementById('pub-senia-aviso');
-  const montoSeniaEl   = document.getElementById('pub-senia-monto');
+// ─── NAVEGACIÓN DE PASOS ─────────────────────
+function irAPaso(n) {
+  if (n < 1 || n > totalPasos) return;
+  pasoActual = n;
 
-  selectServicio.addEventListener('change', function() {
-    const opt = this.options[this.selectedIndex];
-    document.getElementById('pub-duracion').value = opt.dataset.duracion || 30;
+  document.querySelectorAll('.pub-paso').forEach(p => p.classList.remove('activo'));
+  document.getElementById(`paso-${n}`).classList.add('activo');
 
-    // Mostrar/ocultar aviso seña
-    const requiere = opt.dataset.requiereSenia === 'true';
-    const monto    = parseFloat(opt.dataset.montoSenia) || 0;
-    avisoSenia.classList.toggle('oculto', !requiere);
-    if (requiere) montoSeniaEl.textContent = `$${monto}`;
-
-    const fecha = document.getElementById('pub-fecha').value;
-    if (fecha) cargarHorarios(fecha);
+  document.querySelectorAll('.pub-step').forEach(s => {
+    const sn = parseInt(s.dataset.step);
+    s.classList.toggle('activo', sn <= n);
+    s.classList.toggle('completado', sn < n);
   });
 
-  document.getElementById('pub-sucursal').addEventListener('change', function() {
-    const fecha = document.getElementById('pub-fecha').value;
-    if (fecha && this.value) cargarHorarios(fecha);
-  });
+  const prev = document.getElementById('pub-prev');
+  const next = document.getElementById('pub-next');
+  prev.classList.toggle('oculto', n === 1);
+  if (n === totalPasos) {
+    next.classList.add('oculto');
+    renderResumen();
+  } else {
+    next.classList.remove('oculto');
+    next.textContent = 'Continuar';
+  }
 
-  document.getElementById('pub-fecha').addEventListener('change', function() {
-    const sucursalId = document.getElementById('pub-sucursal').value;
-    if (this.value && sucursalId) cargarHorarios(this.value);
-  });
-
-  document.getElementById('pub-fecha').min = new Date().toISOString().split('T')[0];
-  document.getElementById('form-publica').addEventListener('submit', handleSubmit);
+  if (n === 3) renderCalendario();
+  if (n === 4) cargarHorarios();
 }
 
-async function cargarHorarios(fecha) {
-  const selectHora = document.getElementById('pub-hora');
-  selectHora.innerHTML = '<option value="">Cargando...</option>';
-  const sucursalId = document.getElementById('pub-sucursal').value;
+function validarPaso() {
+  switch (pasoActual) {
+    case 1:
+      if (!datosReserva.sucursalId) { mostrarToast('Elegí una ubicación', 'error'); return false; }
+      return true;
+    case 2:
+      if (!datosReserva.serviciosSeleccionados.length) { mostrarToast('Elegí al menos un servicio', 'error'); return false; }
+      return true;
+    case 3:
+      if (!datosReserva.fecha) { mostrarToast('Elegí una fecha', 'error'); return false; }
+      return true;
+    case 4:
+      if (!datosReserva.hora) { mostrarToast('Elegí un horario', 'error'); return false; }
+      return true;
+    default: return true;
+  }
+}
+
+// ─── PASO 1: UBICACIONES ─────────────────────
+function renderPaso1() {
+  const cont = document.getElementById('pub-ubicaciones');
+  if (!sucursales.length) {
+    cont.innerHTML = '<p class="pub-vacio">No hay ubicaciones disponibles</p>';
+    return;
+  }
+  cont.innerHTML = sucursales.map(s => {
+    const tipoIcon = s.tipo === 'profesional' ? '👤' : '🏪';
+    const tipoBadge = s.tipo === 'profesional' ? 'Profesional' : 'Sucursal';
+    return `
+      <div class="pub-ubicacion-card" data-id="${s.id}">
+        <span class="pub-ubicacion-tipo">${tipoIcon} ${tipoBadge}</span>
+        <p class="pub-ubicacion-nombre">${escaparHTML(s.nombre)}</p>
+      </div>`;
+  }).join('');
+
+  cont.querySelectorAll('.pub-ubicacion-card').forEach(card => {
+    card.addEventListener('click', () => {
+      cont.querySelectorAll('.pub-ubicacion-card').forEach(c => c.classList.remove('seleccionado'));
+      card.classList.add('seleccionado');
+      datosReserva.sucursalId = card.dataset.id;
+      datosReserva.sucursalNombre = card.querySelector('.pub-ubicacion-nombre').textContent;
+    });
+  });
+}
+
+// ─── PASO 2: SERVICIOS (ACORDEÓN) ─────────────
+function renderPaso2() {
+  const cont = document.getElementById('pub-servicios');
+  if (!servicios.length) {
+    cont.innerHTML = '<p class="pub-vacio">No hay servicios disponibles</p>';
+    return;
+  }
+
+  const agrupados = {};
+  servicios.forEach(s => {
+    const cat = s.categoria || 'General';
+    if (!agrupados[cat]) agrupados[cat] = [];
+    agrupados[cat].push(s);
+  });
+
+  const categorias = Object.keys(agrupados).sort();
+
+  cont.innerHTML = categorias.map(cat => `
+    <div class="pub-accordion">
+      <button type="button" class="pub-accordion-header">
+        <span class="pub-accordion-chevron">▸</span>
+        <span class="pub-accordion-nombre">${escaparHTML(cat)}</span>
+        <span class="pub-accordion-count">${agrupados[cat].length}</span>
+      </button>
+      <div class="pub-accordion-body oculto">
+        ${agrupados[cat].map(s => `
+          <div class="pub-servicio-card" data-id="${s.id}">
+            ${s.foto_url ? `<div class="pub-servicio-foto"><img src="${s.foto_url}" alt="${escaparHTML(s.nombre)}" loading="lazy"></div>` : ''}
+            <div class="pub-servicio-info">
+              <p class="pub-servicio-nombre">${escaparHTML(s.nombre)}</p>
+              <p class="pub-servicio-zona">📍 ${escaparHTML(s.zona || '')}</p>
+              <p class="pub-servicio-detalles">⏱ ${s.duracion} min${s.precio ? ` · 💲 $${Number(s.precio).toLocaleString('es-AR')}` : ''}</p>
+              ${s.requiere_senia ? `<p class="pub-servicio-senia">💰 Requiere seña: $${s.monto_senia}</p>` : ''}
+              ${s.descripcion ? `<p class="pub-servicio-desc">${escaparHTML(s.descripcion)}</p>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('.pub-accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const body = header.nextElementSibling;
+      const isOpen = !body.classList.contains('oculto');
+      body.classList.toggle('oculto');
+      header.querySelector('.pub-accordion-chevron').style.transform = isOpen ? '' : 'rotate(90deg)';
+    });
+  });
+
+  cont.querySelectorAll('.pub-servicio-card').forEach(card => {
+    card.addEventListener('click', () => {
+      card.classList.toggle('seleccionado');
+      const id = card.dataset.id;
+      if (card.classList.contains('seleccionado')) {
+        datosReserva.serviciosSeleccionados.push(id);
+      } else {
+        datosReserva.serviciosSeleccionados = datosReserva.serviciosSeleccionados.filter(i => i !== id);
+      }
+      calcularDuracionTotal();
+    });
+  });
+
+  // Abrir primera categoría por defecto
+  const firstBody = cont.querySelector('.pub-accordion-body');
+  if (firstBody) {
+    firstBody.classList.remove('oculto');
+    const firstHeader = firstBody.previousElementSibling;
+    if (firstHeader) firstHeader.querySelector('.pub-accordion-chevron').style.transform = 'rotate(90deg)';
+  }
+}
+
+function calcularDuracionTotal() {
+  datosReserva.duracionTotal = 0;
+  datosReserva.serviciosSeleccionados.forEach(id => {
+    const s = servicios.find(sv => String(sv.id) === String(id));
+    if (s) datosReserva.duracionTotal += parseInt(s.duracion) || 30;
+  });
+}
+
+// ─── PASO 3: CALENDARIO ───────────────────────
+function renderCalendario() {
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  document.getElementById('pub-cal-mes').textContent = `${meses[mesCalendario]} ${anioCalendario}`;
+
+  const primerDia = new Date(anioCalendario, mesCalendario, 1);
+  const ultimoDia = new Date(anioCalendario, mesCalendario + 1, 0);
+  let startDow = primerDia.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1; // Lunes primero
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  let html = '';
+  // Espacios vacíos
+  for (let i = 0; i < startDow; i++) html += '<div></div>';
+
+  for (let d = 1; d <= ultimoDia.getDate(); d++) {
+    const fecha = new Date(anioCalendario, mesCalendario, d);
+    const fechaStr = `${anioCalendario}-${String(mesCalendario + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const esPasado = fecha < hoy;
+    const esSeleccionada = datosReserva.fecha === fechaStr;
+    const clases = ['pub-cal-dia'];
+    if (esPasado) clases.push('pasado');
+    if (esSeleccionada) clases.push('seleccionado');
+
+    html += `<button type="button" class="${clases.join(' ')}" data-fecha="${fechaStr}" ${esPasado ? 'disabled' : ''}>${d}</button>`;
+  }
+
+  document.getElementById('pub-cal-dias').innerHTML = html;
+
+  document.getElementById('pub-cal-dias').querySelectorAll('.pub-cal-dia:not(.pasado)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pub-cal-dia').forEach(b => b.classList.remove('seleccionado'));
+      btn.classList.add('seleccionado');
+      datosReserva.fecha = btn.dataset.fecha;
+    });
+  });
+}
+
+// ─── PASO 4: HORARIOS ─────────────────────────
+async function cargarHorarios() {
+  const cont = document.getElementById('pub-horarios');
+  const fechaLabel = document.getElementById('pub-fecha-seleccionada');
+
+  if (!datosReserva.fecha) {
+    cont.innerHTML = '<p class="pub-vacio">Primero elegí una fecha</p>';
+    return;
+  }
+
+  fechaLabel.textContent = formatearFecha(datosReserva.fecha);
+  cont.innerHTML = '<div class="pub-cargando">Cargando horarios...</div>';
+
+  const sucursalId = datosReserva.sucursalId;
   if (!sucursalId) {
-    selectHora.innerHTML = '<option value="">— Primero elegí sucursal —</option>';
+    cont.innerHTML = '<p class="pub-vacio">Primero elegí una ubicación</p>';
     return;
   }
 
   let bloques = [];
+  let ocupados = [];
   try {
-    const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`);
+    const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${datosReserva.fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`);
     const data = await resp.json();
     ocupados = data.ok ? data.ocupados : [];
     bloques = data.ok ? (data.bloques || []) : [];
@@ -283,143 +479,147 @@ async function cargarHorarios(fecha) {
     bloques = [];
   }
 
-  const duracion = parseInt(document.getElementById('pub-duracion').value) || 30;
-  selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
-
   if (!bloques.length) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = '— Sin horarios disponibles en esta sucursal para ese día —';
-    opt.disabled = true;
-    selectHora.appendChild(opt);
+    cont.innerHTML = '<p class="pub-vacio">No hay horarios disponibles para esta fecha</p>';
     return;
   }
 
+  const horariosDisponibles = [];
   for (const b of bloques) {
     const inicio = horaAMinutos(String(b.desde).slice(0, 5));
     const finBloque = horaAMinutos(String(b.hasta).slice(0, 5));
-
-    for (let m = inicio; m <= finBloque; m += 15) {
-      const hora    = minutosAHora(m);
-      const horaFin = m + duracion;
-      if (horaFin > finBloque) continue;
-
+    for (let m = inicio; m < finBloque; m += 15) {
+      const hora = minutosAHora(m);
+      const horaFin = m + datosReserva.duracionTotal;
       const ocupado = ocupados.some(t => {
-        const tMin = horaAMinutos(t.hora.slice(0, 5));
+        const tMin = horaAMinutos(String(t.hora).slice(0, 5));
         return m < tMin + parseInt(t.duracion) && horaFin > tMin;
       });
-
-      const opt = document.createElement('option');
-      opt.value       = hora;
-      opt.textContent = ocupado ? `${hora} — Ocupado` : `${hora} — Disponible`;
-      opt.disabled    = ocupado;
-      if (ocupado) opt.style.color = '#B09590';
-      selectHora.appendChild(opt);
+      if (!ocupado && horaFin <= finBloque) {
+        horariosDisponibles.push(hora);
+      }
     }
   }
+
+  if (!horariosDisponibles.length) {
+    cont.innerHTML = '<p class="pub-vacio">No quedan horarios disponibles</p>';
+    return;
+  }
+
+  cont.innerHTML = horariosDisponibles.map(h =>
+    `<button type="button" class="pub-hora-btn" data-hora="${h}">${h} hs</button>`
+  ).join('');
+
+  cont.querySelectorAll('.pub-hora-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cont.querySelectorAll('.pub-hora-btn').forEach(b => b.classList.remove('seleccionado'));
+      btn.classList.add('seleccionado');
+      datosReserva.hora = btn.dataset.hora;
+    });
+  });
+}
+
+// ─── PASO 5: RESUMEN ─────────────────────────
+function renderResumen() {
+  const cont = document.getElementById('pub-resumen');
+  const serviciosNombres = datosReserva.serviciosSeleccionados.map(id => {
+    const s = servicios.find(sv => String(sv.id) === String(id));
+    return s ? s.nombre : '';
+  }).filter(Boolean).join(', ');
+
+  cont.innerHTML = `
+    <div class="pub-resumen-item">📍 ${escaparHTML(datosReserva.sucursalNombre)}</div>
+    <div class="pub-resumen-item">✂️ ${escaparHTML(serviciosNombres)}</div>
+    <div class="pub-resumen-item">📅 ${formatearFecha(datosReserva.fecha)}</div>
+    <div class="pub-resumen-item">🕐 ${datosReserva.hora} hs</div>
+  `;
+}
+
+// ─── FORM SUBMIT ──────────────────────────────
+function bindForm() {
+  document.getElementById('pub-next').addEventListener('click', () => {
+    if (validarPaso()) irAPaso(pasoActual + 1);
+  });
+
+  document.getElementById('pub-prev').addEventListener('click', () => {
+    irAPaso(pasoActual - 1);
+  });
+
+  document.getElementById('pub-cal-prev').addEventListener('click', () => {
+    mesCalendario--;
+    if (mesCalendario < 0) { mesCalendario = 11; anioCalendario--; }
+    renderCalendario();
+  });
+
+  document.getElementById('pub-cal-next').addEventListener('click', () => {
+    mesCalendario++;
+    if (mesCalendario > 11) { mesCalendario = 0; anioCalendario++; }
+    renderCalendario();
+  });
+
+  document.getElementById('form-publica').addEventListener('submit', handleSubmit);
 }
 
 async function handleSubmit(e) {
   e.preventDefault();
 
-  const nombre   = document.getElementById('pub-nombre').value.trim();
+  const nombre = document.getElementById('pub-nombre').value.trim();
   const telefono = document.getElementById('pub-telefono').value.trim();
   const codigoPais = document.getElementById('codigo-pais').value;
 
-  const sucursalId = document.getElementById('pub-sucursal').value;
-  const fecha    = document.getElementById('pub-fecha').value;
-  const hora     = document.getElementById('pub-hora').value;
-  const duracion = parseInt(document.getElementById('pub-duracion').value) || 30;
-  const notas    = document.getElementById('pub-notas').value.trim();
-  const servId   = document.getElementById('pub-servicio').value;
-  const serv     = servicios.find(s => String(s.id) === String(servId));
-
-  // 🔹 LIMPIAR TELÉFONO
   let telefonoLimpio = telefono.replace(/\D/g, '');
-
-  // sacar 0 inicial si existe
-  if (telefonoLimpio.startsWith('0')) {
-    telefonoLimpio = telefonoLimpio.slice(1);
-  }
-
-  // agregar código país seleccionado
+  if (telefonoLimpio.startsWith('0')) telefonoLimpio = telefonoLimpio.slice(1);
   telefonoLimpio = '+' + codigoPais + telefonoLimpio;
 
-  // 🔹 VALIDACIONES
-  if (!nombre)   { mostrarFormError('El nombre es requerido');   return; }
-  if (!telefono) { mostrarFormError('El teléfono es requerido'); return; }
-  if (telefonoLimpio.length < 11) { 
-    mostrarFormError('Número inválido'); 
-    return; 
-  }
-  if (!sucursalId) { mostrarFormError('La sucursal es requerida'); return; }
-  if (!fecha)    { mostrarFormError('La fecha es requerida');    return; }
-  if (!hora)     { mostrarFormError('El horario es requerido');  return; }
+  if (!nombre)   { mostrarFormError('El nombre es requerido'); return; }
+  if (!telefonoLimpio || telefonoLimpio.length < 11) { mostrarFormError('Número inválido'); return; }
+
+  const serv = datosReserva.serviciosSeleccionados.map(id => servicios.find(s => String(s.id) === String(id))).filter(Boolean)[0];
+  const duracion = datosReserva.duracionTotal || (serv?.duracion || 30);
 
   setBtnLoading(true);
   ocultarFormError();
 
   try {
     const resp = await fetch(`${API_URL}/publica/${userId}/turno`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nombre,
-        telefono: telefonoLimpio, // ✅ ahora sí correcto
-        fecha,
-        hora,
+        telefono: telefonoLimpio,
+        fecha: datosReserva.fecha,
+        hora: datosReserva.hora,
         duracion,
-        notas:           notas        || null,
-        email_clienta:   document.getElementById('pub-email')?.value.trim() || null,
-        servicio_id:     serv?.id     || null,
+        notas: document.getElementById('pub-notas').value.trim() || null,
+        email_clienta: document.getElementById('pub-email')?.value.trim() || null,
+        servicio_id: serv?.id || null,
         servicio_nombre: serv?.nombre || null,
-        servicio_zona:   serv?.zona   || null,
-        servicio_color:  serv?.color  || '#A85568',
-        sucursal_id:     sucursalId,
+        servicio_zona: serv?.zona || null,
+        servicio_color: serv?.color || '#A85568',
+        sucursal_id: datosReserva.sucursalId,
       }),
     });
 
     const data = await resp.json();
-
-    if (!data.ok) {
-      mostrarFormError(data.error || 'Error al reservar');
-      setBtnLoading(false);
-      return;
-    }
+    if (!data.ok) { mostrarFormError(data.error || 'Error al reservar'); setBtnLoading(false); return; }
 
     document.getElementById('publica-form-wrap').classList.add('oculto');
 
-    const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
-      weekday:'long', day:'numeric', month:'long'
-    });
+    const fechaFormateada = new Date(datosReserva.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
 
     if (data.turno?.senia_requerida) {
-      const negocio   = infoNegocio.nombre_negocio || infoNegocio.nombre;
+      const negocio = infoNegocio.nombre_negocio || infoNegocio.nombre;
       const telNegocio = infoNegocio.telefono || '';
 
-      document.getElementById('exito-senia-detalle').textContent =
-        `${nombre}, tu solicitud para el ${fechaFormateada} a las ${hora} hs fue recibida.`;
-
-      document.getElementById('exito-senia-monto').textContent   = `$${data.turno.monto_senia}`;
+      document.getElementById('exito-senia-detalle').textContent = `${nombre}, tu solicitud para el ${fechaFormateada} a las ${datosReserva.hora} hs fue recibida.`;
+      document.getElementById('exito-senia-monto').textContent = `$${data.turno.monto_senia}`;
       document.getElementById('exito-senia-negocio').textContent = negocio;
 
-      const msgWA = encodeURIComponent(
-        `Hola ${negocio}! 🌸 Me agendé para el ${fechaFormateada} a las ${hora} hs` +
-        `${serv ? ` (${serv.nombre})` : ''}. ` +
-        `Quería coordinar el pago de la seña de $${data.turno.monto_senia}. ¡Gracias!`
-      );
-
-      const waLink = telNegocio
-        ? `https://wa.me/${telNegocio.replace(/\D/g,'')}?text=${msgWA}`
-        : '#';
-
-      document.getElementById('exito-senia-wa').href = waLink;
+      const msgWA = encodeURIComponent(`Hola ${negocio}! 🌸 Me agendé para el ${fechaFormateada} a las ${datosReserva.hora} hs${serv ? ` (${serv.nombre})` : ''}. Quería coordinar el pago de la seña de $${data.turno.monto_senia}. ¡Gracias!`);
+      document.getElementById('exito-senia-wa').href = telNegocio ? `https://wa.me/${telNegocio.replace(/\D/g,'')}?text=${msgWA}` : '#';
       document.getElementById('publica-exito-senia').classList.remove('oculto');
-
     } else {
-      document.getElementById('exito-detalle').textContent =
-        `${nombre}, tu turno es el ${fechaFormateada} a las ${hora} hs.`;
-
+      document.getElementById('exito-detalle').textContent = `${nombre}, tu turno es el ${fechaFormateada} a las ${datosReserva.hora} hs.`;
       document.getElementById('publica-exito').classList.remove('oculto');
     }
 
@@ -429,22 +629,29 @@ async function handleSubmit(e) {
   }
 }
 
-function minutosAHora(m) {
-  return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;
-}
+// ─── HELPERS ──────────────────────────────────
+function minutosAHora(m) { return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`; }
 function horaAMinutos(h) { const [hh,mm] = h.split(':').map(Number); return hh*60+mm; }
+function formatearFecha(f) {
+  if (!f) return '';
+  const d = new Date(f + 'T12:00:00');
+  return d.toLocaleDateString('es-UY', { weekday:'long', day:'numeric', month:'long' });
+}
+function escaparHTML(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+
 function mostrarError(msg) {
   document.getElementById('publica-form-wrap')?.classList.add('oculto');
   document.getElementById('publica-error').classList.remove('oculto');
   document.getElementById('publica-error-msg').textContent = msg;
 }
+function mostrarToast(msg) { alert(msg); }
 function mostrarFormError(msg) {
   const el = document.getElementById('pub-form-error');
   el.textContent = msg; el.classList.remove('oculto');
 }
 function ocultarFormError() { document.getElementById('pub-form-error').classList.add('oculto'); }
 function setBtnLoading(loading) {
-  document.getElementById('btn-pub-texto').classList.toggle('oculto',  loading);
+  document.getElementById('btn-pub-texto').classList.toggle('oculto', loading);
   document.getElementById('btn-pub-loader').classList.toggle('oculto', !loading);
   document.getElementById('btn-pub-guardar').disabled = loading;
 }
