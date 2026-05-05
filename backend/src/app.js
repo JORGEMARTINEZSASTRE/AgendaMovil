@@ -15,6 +15,8 @@ const seniaRoutes = require('./routes/senia.routes');
 const waRoutes = require('./routes/wa.routes');
 const whatsappRoutes = require('./routes/whatsapp.routes');
 const sucursalesRoutes = require('./routes/sucursales.routes');
+const fichasRoutes = require('./routes/fichas.routes');
+
 
 const app = express();
 
@@ -51,6 +53,7 @@ app.use('/api/senia', seniaRoutes);
 app.use('/api/wa', waRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
+app.use('/api/fichas', fichasRoutes);
 
 
 
@@ -69,7 +72,7 @@ app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
   res.json(resultado);
 });
 
-// ─── STATIC FRONTEND ─────────────────────────────
+/// ─── STATIC FRONTEND ─────────────────────────────
 const path = require('path');
 const fs = require('fs');
 
@@ -78,7 +81,13 @@ console.log('[STATIC] path:', frontendPath);
 console.log('[STATIC] existe?', fs.existsSync(frontendPath));
 console.log('[STATIC] archivos:', fs.existsSync(frontendPath) ? fs.readdirSync(frontendPath) : 'N/A');
 
+// Carpetas de uploads
+app.use('/fotosServicio', express.static(path.join(__dirname, '../public/fotosServicio')));
+app.use('/fichas_medicas', express.static(path.join(__dirname, '../public/fichas_medicas')));
+
 app.use(express.static(frontendPath));
+app.use(express.static(frontendPath));
+
 // Redirigir raíz al login
 app.get('/', (_req, res) => {
   res.redirect('/login.html');

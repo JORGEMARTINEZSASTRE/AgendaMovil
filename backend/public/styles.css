@@ -1788,3 +1788,183 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 }
+/* ═══════════════════════════════════════════════
+   FICHA CLÍNICA
+   ═══════════════════════════════════════════════ */
+.modal-ficha-card {
+  max-height: 92dvh;
+}
+
+.ficha-clienta-info {
+  background: linear-gradient(135deg, rgba(168,85,104,.08), rgba(201,169,110,.08));
+  border: 1px solid rgba(168,85,104,.2);
+  border-radius: var(--radio-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ficha-clienta-nombre {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--marron);
+}
+.ficha-clienta-tel {
+  font-size: 12px;
+  color: var(--gris);
+}
+.ficha-clienta-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(37,211,102,.15);
+  color: #1a7a3e;
+}
+.ficha-clienta-badge.nueva {
+  background: rgba(168,85,104,.12);
+  color: var(--rosa-vino);
+}
+
+/* Tabs ficha */
+.ficha-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.ficha-tabs::-webkit-scrollbar { display: none; }
+
+.ficha-tab {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 100px;
+  border: 1.5px solid var(--borde);
+  background: var(--crema2);
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gris);
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.ficha-tab.activo {
+  background: linear-gradient(135deg, var(--rosa-vino), var(--rosa-polvo));
+  color: white;
+  border-color: transparent;
+}
+.ficha-tab:hover:not(.activo) {
+  border-color: var(--rosa-polvo);
+  color: var(--rosa-vino);
+}
+
+/* Panels ficha */
+.ficha-panel { display: none; }
+.ficha-panel.activo { display: block; animation: aparecer .2s ease; }
+
+.ficha-seccion-titulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--rosa-vino);
+  margin: 16px 0 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--borde);
+}
+.ficha-panel .ficha-seccion-titulo:first-child { margin-top: 0; }
+
+/* Footer guardar */
+.ficha-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--panel);
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--borde);
+  margin-top: 16px;
+}
+.ficha-msg {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radio-sm);
+  margin-bottom: 10px;
+  text-align: center;
+}
+.ficha-msg.ok {
+  background: rgba(37,211,102,.12);
+  color: #1a7a3e;
+}
+.ficha-msg.error {
+  background: rgba(224,85,85,.12);
+  color: var(--rojo);
+}
+
+/* Sesiones */
+.ficha-sesiones-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.sesion-card {
+  background: var(--crema2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 12px 14px;
+  border-left: 3px solid var(--rosa-polvo);
+}
+.sesion-fecha {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rosa-vino);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.sesion-campo {
+  font-size: 13px;
+  color: var(--texto);
+  margin-bottom: 3px;
+  line-height: 1.5;
+}
+.sesion-campo strong {
+  color: var(--marron);
+}
+.sesion-vacio {
+  text-align: center;
+  font-size: 13px;
+  color: var(--gris);
+  font-style: italic;
+  padding: 16px 0;
+}
+.ficha-nueva-sesion {
+  background: var(--crema);
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Botón ficha en card turno */
+.btn-ficha {
+  background: rgba(168,85,104,.1);
+  border: 1.5px solid rgba(168,85,104,.25);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-ficha:hover {
+  background: rgba(168,85,104,.2);
+  border-color: var(--rosa-vino);
+}

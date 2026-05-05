@@ -438,8 +438,9 @@ function cardTurno(t) {
           <span class="turno-hora-fin">→ ${fin}</span>
         </div>
         <div class="turno-acciones">
-          <button class="btn-icon btn-wa"     data-id="${t.id}" title="WhatsApp">💬</button>
-          <button class="btn-icon btn-editar" data-id="${t.id}" title="Editar">✏️</button>
+            <button class="btn-icon btn-wa"     data-id="${t.id}" title="WhatsApp">💬</button>
+            <button class="btn-icon btn-ficha"  data-id="${t.id}" title="Ficha clínica">🗂️</button>
+            <button class="btn-icon btn-editar" data-id="${t.id}" title="Editar">✏️</button>
           <button class="btn-icon btn-cancelar-turno ${t.estado === 'cancelado' ? 'turno-cancelado' : ''}"
                   data-id="${t.id}"
                   title="${t.estado === 'cancelado' ? 'Reactivar' : 'Cancelar'}">
@@ -475,12 +476,12 @@ function cardTurno(t) {
 
 
 function bindAccionesTurnos(contenedor) {
-  contenedor.querySelectorAll('.btn-wa').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const turno = turnos.find(t => t.id === btn.dataset.id);
-      if (turno) abrirWhatsApp(turno);
-    });
+ contenedor.querySelectorAll('.btn-ficha').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const turno = turnos.find(t => t.id === btn.dataset.id);
+    if (turno) abrirFicha(turno.telefono, turno.nombre, turno.id);
   });
+});
 
   contenedor.querySelectorAll('.btn-editar').forEach(btn => {
         btn.addEventListener('click', () => {
