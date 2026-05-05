@@ -38,6 +38,7 @@
 .oculto { display: none !important; }
 
 /* ─── BASE ───────────────────────────── */
+html, body { margin: 0; padding: 0; }
 *, *::before, *::after { box-sizing: border-box; }
 
 .publica-body {
@@ -47,6 +48,7 @@
   background: linear-gradient(170deg, var(--crema) 0%, var(--crema2) 55%, var(--blush) 100%);
   font-family: 'Nunito', sans-serif;
   color: var(--texto);
+  overflow-x: hidden;
 }
 
 /* ─── HEADER ─────────────────────────── */
@@ -56,6 +58,10 @@
   box-shadow: 0 2px 12px rgba(142,63,84,.20);
   border-radius: 0;
   width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  position: relative;
+  z-index: 10;
 }
 .publica-header-inner {
   display: flex;
