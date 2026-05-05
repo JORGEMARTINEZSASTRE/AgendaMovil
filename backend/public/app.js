@@ -484,22 +484,23 @@ function cardTurno(t) {
 function bindAccionesTurnos(contenedor) {
  contenedor.querySelectorAll('.btn-ficha').forEach(btn => {
   btn.addEventListener('click', () => {
-    const turno = turnos.find(t => t.id === btn.dataset.id);
+    const turno = turnos.find(t => String(t.id) === String(btn.dataset.id));
     if (turno) abrirFicha(turno.telefono, turno.nombre, turno.id);
   });
 });
 
  contenedor.querySelectorAll('.btn-wa').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const turno = turnos.find(t => t.id === btn.dataset.id);
-    if (!turno) return;
-    abrirWhatsApp(turno);
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const turno = turnos.find(t => String(t.id) === String(btn.dataset.id));
+    if (turno) abrirWhatsApp(turno);
   });
 });
 
   contenedor.querySelectorAll('.btn-editar').forEach(btn => {
         btn.addEventListener('click', () => {
-      const turno = turnos.find(t => t.id === btn.dataset.id);
+      const turno = turnos.find(t => String(t.id) === String(btn.dataset.id));
       if (turno) abrirFormTurno(turno);
     });
   });
