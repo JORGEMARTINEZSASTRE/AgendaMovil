@@ -489,6 +489,14 @@ function bindAccionesTurnos(contenedor) {
   });
 });
 
+ contenedor.querySelectorAll('.btn-wa').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const turno = turnos.find(t => t.id === btn.dataset.id);
+    if (!turno) return;
+    abrirWhatsApp(turno);
+  });
+});
+
   contenedor.querySelectorAll('.btn-editar').forEach(btn => {
         btn.addEventListener('click', () => {
       const turno = turnos.find(t => t.id === btn.dataset.id);
