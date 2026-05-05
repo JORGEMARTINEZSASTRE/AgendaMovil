@@ -1126,6 +1126,7 @@ function cardServicioHTML(s) {
   return `
     <div class="card-servicio" data-id="${s.id}" style="border-left:4px solid ${s.color || '#A85568'}">
       <div class="serv-color" style="background:${s.color || '#A85568'}"></div>
+      ${s.foto_url ? `<div class="serv-foto-card"><img src="${s.foto_url}" alt="${escaparHTML(s.nombre)}" loading="lazy"></div>` : ''}
       <div class="serv-info">
         <p class="serv-nombre">${escaparHTML(s.nombre)}</p>
         <p class="serv-zona">📍 ${escaparHTML(s.zona || '')}</p>
@@ -1194,9 +1195,46 @@ function bindFormServicio() {
       if (!toggleSenia.checked) setVal('serv-monto-senia', '');
     });
   }
+
+  // Preview foto
+  const fotoInput = document.getElementById('serv-foto-input');
+  const fotoPreview = document.getElementById('serv-foto-preview');
+  const fotoImg = document.getElementById('serv-foto-img');
+  if (fotoInput && fotoPreview && fotoImg) {
+    fotoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        mostrarToast('Solo se permiten imágenes', 'error');
+        fotoInput.value = '';
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        mostrarToast('La imagen no debe superar 5MB', 'error');
+        fotoInput.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        fotoImg.src = ev.target.result;
+        fotoPreview.classList.remove('oculto');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Quitar foto
+  const btnQuitarFoto = document.getElementById('btn-quitar-foto');
+  if (btnQuitarFoto) {
+    btnQuitarFoto.addEventListener('click', () => {
+      fotoPreview.classList.add('oculto');
+      fotoImg.src = '';
+      fotoInput.value = '';
+    });
+  }
 }
 
-function abrirFormServicio(serv = null) {
+ function abrirFormServicio(serv = null) {
   editandoServId = serv?.id || null;
   limpiarFormServicio();
 
@@ -1210,22 +1248,30 @@ function abrirFormServicio(serv = null) {
   const toggleSenia = document.getElementById('serv-requiere-senia');
   const montoWrap   = document.getElementById('serv-senia-monto-wrap');
 
- if (serv) {
-  setVal('serv-nombre',      serv.nombre);
-  setVal('serv-precio',      serv.precio ?? '');   
-  setVal('serv-categoria',   serv.categoria || '');
-  setVal('serv-zona',        serv.zona);
-  setVal('serv-duracion',    serv.duracion);
-  setVal('serv-color',       serv.color || '#A85568');
-  setVal('serv-descripcion', serv.descripcion || '');
+  if (serv) {
+    setVal('serv-nombre',      serv.nombre);
+    setVal('serv-precio',      serv.precio ?? '');   
+    setVal('serv-categoria',   serv.categoria || '');
+    setVal('serv-zona',        serv.zona);
+    setVal('serv-duracion',    serv.duracion);
+    setVal('serv-color',       serv.color || '#A85568');
+    setVal('serv-descripcion', serv.descripcion || '');
 
-  if (toggleSenia) toggleSenia.checked = !!serv.requiere_senia;
-  if (montoWrap)   montoWrap.classList.toggle('oculto', !serv.requiere_senia);
+    if (toggleSenia) toggleSenia.checked = !!serv.requiere_senia;
+    if (montoWrap)   montoWrap.classList.toggle('oculto', !serv.requiere_senia);
 
-  setVal('serv-monto-senia', serv.monto_senia || '');
+    setVal('serv-monto-senia', serv.monto_senia || '');
+
+    // Mostrar foto existente
+    const preview = document.getElementById('serv-foto-preview');
+    const img     = document.getElementById('serv-foto-img');
+    if (serv.foto_url && preview && img) {
+      img.src = serv.foto_url;
+      preview.classList.remove('oculto');
+    }
   } else {
     setVal('serv-color', '#A85568');
-   setVal('serv-categoria', '');
+    setVal('serv-categoria', '');
     if (toggleSenia) toggleSenia.checked = false;
     if (montoWrap)   montoWrap.classList.add('oculto');
     setVal('serv-monto-senia', '');
@@ -1239,6 +1285,11 @@ function limpiarFormServicio() {
   if (form) form.reset();
   const errEl = document.getElementById('form-servicio-error');
   if (errEl) errEl.classList.add('oculto');
+  // Limpiar preview de foto
+  const preview = document.getElementById('serv-foto-preview');
+  const input   = document.getElementById('serv-foto-input');
+  if (preview) preview.classList.add('oculto');
+  if (input)   input.value = '';
 }
 
 async function handleSubmitServicio(e) {
@@ -1308,6 +1359,36 @@ const payload = {
     } else {
       servicios.push(data.servicio);
       mostrarToast('Servicio creado ✅', 'exito');
+    }
+
+    // Subir foto si hay archivo seleccionado
+    const servId = editandoServId || data.servicio?.id;
+    const fotoInput = document.getElementById('serv-foto-input');
+    if (servId && fotoInput?.files[0]) {
+      try {
+        const fotoData = await ServiciosAPI.subirFoto(servId, fotoInput.files[0]);
+        // Actualizar foto_url en el servicio local
+        const servIdx = servicios.findIndex(s => String(s.id) === String(servId));
+        if (servIdx !== -1) {
+          servicios[servIdx].foto_url = fotoData.url;
+        }
+      } catch (e) {
+        console.error('[FOTO] Error al subir foto:', e.message);
+        mostrarToast('Servicio guardado pero hubo un error al subir la foto', 'error');
+      }
+    }
+
+    // Eliminar foto si se quitó
+    if (servId && !fotoInput?.value) {
+      const servActual = servicios.find(s => String(s.id) === String(servId));
+      if (servActual?.foto_url) {
+        try {
+          await ServiciosAPI.eliminarFoto(servId);
+          servActual.foto_url = null;
+        } catch (e) {
+          console.error('[FOTO] Error al eliminar foto:', e.message);
+        }
+      }
     }
 
     cerrarModales();

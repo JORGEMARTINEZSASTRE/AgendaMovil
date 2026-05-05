@@ -256,6 +256,33 @@ const ServiciosAPI = {
       method: 'DELETE',
     });
   },
+
+  async subirFoto(id, file) {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('foto', file);
+
+    const resp = await fetch(`${API_URL}/fichas/servicio/${id}/foto`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json();
+      throw new Error(data?.error || `Error ${resp.status}`);
+    }
+
+    return await resp.json();
+  },
+
+  async eliminarFoto(id) {
+    return await fetchAPI(`/fichas/servicio/${id}/foto`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ═══════════════════════════════════════════════════════════

@@ -411,7 +411,8 @@ const Servicios = {
       `SELECT id, user_id, nombre, zona, duracion,
               color, descripcion, activo, creado_en,
               requiere_senia, monto_senia, precio,
-              COALESCE(categoria, 'General') as categoria
+              COALESCE(categoria, 'General') as categoria,
+              foto_url
        FROM servicios
        WHERE user_id = $1
          AND activo  = true

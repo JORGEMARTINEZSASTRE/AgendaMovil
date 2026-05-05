@@ -774,6 +774,24 @@
         ></textarea>
       </div>
 
+      <!-- Foto del servicio -->
+      <div class="campo">
+        <label>📷 Foto del servicio</label>
+        <div class="serv-foto-wrap">
+          <div id="serv-foto-preview" class="serv-foto-preview oculto">
+            <img id="serv-foto-img" src="" alt="Foto del servicio">
+            <button type="button" id="btn-quitar-foto" class="btn-quitar-foto" title="Quitar foto">✕</button>
+          </div>
+          <label for="serv-foto-input" class="btn-subir-foto">
+            📷 Subir foto
+          </label>
+          <input type="file" id="serv-foto-input" accept="image/*" class="oculto">
+          <small style="font-size:11px;color:var(--gris);margin-top:4px;display:block">
+            JPG, PNG o WebP — Máx 5MB
+          </small>
+        </div>
+      </div>
+
       <!-- Seña -->
       <div class="campo-senia">
         <div class="senia-toggle-wrap">
