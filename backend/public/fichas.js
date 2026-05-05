@@ -130,7 +130,7 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
   });
 
   try {
-    const token = localStorage.getItem('depimovil_token');
+    const token = localStorage.getItem('token');
     const res   = await fetch('/api/fichas/ficha', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -139,10 +139,24 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
     const result = await res.json();
     if (!res.ok) throw new Error(result.error);
 
-    mostrarMensajeFicha('✅ Ficha guardada correctamente');
+    // Si es nueva, buscar el id recién creado
+    if (result.accion === 'creada' && result.id) {
+      fichaActual.fichaId = result.id;
+    } else if (result.accion === 'actualizada' && !fichaActual.fichaId) {
+      // Buscar el id si no lo teníamos
+      const r2 = await fetch(`/api/fichas/ficha/${encodeURIComponent(fichaActual.telefono)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d2 = await r2.json();
+      if (d2.ficha) fichaActual.fichaId = d2.ficha.id;
+    }
+
     fichaActual.esNueva = false;
+    mostrarMensajeFicha('✅ Ficha guardada correctamente');
     document.getElementById('ficha-estado-badge').textContent = '✅ Ficha existente';
     document.getElementById('ficha-estado-badge').classList.remove('nueva');
+
+    console.log('[FICHA] fichaId después de guardar:', fichaActual.fichaId);
   } catch (err) {
     mostrarMensajeFicha('❌ Error al guardar: ' + err.message, 'error');
   }
@@ -150,6 +164,7 @@ document.getElementById('form-ficha').addEventListener('submit', async (e) => {
 
 // ── Guardar sesión ───────────────────────────────
 document.getElementById('btn-guardar-sesion').addEventListener('click', async () => {
+  console.log('[SESION] fichaActual:', fichaActual); // ← agregá esto
   if (!fichaActual.fichaId) {
     mostrarMensajeFicha('⚠️ Primero guardá la ficha antes de agregar una sesión.', 'error');
     mostrarFichaTab('datos');
