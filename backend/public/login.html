@@ -21,20 +21,24 @@
   <div class="login-logo">
     <span class="login-icono">🌸</span>
     <p class="login-marca">AGENDAMOVIL</p>
-    <h1 class="login-titulo">Bienvenida</h1>
-    <p class="login-sub">Ingresá a tu agenda inteligente</p>
+    <h1 class="login-titulo" id="login-titulo-header">Bienvenida</h1>
+    <p class="login-sub" id="login-sub-header">Ingresá a tu agenda inteligente</p>
+  </div>
+
+  <!-- Toggle tabs -->
+  <div class="login-tabs">
+    <button class="login-tab activo" id="tab-login">Ingresar</button>
+    <button class="login-tab" id="tab-registro">Crear cuenta</button>
   </div>
 
   <!-- Card login -->
-  <div class="login-card">
+  <div class="login-card" id="card-login">
 
-    <!-- Error banner -->
     <div id="login-error" class="login-error oculto">
       <span class="login-error-icono">⚠️</span>
       <span id="login-error-msg">Error al iniciar sesión</span>
     </div>
 
-    <!-- Trial vencido banner -->
     <div id="trial-banner" class="trial-banner oculto">
       <span>⏰</span>
       <div>
@@ -44,45 +48,91 @@
     </div>
 
     <form id="login-form" novalidate>
-
       <div class="campo">
         <label for="login-email">📧 Email</label>
-        <input
-          type="email"
-          id="login-email"
-          placeholder="tu@email.com"
-          autocomplete="email"
-          required
-        >
+        <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email" required>
         <span class="campo-error" id="err-email"></span>
       </div>
-
       <div class="campo">
         <label for="login-password">🔒 Contraseña</label>
         <div class="password-wrap">
-          <input
-            type="password"
-            id="login-password"
-            placeholder="Tu contraseña"
-            autocomplete="current-password"
-            required
-          >
-          <button type="button" class="btn-toggle-pass" id="btn-toggle-pass" tabindex="-1">
-            👁
-          </button>
+          <input type="password" id="login-password" placeholder="Tu contraseña" autocomplete="current-password" required>
+          <button type="button" class="btn-toggle-pass" id="btn-toggle-pass" tabindex="-1">👁</button>
         </div>
         <span class="campo-error" id="err-password"></span>
       </div>
-
       <button type="submit" class="btn-login" id="btn-login">
         <span id="btn-login-texto">Ingresar →</span>
         <span id="btn-login-loader" class="login-loader oculto"></span>
       </button>
-
     </form>
 
     <p class="login-footer-text">
-      ¿No tenés cuenta? Contactá a tu administrador.
+      ¿No tenés cuenta? <button class="btn-link-inv" id="btn-ir-registro">Creá una gratis →</button>
+    </p>
+
+  </div>
+
+  <!-- Card registro -->
+  <div class="login-card oculto" id="card-registro">
+
+    <div id="reg-error" class="login-error oculto">
+      <span class="login-error-icono">⚠️</span>
+      <span id="reg-error-msg"></span>
+    </div>
+
+    <div id="reg-exito" class="reg-exito oculto">
+      <span>🎉</span>
+      <span id="reg-exito-msg">¡Cuenta creada! Redirigiendo...</span>
+    </div>
+
+    <!-- Honeypot -->
+    <input type="text" name="website" id="reg-honeypot" style="position:absolute;left:-9999px;" tabindex="-1" autocomplete="off">
+
+    <form id="registro-form" novalidate>
+      <div class="campo">
+        <label for="reg-nombre">🏪 Nombre de tu estética *</label>
+        <input type="text" id="reg-nombre" placeholder="Ej: Estética Sofía" autocomplete="off" required>
+        <span class="campo-error" id="err-reg-nombre"></span>
+      </div>
+      <div class="campo">
+        <label for="reg-email">📧 Email *</label>
+        <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email" required>
+        <span class="campo-error" id="err-reg-email"></span>
+      </div>
+      <div class="campo">
+        <label for="reg-password">🔒 Contraseña *</label>
+        <div class="password-wrap">
+          <input type="password" id="reg-password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+          <button type="button" class="btn-toggle-pass" id="btn-toggle-reg-pass" tabindex="-1">👁</button>
+        </div>
+        <span class="campo-error" id="err-reg-password"></span>
+      </div>
+      <div class="campo">
+        <label for="reg-telefono">📞 Teléfono (opcional)</label>
+        <div class="telefono-wrap">
+          <select id="reg-codigo-pais">
+            <option value="+598">🇺🇾 +598</option>
+            <option value="+54">🇦🇷 +54</option>
+          </select>
+          <input type="tel" id="reg-telefono" placeholder="99123456">
+        </div>
+      </div>
+      <div class="campo-terms">
+        <label class="terms-label">
+          <input type="checkbox" id="reg-acepto">
+          <span>Acepto los <a href="#" class="link-terms">términos del servicio</a></span>
+        </label>
+        <span class="campo-error" id="err-reg-terms"></span>
+      </div>
+      <button type="submit" class="btn-login" id="btn-registro">
+        <span id="btn-reg-texto">Crear cuenta gratis →</span>
+        <span id="btn-reg-loader" class="login-loader oculto"></span>
+      </button>
+    </form>
+
+    <p class="login-footer-text">
+      ¿Ya tenés cuenta? <button class="btn-link-inv" id="btn-ir-login">Iniciá sesión →</button>
     </p>
 
   </div>
@@ -122,9 +172,7 @@
     </form>
   </div>
 
- 
-
-  <p class="login-version">AGENDAMOVIL PRO v1.0 · Sistema privado</p>
+  <p class="login-version">AGENDAMOVIL PRO v1.0 · 14 días gratis sin tarjeta</p>
 
 </div>
 
