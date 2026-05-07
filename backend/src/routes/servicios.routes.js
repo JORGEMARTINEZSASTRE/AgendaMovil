@@ -26,8 +26,8 @@ const validarServicio = [
     .trim(),
 
 body('zona')
-  .optional({ values: 'falsy' })
-  .isLength({ min: 2, max: 255 }).withMessage('Zona entre 2 y 255 caracteres')
+  .optional({ nullable: true, checkFalsy: true })
+  .isLength({ max: 255 }).withMessage('Zona demasiado larga')
   .trim(),
 
   body('duracion')
