@@ -51,11 +51,64 @@ function estaDentroHorario(horarios, fecha, hora, duracion) {
   const hs = normalizarHorarios(horarios);
   if (!hs.length) return true;
   const dia = diaSemanaNumero(fecha);
-
   const inicioTurno = toMin(hora);
   const finTurno = inicioTurno + Number(duracion || 0);
-
   return hs.some(b => Number(b.dia) === dia && inicioTurno >= toMin(b.desde) && finTurno <= toMin(b.hasta));
+}
+
+/**
+ * Obtiene los bloques horarios para una fecha dada.
+ * Si el id corresponde a un profesional, usa horarios_profesional.
+ * Si no, usa la columna JSON de sucursales (fallback legacy).
+ * Retorna { bloques: [{desde, hasta}], bloqueado: bool }
+ */
+async function obtenerBloquesDia(userId, sucursalId, fecha) {
+  const dia = diaSemanaNumero(fecha);
+
+  // ¿Es un profesional?
+  const { rows: profRows } = await pool.query(
+    `SELECT id FROM profesionales WHERE id = $1 AND user_id = $2 AND activo = true`,
+    [sucursalId, userId]
+  );
+
+  if (profRows.length) {
+    // Verificar si el día está bloqueado
+    const { rows: bloqueos } = await pool.query(
+      `SELECT id FROM bloqueos_profesional WHERE profesional_id = $1 AND fecha = $2`,
+      [sucursalId, fecha]
+    );
+    if (bloqueos.length) return { bloques: [], bloqueado: true };
+
+    // Traer horarios semanales del profesional para ese día
+    const { rows: horarios } = await pool.query(
+      `SELECT hora_inicio AS desde, hora_fin AS hasta
+       FROM horarios_profesional
+       WHERE profesional_id = $1 AND dia_semana = $2
+       ORDER BY hora_inicio`,
+      [sucursalId, dia]
+    );
+    return {
+      bloques: horarios.map(h => ({
+        desde: String(h.desde).slice(0, 5),
+        hasta: String(h.hasta).slice(0, 5),
+      })),
+      bloqueado: false,
+    };
+  }
+
+  // Fallback: sucursal con horarios JSON
+  const { rows: sucRows } = await pool.query(
+    `SELECT horarios FROM sucursales WHERE id = $1 AND user_id = $2 AND activo = true`,
+    [sucursalId, userId]
+  );
+  if (!sucRows.length) return { bloques: [], bloqueado: false };
+
+  const todos = normalizarHorarios(sucRows[0].horarios || []);
+  const bloquesDia = todos.filter(h => h.dia === dia);
+  return {
+    bloques: bloquesDia.map(h => ({ desde: h.desde, hasta: h.hasta })),
+    bloqueado: false,
+  };
 }
 
 function formatearFecha(fechaStr) {
@@ -89,11 +142,11 @@ async function enviarMailNuevaTurnoEstetica({ emailEstetica, nombreEstetica, nom
       <p style="margin:0;color:#A85568;font-weight:700;font-size:14px;">⚠️ Turno pendiente de seña</p>
       <p style="margin:6px 0 0;color:#4A3840;font-size:13px;">La clienta debe abonar <strong>$${montoSenia}</strong> para confirmar el turno.</p>
     </div>` : ''}
-    <p style="color:#9A8F92;font-size:12px;margin-top:16px;">© 2025 DEPIMÓVIL PRO</p>
+    <p style="color:#9A8F92;font-size:12px;margin-top:16px;">© ${new Date().getFullYear()} ${nombreEstetica}</p>
   </div>`;
   try {
     await t.sendMail({
-      from: `"DEPIMÓVIL PRO" <${process.env.MAIL_USER}>`,
+      from: `"${nombreEstetica}" <${process.env.MAIL_USER}>`,
       to: emailEstetica,
       subject: `🌸 Nueva solicitud de turno — ${nombreClienta}`,
       text: `Nueva solicitud de ${nombreClienta} para el ${fechaStr} a las ${horaStr}.`,
@@ -117,7 +170,7 @@ async function enviarMailSeniaPendienteClienta({ emailClienta, nombreClienta, no
   const waLink = telLimpio ? `https://wa.me/${telLimpio}?text=${msgWA}` : null;
 
   const html = `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;background:#FAF6F7;padding:24px;border-radius:14px;">
-    <h2 style="color:#A85568;margin:0 0 16px;">🌸 Solicitud recibida — DEPIMÓVIL PRO</h2>
+    <h2 style="color:#A85568;margin:0 0 16px;">🌸 Solicitud recibida — ${nombreEstetica}</h2>
     <p style="color:#4A3840;">Hola <strong>${nombreClienta}</strong>, tu solicitud fue recibida:</p>
     <table style="width:100%;background:#fff;border-radius:10px;padding:16px;margin:12px 0;border-collapse:collapse;">
       <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">📅 Fecha</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${fechaStr}</td></tr>
@@ -130,11 +183,11 @@ async function enviarMailSeniaPendienteClienta({ emailClienta, nombreClienta, no
       <p style="margin:0;color:#4A3840;font-size:13px;">Contactate con <strong>${nombreEstetica}</strong> para coordinar el pago:</p>
       ${waLink ? `<a href="${waLink}" style="display:inline-block;background:#25D366;color:white;font-weight:700;padding:10px 20px;border-radius:100px;text-decoration:none;margin-top:12px;font-size:14px;">💬 Escribir por WhatsApp</a>` : `<p style="margin:4px 0 0;color:#A85568;font-weight:700;">${telefonoEstetica}</p>`}
     </div>
-    <p style="color:#9A8F92;font-size:12px;margin-top:16px;">© 2025 DEPIMÓVIL PRO</p>
+    <p style="color:#9A8F92;font-size:12px;margin-top:16px;">© ${new Date().getFullYear()} ${nombreEstetica}</p>
   </div>`;
   try {
     await t.sendMail({
-      from: `"DEPIMÓVIL PRO" <${process.env.MAIL_USER}>`,
+      from: `"${nombreEstetica}" <${process.env.MAIL_USER}>`,
       to: emailClienta,
       subject: `🌸 Reserva recibida — confirmá tu seña`,
       text: `Hola ${nombreClienta}, tu reserva fue recibida. Abonando la seña de $${montoSenia} confirmás tu turno.`,
@@ -266,22 +319,16 @@ router.get('/:userId/sucursales', async (req, res) => {
 router.get('/:userId/disponibilidad', async (req, res) => {
   try {
     const { fecha, sucursal_id } = req.query;
-    if (!fecha) return res.status(400).json({ ok: false, error: 'Fecha requerida' });
-    if (!sucursal_id) return res.status(400).json({ ok: false, error: 'Sucursal requerida' });
+    if (!fecha)       return res.status(400).json({ ok: false, error: 'Fecha requerida' });
+    if (!sucursal_id) return res.status(400).json({ ok: false, error: 'Sucursal/profesional requerido' });
 
-    const { rows: sucRows } = await pool.query(
-      `SELECT id, horarios
-       FROM sucursales
-       WHERE id = $1 AND user_id = $2 AND activo = true`,
-      [sucursal_id, req.params.userId]
-    );
-    if (!sucRows.length) return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+    const { bloques, bloqueado } = await obtenerBloquesDia(req.params.userId, sucursal_id, fecha);
 
-    const horarios = normalizarHorarios(sucRows[0].horarios || []);
-    const dia = diaSemanaNumero(fecha);
-    const bloquesDia = horarios.filter(h => h.dia === dia);
+    if (bloqueado) {
+      return res.json({ ok: true, ocupados: [], bloques: [], bloqueado: true });
+    }
 
-    const { rows } = await pool.query(
+    const { rows: ocupados } = await pool.query(
       `SELECT hora, duracion
        FROM turnos
        WHERE user_id = $1
@@ -291,7 +338,7 @@ router.get('/:userId/disponibilidad', async (req, res) => {
       [req.params.userId, fecha, sucursal_id]
     );
 
-    return res.json({ ok: true, ocupados: rows, bloques: bloquesDia });
+    return res.json({ ok: true, ocupados, bloques, bloqueado: false });
   } catch(err) {
     console.error('[PUBLICA/disponibilidad]', err.message);
     return res.status(500).json({ ok: false, error: 'Error interno' });
@@ -343,22 +390,26 @@ router.post('/:userId/turno', [
     if (!usuRows.length) return res.status(404).json({ ok: false, error: 'Agenda no encontrada' });
     const estetica = usuRows[0];
 
-    // Validar sucursal y horarios
-    const { rows: sucRows } = await pool.query(
-      `SELECT id, horarios
-       FROM sucursales
-       WHERE id = $1 AND user_id = $2 AND activo = true`,
-      [sucursal_id, userId]
-    );
-    if (!sucRows.length) {
-      return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+    // Validar sucursal/profesional y horarios
+    const { bloques, bloqueado } = await obtenerBloquesDia(userId, sucursal_id, fecha);
+
+    if (bloqueado) {
+      return res.status(409).json({ ok: false, error: 'La profesional no trabaja ese día.' });
     }
 
-    if (!estaDentroHorario(sucRows[0].horarios, fecha, hora, duracion)) {
-      return res.status(409).json({
-        ok: false,
-        error: 'Ese horario está fuera de disponibilidad de la sucursal',
-      });
+    // Verificar que la hora esté dentro de algún bloque horario
+    if (bloques.length > 0) {
+      const inicioTurno = toMin(hora);
+      const finTurno    = inicioTurno + Number(duracion);
+      const dentroDeBloque = bloques.some(b =>
+        inicioTurno >= toMin(b.desde) && finTurno <= toMin(b.hasta)
+      );
+      if (!dentroDeBloque) {
+        return res.status(409).json({
+          ok: false,
+          error: 'Ese horario está fuera del horario disponible.',
+        });
+      }
     }
 
     // Verificar conflicto

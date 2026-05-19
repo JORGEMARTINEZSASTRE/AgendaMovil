@@ -19,6 +19,14 @@
   </div>
 </header>
 
+<div id="pub-toast" style="
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px);
+  background:#4A3840; color:#fff; padding:12px 22px; border-radius:100px;
+  font-family:'Nunito',sans-serif; font-size:14px; font-weight:600;
+  box-shadow:0 4px 16px rgba(0,0,0,.18); z-index:9999;
+  transition: transform .3s ease, opacity .3s ease; opacity:0; pointer-events:none;
+"></div>
+
 <main class="publica-main">
 
   <!-- ERROR -->
@@ -469,11 +477,15 @@ async function cargarHorarios() {
   try {
     const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${datosReserva.fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`);
     const data = await resp.json();
+    if (data.ok && data.bloqueado) {
+      cont.innerHTML = '<p class="pub-vacio">🚫 La profesional no está disponible este día.</p>';
+      return;
+    }
     ocupados = data.ok ? data.ocupados : [];
-    bloques = data.ok ? (data.bloques || []) : [];
+    bloques  = data.ok ? (data.bloques || []) : [];
   } catch {
     ocupados = [];
-    bloques = [];
+    bloques  = [];
   }
 
   if (!bloques.length) {
@@ -644,7 +656,18 @@ function mostrarError(msg) {
   document.getElementById('publica-error').classList.remove('oculto');
   document.getElementById('publica-error-msg').textContent = msg;
 }
-function mostrarToast(msg) { alert(msg); }
+function mostrarToast(msg) {
+  const el = document.getElementById('pub-toast');
+  if (!el) { alert(msg); return; }
+  el.textContent = msg;
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => {
+    el.style.transform = 'translateX(-50%) translateY(100px)';
+    el.style.opacity = '0';
+  }, 3000);
+}
 function mostrarFormError(msg) {
   const el = document.getElementById('pub-form-error');
   el.textContent = msg; el.classList.remove('oculto');
