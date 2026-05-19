@@ -10,6 +10,7 @@ const { body, validationResult } = require('express-validator');
 const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
+const { enviarModificacionTurno } = require('../../recordatorios');
 
 const pool = new Pool({
   host:     process.env.DB_HOST,
@@ -709,14 +710,32 @@ router.put('/:userId/turno/:turnoId', [
       }
     }
 
-    // Actualizar fecha y hora
+    // Actualizar fecha, hora y resetear recordatorios (para que se reenvíen en la nueva fecha)
     const { rows: updated } = await pool.query(
-      `UPDATE turnos SET fecha = $1, hora = $2, editado_en = NOW()
+      `UPDATE turnos
+       SET fecha = $1, hora = $2, editado_en = NOW(),
+           recordatorio_24h_enviado = FALSE,
+           recordatorio_2h_enviado  = FALSE
        WHERE id = $3 AND user_id = $4 RETURNING *`,
       [fecha, hora, turnoId, userId]
     );
 
-    return res.json({ ok: true, turno: updated[0] });
+    const turnoActualizado = updated[0];
+
+    // Notificar a la clienta por WhatsApp
+    enviarModificacionTurno({
+      id:              turnoActualizado.id,
+      user_id:         userId,
+      nombre:          turnoActualizado.nombre,
+      telefono:        turnoActualizado.telefono,
+      fecha:           turnoActualizado.fecha,
+      hora:            turnoActualizado.hora,
+      servicio_nombre: turnoActualizado.servicio_nombre,
+      duracion:        turnoActualizado.duracion,
+      sucursal_nombre: turnoActualizado.profesional_nombre || null,
+    }).catch(err => console.error('[PUBLICA/reprogramar] WA error:', err.message));
+
+    return res.json({ ok: true, turno: turnoActualizado });
 
   } catch (err) {
     console.error('[PUBLICA/reprogramar]', err.message);
