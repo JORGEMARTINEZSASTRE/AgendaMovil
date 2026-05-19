@@ -178,6 +178,18 @@
     <div class="pub-paso" id="paso-5">
       <h2 class="pub-paso-titulo">👤 Tus datos</h2>
 
+      <!-- Banner turno existente -->
+      <div id="banner-turno-existente" class="banner-turno-existente oculto">
+        <p class="banner-turno-titulo">📅 Ya tenés un turno agendado</p>
+        <p id="banner-turno-detalle" class="banner-turno-detalle"></p>
+        <button type="button" id="btn-banner-reagendar" class="btn-primario" style="margin-top:10px;width:100%;">
+          🔄 Cambiar horario de ese turno
+        </button>
+        <button type="button" id="btn-banner-nuevo" class="btn-secundario" style="margin-top:8px;width:100%;">
+          ➕ Agendar un turno nuevo igual
+        </button>
+      </div>
+
       <!-- Resumen -->
       <div class="pub-resumen" id="pub-resumen"></div>
 
@@ -619,6 +631,17 @@ function bindForm() {
   });
 
   document.getElementById('form-publica').addEventListener('submit', handleSubmit);
+
+  // Detectar turno existente al escribir el teléfono
+  let _telTimer = null;
+  document.getElementById('pub-telefono').addEventListener('input', () => {
+    clearTimeout(_telTimer);
+    _telTimer = setTimeout(verificarTurnoExistente, 600);
+  });
+  document.getElementById('codigo-pais').addEventListener('change', () => {
+    clearTimeout(_telTimer);
+    _telTimer = setTimeout(verificarTurnoExistente, 200);
+  });
 }
 
 async function handleSubmit(e) {
@@ -697,6 +720,53 @@ async function handleSubmit(e) {
   } catch {
     mostrarFormError('Error de conexión. Intentá de nuevo.');
     setBtnLoading(false);
+  }
+}
+
+// ─── VERIFICAR TURNO EXISTENTE ────────────────
+async function verificarTurnoExistente() {
+  const codigoPais = document.getElementById('codigo-pais').value;
+  const telRaw     = document.getElementById('pub-telefono').value.trim().replace(/\D/g, '');
+  const banner     = document.getElementById('banner-turno-existente');
+
+  if (telRaw.length < 7) { banner.classList.add('oculto'); return; }
+
+  const telefono = '+' + codigoPais + telRaw;
+
+  try {
+    const resp = await fetch(
+      `${API_URL}/publica/${userId}/turno/por-telefono?telefono=${encodeURIComponent(telefono)}`
+    );
+    const data = await resp.json();
+    if (!data.ok || !data.turno) { banner.classList.add('oculto'); return; }
+
+    const t = data.turno;
+    const fechaStr = new Date(t.fecha + 'T12:00:00')
+      .toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+    const horaStr = String(t.hora).slice(0, 5);
+    const prof = t.profesional_nombre ? ` con ${t.profesional_nombre}` : '';
+
+    document.getElementById('banner-turno-detalle').textContent =
+      `${fechaStr} a las ${horaStr} hs${prof}${t.servicio_nombre ? ' — ' + t.servicio_nombre : ''}`;
+
+    banner.classList.remove('oculto');
+
+    // Botón reagendar → ir al flujo de reprogramación
+    document.getElementById('btn-banner-reagendar').onclick = () => {
+      banner.classList.add('oculto');
+      document.getElementById('publica-form-wrap').classList.add('oculto');
+      turnoActual = t;
+      turnoActual._telefono = telefono;
+      iniciarReprogramacion(turnoActual, telefono);
+    };
+
+    // Botón nuevo → ocultar banner y dejar seguir normalmente
+    document.getElementById('btn-banner-nuevo').onclick = () => {
+      banner.classList.add('oculto');
+    };
+
+  } catch {
+    banner.classList.add('oculto');
   }
 }
 

@@ -591,6 +591,37 @@ router.post('/:userId/turno', [
   }
 });
 
+// ─── GET /api/publica/:userId/turno/por-telefono ─────────────
+// Busca el último turno activo de un teléfono, si fue agendado hace < 24h
+router.get('/:userId/turno/por-telefono', async (req, res) => {
+  try {
+    const { telefono } = req.query;
+    if (!telefono) return res.status(400).json({ ok: false, error: 'Teléfono requerido' });
+
+    // Normalizar: buscar por los últimos dígitos para tolerar variantes de código de país
+    const digitos = telefono.replace(/\D/g, '').slice(-9);
+
+    const { rows } = await pool.query(
+      `SELECT id, nombre, fecha, hora, duracion, servicio_nombre,
+              profesional_id, profesional_nombre, sucursal_id, creado_en, telefono
+       FROM turnos
+       WHERE user_id = $1
+         AND estado != 'cancelado'
+         AND RIGHT(REGEXP_REPLACE(telefono, '[^0-9]', '', 'g'), 9) = $2
+         AND creado_en > NOW() - INTERVAL '24 hours'
+       ORDER BY creado_en DESC
+       LIMIT 1`,
+      [req.params.userId, digitos]
+    );
+
+    if (!rows.length) return res.json({ ok: true, turno: null });
+    return res.json({ ok: true, turno: rows[0] });
+  } catch (err) {
+    console.error('[PUBLICA/por-telefono]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error interno' });
+  }
+});
+
 // ─── PUT /api/publica/:userId/turno/:turnoId ─────────────────
 // Permite a la clienta reprogramar su turno si lo agendó hace menos de 24h
 router.put('/:userId/turno/:turnoId', [
