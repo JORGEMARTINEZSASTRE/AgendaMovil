@@ -2452,9 +2452,9 @@ body {
 
 .horario-dia-fila {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 6px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--borde);
 }
 
@@ -2465,18 +2465,26 @@ body {
   font-size: 13px;
   font-weight: 600;
   color: var(--marron2);
-  min-width: 70px;
+  min-width: 60px;
+  padding-top: 4px;
   cursor: pointer;
 }
 
-.horario-rangos {
+.horario-bloques-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.horario-bloque-fila {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
 }
 
-.horario-rangos input[type="time"] {
+.horario-bloque-fila input[type="time"] {
   padding: 4px 6px;
   border: 1.5px solid var(--borde);
   border-radius: var(--radio-sm);
@@ -2484,8 +2492,24 @@ body {
   font-size: 13px;
   background: var(--fondo);
   color: var(--marron);
-  width: 90px;
+  width: 88px;
 }
+
+.btn-agregar-bloque {
+  align-self: flex-start;
+  background: none;
+  border: 1.5px dashed var(--borde);
+  border-radius: var(--radio-sm);
+  color: var(--rosa-vino);
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.btn-agregar-bloque:hover { background: rgba(168,85,104,.06); }
 
 /* Bloqueos */
 .bloqueos-lista {

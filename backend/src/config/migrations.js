@@ -42,15 +42,20 @@ async function correrMigraciones() {
 
     // ── 4. Horarios semanales por profesional ──────────────────────────
     // dia_semana: 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
+    // Permite múltiples bloques por día (ej: 8-12 y 15-19)
     await query(`
       CREATE TABLE IF NOT EXISTS public.horarios_profesional (
         id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         profesional_id  UUID NOT NULL REFERENCES public.profesionales(id) ON DELETE CASCADE,
         dia_semana      SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
         hora_inicio     TIME NOT NULL,
-        hora_fin        TIME NOT NULL,
-        UNIQUE (profesional_id, dia_semana)
+        hora_fin        TIME NOT NULL
       )
+    `);
+    // Si ya existía con UNIQUE de la versión anterior, lo dropeamos
+    await query(`
+      ALTER TABLE public.horarios_profesional
+        DROP CONSTRAINT IF EXISTS horarios_profesional_profesional_id_dia_semana_key
     `);
     console.log('[MIGRATIONS] ✓ Tabla horarios_profesional OK');
 

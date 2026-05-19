@@ -2763,49 +2763,112 @@ async function abrirModalHorarios(profId, profNombre) {
 
 function renderDiasHorario(horarios) {
   const wrap = document.getElementById('horarios-dias-wrap');
-  // Mapa dia_semana -> { hora_inicio, hora_fin }
-  const map = {};
-  horarios.forEach(h => { map[h.dia_semana] = h; });
+
+  // Agrupar por día: { 0: [{hora_inicio, hora_fin}, ...], 1: [...], ... }
+  const porDia = {};
+  horarios.forEach(h => {
+    if (!porDia[h.dia_semana]) porDia[h.dia_semana] = [];
+    porDia[h.dia_semana].push(h);
+  });
 
   wrap.innerHTML = DIAS_SEMANA.map((nombre, idx) => {
-    const h = map[idx];
-    const activo = !!h;
+    const bloques = porDia[idx] || [];
+    const activo  = bloques.length > 0;
+    const bloquesHtml = bloques.length
+      ? bloques.map((b, bi) => renderBloqueHorario(idx, bi, b.hora_inicio, b.hora_fin)).join('')
+      : renderBloqueHorario(idx, 0, '09:00', '18:00');
+
     return `
-      <div class="horario-dia-fila">
+      <div class="horario-dia-fila" data-dia="${idx}">
         <label class="horario-dia-label">
           <input type="checkbox" class="horario-check" data-dia="${idx}" ${activo ? 'checked' : ''}>
           <span>${nombre}</span>
         </label>
-        <div class="horario-rangos ${activo ? '' : 'oculto'}" data-dia="${idx}">
-          <input type="time" class="horario-inicio" data-dia="${idx}" value="${h?.hora_inicio?.slice(0,5) || '09:00'}">
-          <span>a</span>
-          <input type="time" class="horario-fin"    data-dia="${idx}" value="${h?.hora_fin?.slice(0,5)   || '18:00'}">
+        <div class="horario-bloques-col ${activo ? '' : 'oculto'}" data-dia="${idx}">
+          ${bloquesHtml}
+          <button type="button" class="btn-agregar-bloque" data-dia="${idx}">+ turno cortado</button>
         </div>
       </div>
     `;
   }).join('');
 
-  // Mostrar/ocultar rangos al tildar
+  _bindHorarioEvents(wrap);
+}
+
+function renderBloqueHorario(dia, idx, inicio, fin) {
+  return `
+    <div class="horario-bloque-fila" data-dia="${dia}" data-idx="${idx}">
+      <input type="time" class="horario-inicio" value="${String(inicio).slice(0,5)}">
+      <span>a</span>
+      <input type="time" class="horario-fin" value="${String(fin).slice(0,5)}">
+      <button type="button" class="btn-icon btn-quitar-bloque" title="Quitar">✕</button>
+    </div>
+  `;
+}
+
+function _bindHorarioEvents(wrap) {
+  // Mostrar/ocultar bloques al tildar el día
   wrap.querySelectorAll('.horario-check').forEach(chk => {
     chk.addEventListener('change', () => {
-      const rangos = wrap.querySelector(`.horario-rangos[data-dia="${chk.dataset.dia}"]`);
-      rangos.classList.toggle('oculto', !chk.checked);
+      const col = wrap.querySelector(`.horario-bloques-col[data-dia="${chk.dataset.dia}"]`);
+      col.classList.toggle('oculto', !chk.checked);
     });
+  });
+
+  // Agregar bloque extra (turno cortado)
+  wrap.querySelectorAll('.btn-agregar-bloque').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dia = btn.dataset.dia;
+      const col = wrap.querySelector(`.horario-bloques-col[data-dia="${dia}"]`);
+      const nuevoBloque = document.createElement('div');
+      nuevoBloque.innerHTML = renderBloqueHorario(dia, Date.now(), '09:00', '18:00');
+      col.insertBefore(nuevoBloque.firstElementChild, btn);
+      _bindQuitarBloque(col);
+    });
+  });
+
+  wrap.querySelectorAll('.horario-bloques-col').forEach(col => _bindQuitarBloque(col));
+}
+
+function _bindQuitarBloque(col) {
+  col.querySelectorAll('.btn-quitar-bloque').forEach(btn => {
+    btn.onclick = () => {
+      const fila = btn.closest('.horario-bloque-fila');
+      const col2 = fila.parentElement;
+      // Si es el único bloque, no lo borramos — simplemente desmarcamos el día
+      const filas = col2.querySelectorAll('.horario-bloque-fila');
+      if (filas.length === 1) {
+        const dia = col2.dataset.dia;
+        const chk = document.querySelector(`.horario-check[data-dia="${dia}"]`);
+        if (chk) { chk.checked = false; col2.classList.add('oculto'); }
+      } else {
+        fila.remove();
+      }
+    };
   });
 }
 
 async function guardarHorarioSemanal() {
-  const wrap = document.getElementById('horarios-dias-wrap');
+  const wrap   = document.getElementById('horarios-dias-wrap');
   const bloques = [];
+  let errorEncontrado = false;
 
   wrap.querySelectorAll('.horario-check:checked').forEach(chk => {
     const dia = Number(chk.dataset.dia);
-    const inicio = wrap.querySelector(`.horario-inicio[data-dia="${dia}"]`).value;
-    const fin    = wrap.querySelector(`.horario-fin[data-dia="${dia}"]`).value;
-    if (inicio && fin && inicio < fin) {
+    const col = wrap.querySelector(`.horario-bloques-col[data-dia="${dia}"]`);
+    col.querySelectorAll('.horario-bloque-fila').forEach(fila => {
+      const inicio = fila.querySelector('.horario-inicio').value;
+      const fin    = fila.querySelector('.horario-fin').value;
+      if (!inicio || !fin || inicio >= fin) {
+        mostrarToast(`${DIAS_SEMANA[dia]}: hora inicio debe ser menor que hora fin`, 'error');
+        errorEncontrado = true;
+        return;
+      }
       bloques.push({ dia_semana: dia, hora_inicio: inicio, hora_fin: fin });
-    }
+    });
   });
+
+  if (errorEncontrado) return;
 
   const btn = document.getElementById('btn-guardar-horarios');
   btn.disabled = true;
