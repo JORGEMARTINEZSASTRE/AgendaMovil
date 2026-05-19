@@ -658,18 +658,8 @@ function abrirFormTurno(turno = null) {
   if (turno) {
     setVal('turno-nombre',          turno.nombre);
 
-    // Separar teléfono en código país + resto
-    const tel = String(turno.telefono || '').replace(/\D/g, '');
-    if (tel.startsWith('598')) {
-      setVal('turno-codigo-pais', '598');
-      setVal('turno-telefono',    tel.slice(3));
-    } else if (tel.startsWith('54')) {
-      setVal('turno-codigo-pais', '54');
-      setVal('turno-telefono',    tel.slice(2));
-    } else {
-      setVal('turno-codigo-pais', '598');
-      setVal('turno-telefono',    tel);
-    }
+    // Mostrar teléfono tal cual está guardado
+    setVal('turno-telefono', turno.telefono || '');
 
     setVal('turno-email',          turno.email_clienta   || '');
     setVal('turno-fecha',          turno.fecha);
@@ -693,7 +683,6 @@ function abrirFormTurno(turno = null) {
   } else {
     setVal('turno-fecha',          fechaSeleccionada);
     setVal('turno-servicio-color', '#A85568');
-    setVal('turno-codigo-pais',    '598');
 
     // Si hay una sola sucursal, seleccionarla por defecto
     if (!turno && (sucursales || []).length === 1) {
@@ -775,7 +764,6 @@ async function handleSubmitTurno(e) {
   const nombre         = getVal('turno-nombre').trim();
   const sucursalId     = getVal('turno-sucursal-id');
   const telefonoRaw    = getVal('turno-telefono').trim();
-  const codigoPais     = getVal('turno-codigo-pais') || '598';
   const email          = getVal('turno-email').trim()  || null;
   const fecha          = getVal('turno-fecha');
   const hora           = getVal('turno-hora');
@@ -787,10 +775,8 @@ async function handleSubmitTurno(e) {
   const cumpleDia      = parseInt(getVal('turno-cumple-dia')) || null;
   const cumpleMes      = parseInt(getVal('turno-cumple-mes')) || null;
 
-  // Armar teléfono con código de país
-  let telefonoLimpio = telefonoRaw.replace(/\D/g, '');
-  if (telefonoLimpio.startsWith('0')) telefonoLimpio = telefonoLimpio.slice(1);
-  const telefono = '+' + codigoPais + telefonoLimpio;
+  // Normalizar teléfono: conservar el + inicial, quitar espacios y guiones
+  const telefono = '+' + telefonoRaw.replace(/[^\d]/g, '');
 
   // Buscar nombre del servicio por ID (del array local)
   const servicio       = servicios.find(s => s.id === servicioId);
