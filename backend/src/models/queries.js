@@ -152,8 +152,11 @@ const Turnos = {
              t.cumple_dia, t.cumple_mes,
              t.estado, t.creado_en, t.editado_en,
              t.sucursal_id,
+             t.profesional_id,
+             t.profesional_nombre,
+             t.senia_requerida, t.senia_pagada, t.monto_senia, t.estado_pago,
              s.nombre AS sucursal_nombre,
-             s.tipo AS sucursal_tipo
+             s.tipo   AS sucursal_tipo
       FROM turnos t
       LEFT JOIN sucursales s ON s.id = t.sucursal_id
       WHERE t.user_id = $1
@@ -184,7 +187,8 @@ const Turnos = {
   async buscarPorId(id, userId) {
     const { rows } = await query(
       `SELECT t.*,
-              s.nombre AS sucursal_nombre
+              s.nombre AS sucursal_nombre,
+              s.tipo   AS sucursal_tipo
        FROM turnos t
        LEFT JOIN sucursales s ON s.id = t.sucursal_id
        WHERE t.id = $1 AND t.user_id = $2`,

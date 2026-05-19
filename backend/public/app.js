@@ -478,7 +478,7 @@ function cardTurno(t) {
             ✂️ ${escaparHTML(t.servicio_nombre)}
             ${t.servicio_zona ? `· ${escaparHTML(t.servicio_zona)}` : ''}
           </p>` : ''}
-        ${t.sucursal_nombre ? `<p class="turno-duracion">${t.sucursal_tipo === 'profesional' ? '👤' : '🏪'} ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
+        ${t.sucursal_nombre ? `<p class="turno-duracion">🏪 ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
         <p class="turno-duracion">⏱ ${t.duracion} min</p>
         ${t.profesional_nombre ? `<span class="turno-profesional-badge" style="background:${profesionales.find(p=>p.id===t.profesional_id)?.color||'#A85568'}">👩‍⚕️ ${escaparHTML(t.profesional_nombre)}</span>` : ''}
         ${t.notas ? `<p class="turno-notas">📝 ${escaparHTML(t.notas)}</p>` : ''}
