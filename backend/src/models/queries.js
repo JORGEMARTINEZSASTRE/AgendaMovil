@@ -839,4 +839,3 @@ module.exports = {
   Clientes,
   Profesionales,
 };
-};
