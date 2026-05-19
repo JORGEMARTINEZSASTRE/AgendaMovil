@@ -301,14 +301,34 @@ router.get('/:userId/info', async (req, res) => {
 
 router.get('/:userId/sucursales', async (req, res) => {
   try {
-    const { rows } = await pool.query(
+    // Sucursales clásicas
+    const { rows: sucRows } = await pool.query(
       `SELECT id, nombre, tipo, horarios
        FROM sucursales
        WHERE user_id = $1 AND activo = true
        ORDER BY created_at DESC`,
       [req.params.userId]
     );
-    return res.json({ ok: true, sucursales: rows });
+
+    // Profesionales como "ubicaciones" del paso 1
+    const { rows: profRows } = await pool.query(
+      `SELECT id, nombre, color
+       FROM profesionales
+       WHERE user_id = $1 AND activo = true
+       ORDER BY nombre ASC`,
+      [req.params.userId]
+    );
+
+    const profesionalesComoUbicacion = profRows.map(p => ({
+      id:      p.id,
+      nombre:  p.nombre,
+      tipo:    'profesional',
+      color:   p.color,
+      horarios: null,
+    }));
+
+    const todos = [...sucRows, ...profesionalesComoUbicacion];
+    return res.json({ ok: true, sucursales: todos });
   } catch (err) {
     console.error('[PUBLICA/sucursales]', err.message);
     return res.status(500).json({ ok: false, error: 'Error interno' });

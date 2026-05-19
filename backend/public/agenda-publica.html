@@ -221,9 +221,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   await cargarInfo();
   await cargarSucursales();
   await cargarServicios();
-  renderPaso1();
-  renderPaso2();
-  bindForm();
+
+  // Si solo hay una ubicación, seleccionarla y saltar directo al paso 2
+  if (sucursales.length === 1) {
+    datosReserva.sucursalId     = sucursales[0].id;
+    datosReserva.sucursalNombre = sucursales[0].nombre;
+    renderPaso2();
+    bindForm();
+    irAPaso(2);
+  } else {
+    renderPaso1();
+    renderPaso2();
+    bindForm();
+  }
 });
 
 async function cargarInfo() {
@@ -314,12 +324,16 @@ function renderPaso1() {
     return;
   }
   cont.innerHTML = sucursales.map(s => {
-    const tipoIcon = s.tipo === 'profesional' ? '👤' : '🏪';
-    const tipoBadge = s.tipo === 'profesional' ? 'Profesional' : 'Sucursal';
+    const esProfesional = s.tipo === 'profesional';
+    const tipoIcon  = esProfesional ? '👤' : '🏪';
+    const tipoBadge = esProfesional ? 'Profesional' : 'Sucursal';
+    const dot = esProfesional && s.color
+      ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px;vertical-align:middle;"></span>`
+      : '';
     return `
       <div class="pub-ubicacion-card" data-id="${s.id}">
         <span class="pub-ubicacion-tipo">${tipoIcon} ${tipoBadge}</span>
-        <p class="pub-ubicacion-nombre">${escaparHTML(s.nombre)}</p>
+        <p class="pub-ubicacion-nombre">${dot}${escaparHTML(s.nombre)}</p>
       </div>`;
   }).join('');
 
