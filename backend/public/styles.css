@@ -2248,8 +2248,40 @@ body {
 /* ═══════════════════════════════════════
    RESUMEN FINANCIERO (panel clientes)
    ═══════════════════════════════════════ */
+.resumen-financiero-wrap {
+  padding: 0 14px 8px;
+}
+
+.btn-toggle-resumen {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--crema2);
+  border: 1.5px solid var(--borde);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--marron);
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-toggle-resumen:hover {
+  background: var(--blush);
+  border-color: var(--rosa-polvo);
+}
+
+.btn-toggle-flecha {
+  font-size: 10px;
+  transition: transform .25s ease;
+  color: var(--gris);
+}
+
 .resumen-financiero {
-  padding: 0 14px 12px;
+  margin-top: 10px;
+  animation: aparecer .2s ease;
 }
 
 .resumen-grid {

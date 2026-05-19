@@ -2537,8 +2537,18 @@ async function renderClientes() {
   const contenedor = document.getElementById('lista-clientes');
   if (!contenedor) return;
 
-  // Cargar resumen en paralelo
-  renderResumenFinanciero();
+  // Toggle del resumen
+  const btnToggle = document.getElementById('btn-toggle-resumen');
+  const resumenDiv = document.getElementById('resumen-financiero');
+  btnToggle.onclick = () => {
+    const abierto = !resumenDiv.classList.contains('oculto');
+    resumenDiv.classList.toggle('oculto', abierto);
+    btnToggle.querySelector('.btn-toggle-flecha').style.transform = abierto ? 'rotate(0deg)' : 'rotate(180deg)';
+    if (!abierto && !resumenDiv.dataset.cargado) {
+      renderResumenFinanciero();
+      resumenDiv.dataset.cargado = 'true';
+    }
+  };
 
   contenedor.innerHTML = `<div class="pub-cargando">Cargando clientes...</div>`;
 
