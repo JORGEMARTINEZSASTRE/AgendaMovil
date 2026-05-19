@@ -2582,11 +2582,16 @@ function renderProfesionalesConfig() {
         ${p.telefono ? `<p class="prof-config-tel">📞 ${escaparHTML(p.telefono)}</p>` : ''}
       </div>
       <div class="prof-config-acciones">
+        <button class="btn-icon btn-horarios-prof" data-id="${p.id}" data-nombre="${escaparHTML(p.nombre)}" title="Horarios">🕐</button>
         <button class="btn-icon btn-editar-prof" data-id="${p.id}" title="Editar">✏️</button>
         <button class="btn-icon btn-borrar-prof" data-id="${p.id}" title="Eliminar">🗑</button>
       </div>
     </div>
   `).join('');
+
+  contenedor.querySelectorAll('.btn-horarios-prof').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalHorarios(btn.dataset.id, btn.dataset.nombre));
+  });
 
   contenedor.querySelectorAll('.btn-editar-prof').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2723,5 +2728,147 @@ async function eliminarProfesional(id) {
     renderProfesionalesConfig();
   } catch (e) {
     mostrarToast('Error al eliminar', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODAL HORARIOS PROFESIONAL
+// ═══════════════════════════════════════════════════════════
+
+const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+let horariosProfActualId = null;
+let bloqueosProfActual   = [];
+
+async function abrirModalHorarios(profId, profNombre) {
+  horariosProfActualId = profId;
+  document.getElementById('modal-horarios-titulo').textContent = `🕐 Horarios — ${profNombre}`;
+  document.getElementById('modal-horarios-prof').classList.remove('oculto');
+
+  // Cargar horarios y bloqueos en paralelo
+  const [horarios, bloqueos] = await Promise.all([
+    ProfesionalesAPI.getHorarios(profId),
+    ProfesionalesAPI.getBloqueos(profId),
+  ]);
+
+  renderDiasHorario(horarios);
+  bloqueosProfActual = bloqueos;
+  renderBloqueos();
+
+  // Botón guardar horario semanal
+  document.getElementById('btn-guardar-horarios').onclick = guardarHorarioSemanal;
+
+  // Botón agregar bloqueo
+  document.getElementById('btn-agregar-bloqueo').onclick = agregarBloqueo;
+}
+
+function renderDiasHorario(horarios) {
+  const wrap = document.getElementById('horarios-dias-wrap');
+  // Mapa dia_semana -> { hora_inicio, hora_fin }
+  const map = {};
+  horarios.forEach(h => { map[h.dia_semana] = h; });
+
+  wrap.innerHTML = DIAS_SEMANA.map((nombre, idx) => {
+    const h = map[idx];
+    const activo = !!h;
+    return `
+      <div class="horario-dia-fila">
+        <label class="horario-dia-label">
+          <input type="checkbox" class="horario-check" data-dia="${idx}" ${activo ? 'checked' : ''}>
+          <span>${nombre}</span>
+        </label>
+        <div class="horario-rangos ${activo ? '' : 'oculto'}" data-dia="${idx}">
+          <input type="time" class="horario-inicio" data-dia="${idx}" value="${h?.hora_inicio?.slice(0,5) || '09:00'}">
+          <span>a</span>
+          <input type="time" class="horario-fin"    data-dia="${idx}" value="${h?.hora_fin?.slice(0,5)   || '18:00'}">
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Mostrar/ocultar rangos al tildar
+  wrap.querySelectorAll('.horario-check').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const rangos = wrap.querySelector(`.horario-rangos[data-dia="${chk.dataset.dia}"]`);
+      rangos.classList.toggle('oculto', !chk.checked);
+    });
+  });
+}
+
+async function guardarHorarioSemanal() {
+  const wrap = document.getElementById('horarios-dias-wrap');
+  const bloques = [];
+
+  wrap.querySelectorAll('.horario-check:checked').forEach(chk => {
+    const dia = Number(chk.dataset.dia);
+    const inicio = wrap.querySelector(`.horario-inicio[data-dia="${dia}"]`).value;
+    const fin    = wrap.querySelector(`.horario-fin[data-dia="${dia}"]`).value;
+    if (inicio && fin && inicio < fin) {
+      bloques.push({ dia_semana: dia, hora_inicio: inicio, hora_fin: fin });
+    }
+  });
+
+  const btn = document.getElementById('btn-guardar-horarios');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  try {
+    const res = await ProfesionalesAPI.guardarHorarios(horariosProfActualId, bloques);
+    if (res?.ok) mostrarToast('Horario guardado ✅', 'exito');
+    else mostrarToast(res?.error || 'Error al guardar', 'error');
+  } catch {
+    mostrarToast('Error al guardar', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Guardar horario semanal';
+  }
+}
+
+function renderBloqueos() {
+  const lista = document.getElementById('bloqueos-lista');
+  if (!bloqueosProfActual.length) {
+    lista.innerHTML = `<li class="bloqueo-item" style="font-style:italic;color:var(--gris)">Sin días bloqueados.</li>`;
+    return;
+  }
+  lista.innerHTML = bloqueosProfActual.map(b => `
+    <li class="bloqueo-item">
+      <span>📅 ${b.fecha.slice(0, 10)}${b.motivo ? ` — ${escaparHTML(b.motivo)}` : ''}</span>
+      <button class="btn-icon btn-quitar-bloqueo" data-id="${b.id}" title="Quitar">✕</button>
+    </li>
+  `).join('');
+
+  lista.querySelectorAll('.btn-quitar-bloqueo').forEach(btn => {
+    btn.addEventListener('click', () => quitarBloqueo(btn.dataset.id));
+  });
+}
+
+async function agregarBloqueo() {
+  const fecha  = document.getElementById('bloqueo-fecha').value;
+  const motivo = document.getElementById('bloqueo-motivo').value.trim();
+  if (!fecha) { mostrarToast('Seleccioná una fecha', 'error'); return; }
+
+  try {
+    const res = await ProfesionalesAPI.agregarBloqueo(horariosProfActualId, fecha, motivo);
+    if (res?.ok) {
+      bloqueosProfActual.push(res.bloqueo);
+      bloqueosProfActual.sort((a, b) => a.fecha.localeCompare(b.fecha));
+      renderBloqueos();
+      document.getElementById('bloqueo-fecha').value  = '';
+      document.getElementById('bloqueo-motivo').value = '';
+      mostrarToast('Día bloqueado ✅', 'exito');
+    } else {
+      mostrarToast(res?.error || 'Error', 'error');
+    }
+  } catch {
+    mostrarToast('Error al bloquear día', 'error');
+  }
+}
+
+async function quitarBloqueo(bloqueoId) {
+  try {
+    await ProfesionalesAPI.eliminarBloqueo(horariosProfActualId, bloqueoId);
+    bloqueosProfActual = bloqueosProfActual.filter(b => b.id !== bloqueoId);
+    renderBloqueos();
+    mostrarToast('Bloqueo eliminado', 'exito');
+  } catch {
+    mostrarToast('Error al eliminar bloqueo', 'error');
   }
 }

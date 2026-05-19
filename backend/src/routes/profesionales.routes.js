@@ -6,7 +6,7 @@ const { autenticar } = require('../middleware/auth');
 const { planActivo } = require('../middleware/planGuard');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const { validar } = require('../middleware/validate');
-const { Profesionales } = require('../models/queries');
+const { Profesionales, HorariosProfesional, BloqueosProfesional } = require('../models/queries');
 
 router.use(autenticar);
 router.use(planActivo);
@@ -70,6 +70,98 @@ router.delete('/:id',
     } catch (err) {
       console.error('[PROFESIONALES/eliminar]', err.message);
       return res.status(500).json({ ok: false, error: 'Error al eliminar profesional' });
+    }
+  }
+);
+
+// ── HORARIOS SEMANALES ──────────────────────────────────────────────────────
+
+// GET /api/profesionales/:id/horarios
+router.get('/:id/horarios',
+  param('id').isUUID(), validar,
+  async (req, res) => {
+    try {
+      // Verificar que el profesional pertenece al usuario
+      const prof = await Profesionales.buscarPorId(req.params.id, req.user.id);
+      if (!prof) return res.status(404).json({ ok: false, error: 'Profesional no encontrado' });
+      const horarios = await HorariosProfesional.listar(req.params.id);
+      return res.json({ ok: true, horarios });
+    } catch (err) {
+      console.error('[HORARIOS/listar]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al obtener horarios' });
+    }
+  }
+);
+
+// PUT /api/profesionales/:id/horarios  (reemplaza todos de una)
+router.put('/:id/horarios',
+  param('id').isUUID(),
+  body('bloques').isArray(),
+  validar,
+  async (req, res) => {
+    try {
+      const prof = await Profesionales.buscarPorId(req.params.id, req.user.id);
+      if (!prof) return res.status(404).json({ ok: false, error: 'Profesional no encontrado' });
+      const horarios = await HorariosProfesional.guardar(req.params.id, req.body.bloques);
+      return res.json({ ok: true, horarios });
+    } catch (err) {
+      console.error('[HORARIOS/guardar]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al guardar horarios' });
+    }
+  }
+);
+
+// ── BLOQUEOS DE DÍAS ────────────────────────────────────────────────────────
+
+// GET /api/profesionales/:id/bloqueos
+router.get('/:id/bloqueos',
+  param('id').isUUID(), validar,
+  async (req, res) => {
+    try {
+      const prof = await Profesionales.buscarPorId(req.params.id, req.user.id);
+      if (!prof) return res.status(404).json({ ok: false, error: 'Profesional no encontrado' });
+      const bloqueos = await BloqueosProfesional.listar(req.params.id);
+      return res.json({ ok: true, bloqueos });
+    } catch (err) {
+      console.error('[BLOQUEOS/listar]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al obtener bloqueos' });
+    }
+  }
+);
+
+// POST /api/profesionales/:id/bloqueos
+router.post('/:id/bloqueos',
+  param('id').isUUID(),
+  body('fecha').isDate(),
+  body('motivo').optional({ checkFalsy: true }).trim().isLength({ max: 200 }),
+  validar,
+  async (req, res) => {
+    try {
+      const prof = await Profesionales.buscarPorId(req.params.id, req.user.id);
+      if (!prof) return res.status(404).json({ ok: false, error: 'Profesional no encontrado' });
+      const bloqueo = await BloqueosProfesional.agregar(req.params.id, req.body.fecha, req.body.motivo);
+      return res.status(201).json({ ok: true, bloqueo });
+    } catch (err) {
+      console.error('[BLOQUEOS/agregar]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al agregar bloqueo' });
+    }
+  }
+);
+
+// DELETE /api/profesionales/:id/bloqueos/:bloqueoId
+router.delete('/:id/bloqueos/:bloqueoId',
+  param('id').isUUID(),
+  param('bloqueoId').isUUID(),
+  validar,
+  async (req, res) => {
+    try {
+      const prof = await Profesionales.buscarPorId(req.params.id, req.user.id);
+      if (!prof) return res.status(404).json({ ok: false, error: 'Profesional no encontrado' });
+      await BloqueosProfesional.eliminar(req.params.bloqueoId, req.params.id);
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('[BLOQUEOS/eliminar]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al eliminar bloqueo' });
     }
   }
 );

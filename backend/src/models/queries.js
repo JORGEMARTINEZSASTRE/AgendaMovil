@@ -825,6 +825,74 @@ const Profesionales = {
   },
 };
 
+// ─── HORARIOS PROFESIONAL ─────────────────────────────────────────────────────
+const HorariosProfesional = {
+  // Trae todos los bloques semanales de un profesional
+  async listar(profesionalId) {
+    const { rows } = await query(
+      `SELECT * FROM horarios_profesional
+       WHERE profesional_id = $1
+       ORDER BY dia_semana ASC`,
+      [profesionalId]
+    );
+    return rows;
+  },
+
+  // Reemplaza todos los bloques semanales de una vez (upsert masivo)
+  async guardar(profesionalId, bloques) {
+    // bloques = [{ dia_semana, hora_inicio, hora_fin }, ...]
+    await query(
+      `DELETE FROM horarios_profesional WHERE profesional_id = $1`,
+      [profesionalId]
+    );
+    if (!bloques || bloques.length === 0) return [];
+    const values = bloques.map((b, i) =>
+      `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
+    ).join(', ');
+    const params = bloques.flatMap(b => [
+      profesionalId, b.dia_semana, b.hora_inicio, b.hora_fin
+    ]);
+    const { rows } = await query(
+      `INSERT INTO horarios_profesional (profesional_id, dia_semana, hora_inicio, hora_fin)
+       VALUES ${values} RETURNING *`,
+      params
+    );
+    return rows;
+  },
+};
+
+// ─── BLOQUEOS PROFESIONAL ─────────────────────────────────────────────────────
+const BloqueosProfesional = {
+  async listar(profesionalId) {
+    const { rows } = await query(
+      `SELECT * FROM bloqueos_profesional
+       WHERE profesional_id = $1
+       ORDER BY fecha ASC`,
+      [profesionalId]
+    );
+    return rows;
+  },
+
+  async agregar(profesionalId, fecha, motivo) {
+    const { rows } = await query(
+      `INSERT INTO bloqueos_profesional (profesional_id, fecha, motivo)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (profesional_id, fecha) DO UPDATE SET motivo = EXCLUDED.motivo
+       RETURNING *`,
+      [profesionalId, fecha, motivo || null]
+    );
+    return rows[0];
+  },
+
+  async eliminar(id, profesionalId) {
+    await query(
+      `DELETE FROM bloqueos_profesional WHERE id = $1 AND profesional_id = $2`,
+      [id, profesionalId]
+    );
+    return true;
+  },
+};
+
 module.exports = {
   Usuarios,
   Turnos,
@@ -838,4 +906,6 @@ module.exports = {
   Sucursales,
   Clientes,
   Profesionales,
+  HorariosProfesional,
+  BloqueosProfesional,
 };

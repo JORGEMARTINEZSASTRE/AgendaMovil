@@ -2438,3 +2438,73 @@ body {
   background: rgba(168,85,104,.1);
   color: var(--rosa-vino);
 }
+
+/* ── Modal horarios profesional ─────────────────────── */
+.horarios-seccion { margin-bottom: 4px; }
+
+.horarios-subtitulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 6px;
+}
+
+.horario-dia-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.horario-dia-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--marron2);
+  min-width: 70px;
+  cursor: pointer;
+}
+
+.horario-rangos {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.horario-rangos input[type="time"] {
+  padding: 4px 6px;
+  border: 1.5px solid var(--borde);
+  border-radius: var(--radio-sm);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  background: var(--fondo);
+  color: var(--marron);
+  width: 90px;
+}
+
+/* Bloqueos */
+.bloqueos-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bloqueo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--crema2);
+  border: 1.5px solid var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--marron2);
+}

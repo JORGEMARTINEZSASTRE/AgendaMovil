@@ -539,6 +539,46 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════
+     MODAL: HORARIOS DE PROFESIONAL
+════════════════════════════════════════════════ -->
+<div id="modal-horarios-prof" class="modal-overlay oculto">
+  <div class="modal-card" style="max-width:520px;">
+    <div class="modal-header">
+      <h2 id="modal-horarios-titulo" class="modal-titulo">🕐 Horarios de profesional</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+
+    <!-- Horario semanal -->
+    <section class="horarios-seccion">
+      <h3 class="horarios-subtitulo">Horario semanal</h3>
+      <p class="campo-ayuda">Marcá los días que trabaja y el rango horario.</p>
+      <div id="horarios-dias-wrap">
+        <!-- Se genera con JS -->
+      </div>
+      <button id="btn-guardar-horarios" class="btn-primario" style="margin-top:12px;">
+        💾 Guardar horario semanal
+      </button>
+    </section>
+
+    <hr style="margin:20px 0; border-color:var(--borde);">
+
+    <!-- Bloqueos de días específicos -->
+    <section class="horarios-seccion">
+      <h3 class="horarios-subtitulo">Días bloqueados</h3>
+      <p class="campo-ayuda">Vacaciones, feriados, hospital — días que no atiende.</p>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input type="date" id="bloqueo-fecha" style="flex:1;">
+        <input type="text" id="bloqueo-motivo" placeholder="Motivo (opcional)" style="flex:2;">
+        <button id="btn-agregar-bloqueo" class="btn-secundario">➕</button>
+      </div>
+      <ul id="bloqueos-lista" class="bloqueos-lista">
+        <!-- Se genera con JS -->
+      </ul>
+    </section>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
      MODAL: HISTORIAL CLIENTE
 ════════════════════════════════════════════════ -->
 <div id="modal-historial-cliente" class="modal-overlay oculto">

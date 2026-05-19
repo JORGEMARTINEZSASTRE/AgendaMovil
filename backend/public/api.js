@@ -431,4 +431,31 @@ const ProfesionalesAPI = {
   async eliminar(id) {
     return await fetchAPI(`/profesionales/${id}`, { method: 'DELETE' });
   },
+
+  // Horarios semanales
+  async getHorarios(id) {
+    const data = await fetchAPI(`/profesionales/${id}/horarios`);
+    return data?.horarios ?? [];
+  },
+  async guardarHorarios(id, bloques) {
+    return await fetchAPI(`/profesionales/${id}/horarios`, {
+      method: 'PUT',
+      body: JSON.stringify({ bloques }),
+    });
+  },
+
+  // Bloqueos de días
+  async getBloqueos(id) {
+    const data = await fetchAPI(`/profesionales/${id}/bloqueos`);
+    return data?.bloqueos ?? [];
+  },
+  async agregarBloqueo(id, fecha, motivo) {
+    return await fetchAPI(`/profesionales/${id}/bloqueos`, {
+      method: 'POST',
+      body: JSON.stringify({ fecha, motivo }),
+    });
+  },
+  async eliminarBloqueo(profId, bloqueoId) {
+    return await fetchAPI(`/profesionales/${profId}/bloqueos/${bloqueoId}`, { method: 'DELETE' });
+  },
 };
