@@ -2249,7 +2249,7 @@ body {
    RESUMEN FINANCIERO (panel clientes)
    ═══════════════════════════════════════ */
 .resumen-financiero-wrap {
-  padding: 0 14px 8px;
+  margin-top: 8px;
 }
 
 .btn-toggle-resumen {
