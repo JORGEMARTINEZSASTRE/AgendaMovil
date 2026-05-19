@@ -802,7 +802,7 @@ async function handleSubmitTurno(e) {
   const profesionalNombre = profesional?.nombre || null;
 
   // Validaciones frontend
-  if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion || !sucursalId) {
+  if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion) {
     mostrarErrorForm('form-turno-error', 'Completá todos los campos obligatorios');
     return;
   }

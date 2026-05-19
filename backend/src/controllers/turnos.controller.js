@@ -130,19 +130,19 @@ async function crear(req, res) {
 
     if (sucursal_id) {
       const sucursal = await Sucursales.obtenerHorarios(sucursal_id, req.user.id);
-      if (!sucursal) {
-        return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
+      if (sucursal) {
+        // Es una sucursal real — validar horarios del JSON
+        sucursalNombre = sucursal.nombre || null;
+        const disponible = estaDentroHorario(sucursal.horarios, fecha, hora, duracion);
+        if (!disponible) {
+          return res.status(409).json({
+            ok: false,
+            error: 'El horario está fuera de la disponibilidad configurada para la sucursal',
+          });
+        }
       }
-
-      sucursalNombre = sucursal.nombre || null;
-
-      const disponible = estaDentroHorario(sucursal.horarios, fecha, hora, duracion);
-      if (!disponible) {
-        return res.status(409).json({
-          ok: false,
-          error: 'El horario está fuera de la disponibilidad configurada para la sucursal',
-        });
-      }
+      // Si no es sucursal puede ser un profesional — los horarios ya se validan
+      // desde la agenda pública o el frontend no valida horario en admin
     }
 
     const conflictos = sucursal_id
@@ -238,16 +238,15 @@ async function actualizar(req, res) {
     if (cambioHorario) {
       if (sucursalObjetivo) {
         const sucursal = await Sucursales.obtenerHorarios(sucursalObjetivo, req.user.id);
-        if (!sucursal) {
-          return res.status(404).json({ ok: false, error: 'Sucursal no encontrada' });
-        }
-
-        const disponible = estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal);
-        if (!disponible) {
-          return res.status(409).json({
-            ok: false,
-            error: 'El horario está fuera de la disponibilidad configurada para la sucursal',
-          });
+        if (sucursal) {
+          // Solo validar horario si es una sucursal real (no un profesional)
+          const disponible = estaDentroHorario(sucursal.horarios, fechaFinal, horaFinal, duracionFinal);
+          if (!disponible) {
+            return res.status(409).json({
+              ok: false,
+              error: 'El horario está fuera de la disponibilidad configurada para la sucursal',
+            });
+          }
         }
       }
 
@@ -288,9 +287,9 @@ async function actualizar(req, res) {
     });
 
     const fechaAnterior = String(existente.fecha).slice(0, 10);
-    const fechaNueva    = String(fecha).slice(0, 10);
+    const fechaNueva    = String(fechaFinal).slice(0, 10);
     const horaAnterior  = String(existente.hora).slice(0, 5);
-    const horaNueva     = String(hora).slice(0, 5);
+    const horaNueva     = String(horaFinal).slice(0, 5);
 
     const fechaCambio  = fechaAnterior !== fechaNueva;
     const horaCambio   = horaAnterior  !== horaNueva;
