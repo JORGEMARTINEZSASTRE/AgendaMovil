@@ -656,10 +656,20 @@ function abrirFormTurno(turno = null) {
   }
 
   if (turno) {
-    setVal('turno-nombre',          turno.nombre);
+    setVal('turno-nombre', turno.nombre);
 
-    // Mostrar teléfono tal cual está guardado
-    setVal('turno-telefono', turno.telefono || '');
+    // Separar teléfono en código país + número
+    const tel = String(turno.telefono || '').replace(/\D/g, '');
+    if (tel.startsWith('598')) {
+      setVal('turno-codigo-pais', '598');
+      setVal('turno-telefono',    tel.slice(3));
+    } else if (tel.startsWith('54')) {
+      setVal('turno-codigo-pais', '54');
+      setVal('turno-telefono',    tel.slice(2));
+    } else {
+      setVal('turno-codigo-pais', '598');
+      setVal('turno-telefono',    tel);
+    }
 
     setVal('turno-email',          turno.email_clienta   || '');
     setVal('turno-fecha',          turno.fecha);
@@ -683,6 +693,7 @@ function abrirFormTurno(turno = null) {
   } else {
     setVal('turno-fecha',          fechaSeleccionada);
     setVal('turno-servicio-color', '#A85568');
+    setVal('turno-codigo-pais',    '598');
 
     // Si hay una sola sucursal, seleccionarla por defecto
     if (!turno && (sucursales || []).length === 1) {
@@ -764,6 +775,7 @@ async function handleSubmitTurno(e) {
   const nombre         = getVal('turno-nombre').trim();
   const sucursalId     = getVal('turno-sucursal-id');
   const telefonoRaw    = getVal('turno-telefono').trim();
+  const codigoPais     = getVal('turno-codigo-pais') || '598';
   const email          = getVal('turno-email').trim()  || null;
   const fecha          = getVal('turno-fecha');
   const hora           = getVal('turno-hora');
@@ -775,8 +787,10 @@ async function handleSubmitTurno(e) {
   const cumpleDia      = parseInt(getVal('turno-cumple-dia')) || null;
   const cumpleMes      = parseInt(getVal('turno-cumple-mes')) || null;
 
-  // Normalizar teléfono: conservar el + inicial, quitar espacios y guiones
-  const telefono = '+' + telefonoRaw.replace(/[^\d]/g, '');
+  // Armar teléfono con código de país
+  let telefonoLimpio = telefonoRaw.replace(/\D/g, '');
+  if (telefonoLimpio.startsWith('0')) telefonoLimpio = telefonoLimpio.slice(1);
+  const telefono = '+' + codigoPais + telefonoLimpio;
 
   // Buscar nombre del servicio por ID (del array local)
   const servicio       = servicios.find(s => s.id === servicioId);
@@ -2634,10 +2648,22 @@ function abrirModalProfesional(prof = null) {
   titulo.textContent = prof ? '✏️ Editar profesional' : '➕ Nuevo profesional';
   err.classList.add('oculto');
 
-  document.getElementById('prof-id').value       = prof?.id || '';
-  document.getElementById('prof-nombre').value   = prof?.nombre || '';
-  document.getElementById('prof-telefono').value = prof?.telefono || '';
-  document.getElementById('prof-color').value    = prof?.color || '#A85568';
+  document.getElementById('prof-id').value     = prof?.id || '';
+  document.getElementById('prof-nombre').value = prof?.nombre || '';
+  document.getElementById('prof-color').value  = prof?.color || '#A85568';
+
+  // Separar teléfono en código de país + número
+  const telProf = String(prof?.telefono || '').replace(/\D/g, '');
+  if (telProf.startsWith('598')) {
+    document.getElementById('prof-codigo-pais').value = '598';
+    document.getElementById('prof-telefono').value    = telProf.slice(3);
+  } else if (telProf.startsWith('54')) {
+    document.getElementById('prof-codigo-pais').value = '54';
+    document.getElementById('prof-telefono').value    = telProf.slice(2);
+  } else {
+    document.getElementById('prof-codigo-pais').value = '598';
+    document.getElementById('prof-telefono').value    = telProf;
+  }
 
   modal.classList.remove('oculto');
 }
@@ -2645,9 +2671,11 @@ function abrirModalProfesional(prof = null) {
 async function handleSubmitProfesional(e) {
   e.preventDefault();
   const err    = document.getElementById('form-profesional-error');
-  const nombre = document.getElementById('prof-nombre').value.trim();
-  const tel    = document.getElementById('prof-telefono').value.trim();
-  const color  = document.getElementById('prof-color').value;
+  const nombre     = document.getElementById('prof-nombre').value.trim();
+  const codigoProf = document.getElementById('prof-codigo-pais').value || '598';
+  const telRaw     = document.getElementById('prof-telefono').value.trim().replace(/\D/g, '');
+  const tel        = telRaw ? ('+' + codigoProf + telRaw) : '';
+  const color      = document.getElementById('prof-color').value;
 
   if (!nombre) {
     err.textContent = 'El nombre es requerido';

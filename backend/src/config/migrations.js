@@ -40,6 +40,33 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Columna sucursal_id en turnos OK');
 
+    // ── 4. Horarios semanales por profesional ──────────────────────────
+    // dia_semana: 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.horarios_profesional (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        profesional_id  UUID NOT NULL REFERENCES public.profesionales(id) ON DELETE CASCADE,
+        dia_semana      SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+        hora_inicio     TIME NOT NULL,
+        hora_fin        TIME NOT NULL,
+        UNIQUE (profesional_id, dia_semana)
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ Tabla horarios_profesional OK');
+
+    // ── 5. Bloqueos de días específicos por profesional ────────────────
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.bloqueos_profesional (
+        id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        profesional_id  UUID NOT NULL REFERENCES public.profesionales(id) ON DELETE CASCADE,
+        fecha           DATE NOT NULL,
+        motivo          VARCHAR(200),
+        creado_en       TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (profesional_id, fecha)
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ Tabla bloqueos_profesional OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

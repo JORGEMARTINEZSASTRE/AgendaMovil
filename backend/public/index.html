@@ -518,8 +518,14 @@
       </div>
       <div class="campo">
         <label for="prof-telefono">📞 Teléfono (para recibir WhatsApp)</label>
-        <input type="tel" id="prof-telefono" placeholder="Ej: +59899123456">
-        <small>Con código de país. Ej: +598 para Uruguay, +54 para Argentina</small>
+        <div style="display:flex; gap:8px;">
+          <select id="prof-codigo-pais" style="max-width:110px;">
+            <option value="598">🇺🇾 +598</option>
+            <option value="54">🇦🇷 +54</option>
+          </select>
+          <input type="tel" id="prof-telefono" placeholder="Ej: 99123456" style="flex:1;">
+        </div>
+        <span class="campo-ayuda">Sin el 0 inicial ni espacios.</span>
       </div>
       <div class="campo">
         <label for="prof-color">🎨 Color identificador</label>
@@ -700,17 +706,24 @@
         >
       </div>
 
-      <!-- Teléfono -->
+      <!-- Teléfono con código de país -->
       <div class="campo">
         <label for="turno-telefono">📞 Teléfono *</label>
-        <input
-          type="tel"
-          id="turno-telefono"
-          placeholder="Ej: +59892614060 o +5491165432100"
-          autocomplete="off"
-          required
-        >
-        <span class="campo-ayuda">Incluí el código de país. Ej: +598 Uruguay, +54 Argentina.</span>
+        <div style="display:flex; gap:8px;">
+          <select id="turno-codigo-pais" style="max-width:110px;">
+            <option value="598">🇺🇾 +598</option>
+            <option value="54">🇦🇷 +54</option>
+          </select>
+          <input
+            type="tel"
+            id="turno-telefono"
+            placeholder="Ej: 92614060"
+            autocomplete="off"
+            required
+            style="flex:1;"
+          >
+        </div>
+        <span class="campo-ayuda">Sin el 0 inicial ni espacios.</span>
       </div>
 
       <!-- Email opcional -->
