@@ -6,20 +6,24 @@
 // ═══════════════════════════════════════════════════════════
 
 // ─── ESTADO EN MEMORIA ───────────────────────────────────────
-let turnos      = [];
-let servicios   = [];
-let sucursales  = [];
+let turnos        = [];
+let servicios     = [];
+let sucursales    = [];
+let clientes      = [];
+let profesionales = [];
 let config      = {
   plantilla_turno:  '',
   plantilla_cumple: '',
 };
 
-let tabActual         = 'agenda';
-let fechaSeleccionada = hoy();
-let editandoId        = null;
-let editandoServId    = null;
-let mesCalendario     = new Date();
-let cargando          = false;
+let tabActual              = 'agenda';
+let fechaSeleccionada      = hoy();
+let editandoId             = null;
+let editandoServId         = null;
+let editandoProfId         = null;
+let filtroProfesionalId    = null;
+let mesCalendario          = new Date();
+let cargando               = false;
 const DIAS_SEMANA_SUC = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
 // ─── INIT ─────────────────────────────────────────────────────
@@ -59,16 +63,18 @@ function limpiarDatosEnMemoria() {
 async function cargarDatosIniciales() {
   mostrarCargando(true);
   try {
-    const [turnosData, serviciosData, configData, sucursalesData] = await Promise.all([
-      apiCall(() => TurnosAPI.getAll(),      'Error al cargar turnos'),
-      apiCall(() => ServiciosAPI.getAll(),   'Error al cargar servicios'),
-      apiCall(() => ConfigAPI.get(),         'Error al cargar configuración'),
-      apiCall(() => SucursalesAPI.listar(),  'Error al cargar sucursales'),
+    const [turnosData, serviciosData, configData, sucursalesData, profesionalesData] = await Promise.all([
+      apiCall(() => TurnosAPI.getAll(),          'Error al cargar turnos'),
+      apiCall(() => ServiciosAPI.getAll(),       'Error al cargar servicios'),
+      apiCall(() => ConfigAPI.get(),             'Error al cargar configuración'),
+      apiCall(() => SucursalesAPI.listar(),      'Error al cargar sucursales'),
+      apiCall(() => ProfesionalesAPI.getAll(),   'Error al cargar profesionales'),
     ]);
 
-    turnos     = turnosData     || [];
-    servicios  = serviciosData  || [];
-    sucursales = sucursalesData || [];
+    turnos        = turnosData        || [];
+    servicios     = serviciosData     || [];
+    sucursales    = sucursalesData    || [];
+    profesionales = profesionalesData || [];
 
     if (configData) {
       config.plantilla_turno  = configData.plantilla_turno;
@@ -178,6 +184,7 @@ function renderTabActual() {
     case 'servicios':  renderServicios();  break;
     case 'cumples':    renderCumples();    break;
     case 'sucursales': renderSucursalesOperadora(); break;
+    case 'clientes':   renderClientes();   break;
   }
 }
 
@@ -361,8 +368,16 @@ function renderAgenda() {
     };
   }
 
-  const turnosFecha = turnosDeFecha(fechaSeleccionada)
+  const turnosFechaBase = turnosDeFecha(fechaSeleccionada)
     .sort((a, b) => horaAMinutos(a.hora) - horaAMinutos(b.hora));
+
+  // Filtro por profesional
+  const turnosFecha = filtroProfesionalId
+    ? turnosFechaBase.filter(t => t.profesional_id === filtroProfesionalId)
+    : turnosFechaBase;
+
+  // Renderizar filtros de profesional si hay profesionales cargados
+  renderFiltrosProfesional();
 
   const tituloEl = document.getElementById('titulo-fecha');
   if (tituloEl) {
@@ -465,6 +480,7 @@ function cardTurno(t) {
           </p>` : ''}
         ${t.sucursal_nombre ? `<p class="turno-duracion">${t.sucursal_tipo === 'profesional' ? '👤' : '🏪'} ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
         <p class="turno-duracion">⏱ ${t.duracion} min</p>
+        ${t.profesional_nombre ? `<span class="turno-profesional-badge" style="background:${profesionales.find(p=>p.id===t.profesional_id)?.color||'#A85568'}">👩‍⚕️ ${escaparHTML(t.profesional_nombre)}</span>` : ''}
         ${t.notas ? `<p class="turno-notas">📝 ${escaparHTML(t.notas)}</p>` : ''}
         ${t.senia_requerida ? `
           <div class="turno-senia-wrap">
@@ -603,6 +619,23 @@ function abrirFormTurno(turno = null) {
             ${icono} ${escaparHTML(s.nombre || 'Sucursal')}
           </option>`;
       }).join('');
+  }
+
+  // Poblar selector de profesional
+  const selectProf = document.getElementById('turno-profesional');
+  const campoProf  = document.getElementById('campo-profesional');
+  if (selectProf) {
+    if (profesionales.length > 0) {
+      if (campoProf) campoProf.style.display = '';
+      selectProf.innerHTML = '<option value="">— Sin asignar —</option>' +
+        profesionales.map(p =>
+          `<option value="${p.id}" ${turno?.profesional_id === p.id ? 'selected' : ''}>
+            ${escaparHTML(p.nombre)}
+          </option>`
+        ).join('');
+    } else {
+      if (campoProf) campoProf.style.display = 'none';
+    }
   }
 
   // Poblar selector de servicios (con indicador de seña)
@@ -763,6 +796,11 @@ async function handleSubmitTurno(e) {
   const servicio       = servicios.find(s => s.id === servicioId);
   const servicioNombre = servicio?.nombre || null;
 
+  // Profesional seleccionado
+  const profesionalId  = getVal('turno-profesional') || null;
+  const profesional    = profesionales.find(p => p.id === profesionalId);
+  const profesionalNombre = profesional?.nombre || null;
+
   // Validaciones frontend
   if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion || !sucursalId) {
     mostrarErrorForm('form-turno-error', 'Completá todos los campos obligatorios');
@@ -804,9 +842,11 @@ async function handleSubmitTurno(e) {
     servicio_zona:   servicioZona,
     servicio_color:  servicioColor,
     notas,
-    cumple_dia:      cumpleDia,
-    cumple_mes:      cumpleMes,
-    sucursal_id:     sucursalId,
+    cumple_dia:         cumpleDia,
+    cumple_mes:         cumpleMes,
+    sucursal_id:        sucursalId,
+    profesional_id:     profesionalId,
+    profesional_nombre: profesionalNombre,
   };
 
   setBtnLoading('btn-guardar-turno', true);
@@ -1716,6 +1756,19 @@ function bindConfiguracion() {
       }
     });
   }
+
+  // Profesionales
+  renderProfesionalesConfig();
+
+  const btnNuevoProf = document.getElementById('btn-nuevo-profesional');
+  if (btnNuevoProf) {
+    btnNuevoProf.addEventListener('click', () => abrirModalProfesional());
+  }
+
+  const formProf = document.getElementById('form-profesional');
+  if (formProf) {
+    formProf.addEventListener('submit', handleSubmitProfesional);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2400,3 +2453,261 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+//  CLIENTES
+// ═══════════════════════════════════════════════════════════
+async function renderClientes() {
+  const contenedor = document.getElementById('lista-clientes');
+  if (!contenedor) return;
+
+  contenedor.innerHTML = `<div class="pub-cargando">Cargando clientes...</div>`;
+
+  try {
+    clientes = await ClientesAPI.getAll();
+  } catch (e) {
+    contenedor.innerHTML = `<div class="pub-vacio">Error al cargar clientes</div>`;
+    return;
+  }
+
+  if (!clientes.length) {
+    contenedor.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icono">👥</span>
+        <p class="empty-titulo">Sin clientes todavía</p>
+        <p class="empty-sub">Los clientes aparecen cuando agendás turnos</p>
+      </div>`;
+    return;
+  }
+
+  const buscar = document.getElementById('buscar-cliente');
+  const renderLista = (filtro = '') => {
+    const filtrados = filtro
+      ? clientes.filter(c =>
+          c.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
+          c.telefono.includes(filtro)
+        )
+      : clientes;
+
+    if (!filtrados.length) {
+      contenedor.innerHTML = `<div class="pub-vacio">Sin resultados para "${filtro}"</div>`;
+      return;
+    }
+
+    contenedor.innerHTML = filtrados.map(c => {
+      const inicial = (c.nombre || '?')[0].toUpperCase();
+      const gasto   = parseFloat(c.total_gastado) || 0;
+      const fecha   = c.ultimo_turno ? formatearFecha(c.ultimo_turno.toString().split('T')[0]) : '—';
+      return `
+        <div class="cliente-card" data-tel="${escaparHTML(c.telefono)}">
+          <div class="cliente-avatar">${inicial}</div>
+          <div class="cliente-info">
+            <p class="cliente-nombre">${escaparHTML(c.nombre)}</p>
+            <p class="cliente-tel">📞 ${escaparHTML(c.telefono)}</p>
+            <p class="cliente-ultimo">Último: ${fecha}</p>
+          </div>
+          <div class="cliente-stats">
+            <p class="cliente-gasto">$${gasto.toLocaleString('es-UY')}</p>
+            <p class="cliente-turnos">${c.total_turnos} turno${c.total_turnos != 1 ? 's' : ''}</p>
+          </div>
+        </div>`;
+    }).join('');
+
+    contenedor.querySelectorAll('.cliente-card').forEach(card => {
+      card.addEventListener('click', () => abrirHistorialCliente(card.dataset.tel));
+    });
+  };
+
+  renderLista();
+
+  if (buscar) {
+    buscar.value = '';
+    buscar.oninput = (e) => renderLista(e.target.value.trim());
+  }
+}
+
+async function abrirHistorialCliente(telefono) {
+  const cliente = clientes.find(c => c.telefono === telefono);
+  if (!cliente) return;
+
+  const modal    = document.getElementById('modal-historial-cliente');
+  const titulo   = document.getElementById('modal-historial-titulo');
+  const contenido = document.getElementById('modal-historial-contenido');
+
+  titulo.textContent = `📋 ${cliente.nombre}`;
+  contenido.innerHTML = `<div class="pub-cargando">Cargando historial...</div>`;
+  modal.classList.remove('oculto');
+
+  try {
+    const historial = await ClientesAPI.historial(telefono);
+    if (!historial.length) {
+      contenido.innerHTML = `<div class="pub-vacio">Sin turnos registrados</div>`;
+      return;
+    }
+    contenido.innerHTML = historial.map(t => {
+      const fecha   = formatearFecha(t.fecha?.toString().split('T')[0]);
+      const hora    = formatearHora(t.hora);
+      const precio  = parseFloat(t.servicio_precio) || 0;
+      const cancelado = t.estado === 'cancelado';
+      return `
+        <div class="historial-item">
+          <p class="historial-fecha">${fecha} · ${hora} hs</p>
+          <p class="historial-servicio">${escaparHTML(t.servicio_nombre || 'Sin servicio')}</p>
+          ${precio > 0 ? `<p class="historial-precio">$${precio.toLocaleString('es-UY')}</p>` : ''}
+          ${cancelado ? `<p class="historial-estado-cancelado">🚫 Cancelado</p>` : ''}
+        </div>`;
+    }).join('');
+  } catch (e) {
+    contenido.innerHTML = `<div class="pub-vacio">Error al cargar historial</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROFESIONALES
+// ═══════════════════════════════════════════════════════════
+function renderProfesionalesConfig() {
+  const contenedor = document.getElementById('lista-profesionales-config');
+  if (!contenedor) return;
+
+  if (!profesionales.length) {
+    contenedor.innerHTML = `<p style="font-size:13px;color:var(--gris);font-style:italic">Sin profesionales agregados todavía.</p>`;
+    return;
+  }
+
+  contenedor.innerHTML = profesionales.map(p => `
+    <div class="prof-config-card">
+      <span class="prof-color-dot" style="background:${p.color}"></span>
+      <div class="prof-config-info">
+        <p class="prof-config-nombre">${escaparHTML(p.nombre)}</p>
+        ${p.telefono ? `<p class="prof-config-tel">📞 ${escaparHTML(p.telefono)}</p>` : ''}
+      </div>
+      <div class="prof-config-acciones">
+        <button class="btn-icon btn-editar-prof" data-id="${p.id}" title="Editar">✏️</button>
+        <button class="btn-icon btn-borrar-prof" data-id="${p.id}" title="Eliminar">🗑</button>
+      </div>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('.btn-editar-prof').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = profesionales.find(x => x.id === btn.dataset.id);
+      if (p) abrirModalProfesional(p);
+    });
+  });
+
+  contenedor.querySelectorAll('.btn-borrar-prof').forEach(btn => {
+    btn.addEventListener('click', () => eliminarProfesional(btn.dataset.id));
+  });
+}
+
+function renderFiltrosProfesional() {
+  // Insertar filtros antes de lista-usuarios si hay profesionales
+  let wrap = document.getElementById('filtro-profesional-wrap');
+  const agenda = document.getElementById('lista-usuarios');
+  if (!agenda) return;
+
+  if (!profesionales.length) {
+    if (wrap) wrap.remove();
+    return;
+  }
+
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'filtro-profesional-wrap';
+    wrap.className = 'filtro-profesional-wrap';
+    agenda.parentElement.insertBefore(wrap, agenda);
+  }
+
+  wrap.innerHTML = `
+    <button class="filtro-prof-btn ${!filtroProfesionalId ? 'activo' : ''}" data-id="">
+      Todas
+    </button>
+    ${profesionales.map(p => `
+      <button class="filtro-prof-btn ${filtroProfesionalId === p.id ? 'activo' : ''}"
+              data-id="${p.id}"
+              style="${filtroProfesionalId === p.id ? `background:${p.color}20;border-color:${p.color};color:${p.color}` : ''}">
+        ${escaparHTML(p.nombre)}
+      </button>
+    `).join('')}
+  `;
+
+  wrap.querySelectorAll('.filtro-prof-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      filtroProfesionalId = btn.dataset.id || null;
+      renderAgenda();
+    });
+  });
+}
+
+function abrirModalProfesional(prof = null) {
+  editandoProfId = prof?.id || null;
+  const modal  = document.getElementById('modal-profesional');
+  const titulo = document.getElementById('modal-profesional-titulo');
+  const err    = document.getElementById('form-profesional-error');
+
+  titulo.textContent = prof ? '✏️ Editar profesional' : '➕ Nuevo profesional';
+  err.classList.add('oculto');
+
+  document.getElementById('prof-id').value       = prof?.id || '';
+  document.getElementById('prof-nombre').value   = prof?.nombre || '';
+  document.getElementById('prof-telefono').value = prof?.telefono || '';
+  document.getElementById('prof-color').value    = prof?.color || '#A85568';
+
+  modal.classList.remove('oculto');
+}
+
+async function handleSubmitProfesional(e) {
+  e.preventDefault();
+  const err    = document.getElementById('form-profesional-error');
+  const nombre = document.getElementById('prof-nombre').value.trim();
+  const tel    = document.getElementById('prof-telefono').value.trim();
+  const color  = document.getElementById('prof-color').value;
+
+  if (!nombre) {
+    err.textContent = 'El nombre es requerido';
+    err.classList.remove('oculto');
+    return;
+  }
+
+  setBtnLoading('btn-guardar-profesional', true);
+  try {
+    let data;
+    if (editandoProfId) {
+      data = await ProfesionalesAPI.actualizar(editandoProfId, { nombre, telefono: tel, color });
+      if (data?.ok) {
+        profesionales = profesionales.map(p => p.id === editandoProfId ? data.profesional : p);
+        mostrarToast('Profesional actualizado ✅', 'exito');
+      }
+    } else {
+      data = await ProfesionalesAPI.crear({ nombre, telefono: tel, color });
+      if (data?.ok) {
+        profesionales.push(data.profesional);
+        mostrarToast('Profesional creado ✅', 'exito');
+      }
+    }
+    if (!data?.ok) {
+      err.textContent = data?.error || 'Error al guardar';
+      err.classList.remove('oculto');
+      return;
+    }
+    cerrarModales();
+    renderProfesionalesConfig();
+  } catch (e) {
+    err.textContent = e.message || 'Error al guardar';
+    err.classList.remove('oculto');
+  } finally {
+    setBtnLoading('btn-guardar-profesional', false);
+  }
+}
+
+async function eliminarProfesional(id) {
+  if (!confirm('¿Eliminar este profesional?')) return;
+  try {
+    await ProfesionalesAPI.eliminar(id);
+    profesionales = profesionales.filter(p => p.id !== id);
+    mostrarToast('Profesional eliminado', 'exito');
+    renderProfesionalesConfig();
+  } catch (e) {
+    mostrarToast('Error al eliminar', 'error');
+  }
+}

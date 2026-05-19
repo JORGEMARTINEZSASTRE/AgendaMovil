@@ -16,6 +16,8 @@ const waRoutes = require('./routes/wa.routes');
 const whatsappRoutes = require('./routes/whatsapp.routes');
 const sucursalesRoutes = require('./routes/sucursales.routes');
 const fichasRoutes = require('./routes/fichas.routes');
+const clientesRoutes = require('./routes/clientes.routes');
+const profesionalesRoutes = require('./routes/profesionales.routes');
 
 
 const app = express();
@@ -54,6 +56,8 @@ app.use('/api/wa', waRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/fichas', fichasRoutes);
+app.use('/api/clientes', clientesRoutes);
+app.use('/api/profesionales', profesionalesRoutes);
 
 
 

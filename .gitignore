@@ -24,6 +24,3 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-
-# Railway/Render
-public/
