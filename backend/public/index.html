@@ -429,62 +429,75 @@
 
   <!-- ─── CONFIGURACIÓN (panel fijo abajo) ────── -->
   <div id="seccion-config" class="config-panel oculto">
+
     <div class="config-header">
       <p class="config-titulo">⚙️ Configuración</p>
       <button id="btn-cerrar-config" class="btn-cerrar-config">✕</button>
     </div>
 
-    <!-- Logo del negocio -->
-    <div class="config-logo-wrap">
+    <!-- ── TARJETA 1: Logo ─────────────────────────── -->
+    <div class="config-card">
+      <div class="config-card-header">
+        <span class="config-card-icon">🖼️</span>
+        <div>
+          <p class="config-card-titulo">Logo del negocio</p>
+          <p class="config-card-desc">Aparece en la agenda pública y en el panel</p>
+        </div>
+      </div>
       <div class="config-logo-section">
-        <label>🖼️ Logo de tu negocio</label>
         <div id="config-logo-preview" class="config-logo-preview oculto">
           <img id="config-logo-img" src="" alt="Logo">
           <button type="button" id="btn-quitar-logo" class="btn-quitar-logo" title="Quitar logo">✕</button>
         </div>
-        <label for="config-logo-input" class="btn-subir-logo">
-          📷 Subir logo
-        </label>
+        <label for="config-logo-input" class="btn-subir-logo">📷 Subir logo</label>
         <input type="file" id="config-logo-input" accept="image/*" class="oculto">
-        <small>PNG, JPG o WebP — Máx 2MB</small>
+        <span class="campo-ayuda">PNG, JPG o WebP — Máx 2MB</span>
       </div>
     </div>
 
-    <form id="form-config" class="form-config">
-      <div class="campo">
-        <label for="config-plantilla-turno">
-          💬 Plantilla confirmación de turno
-        </label>
-        <textarea
-          id="config-plantilla-turno"
-          rows="8"
-          placeholder="Usá {nombre}, {fecha}, {hora}, {servicio}, {zona}, {duracion}"
-        ></textarea>
-        <p class="campo-ayuda">
-          Variables: {nombre} {fecha} {hora} {servicio} {zona} {duracion}
-        </p>
+    <!-- ── TARJETA 2: Mensajes ─────────────────────── -->
+    <div class="config-card">
+      <div class="config-card-header">
+        <span class="config-card-icon">💬</span>
+        <div>
+          <p class="config-card-titulo">Mensajes de WhatsApp</p>
+          <p class="config-card-desc">Plantillas que se envían automáticamente</p>
+        </div>
       </div>
-      <div class="campo">
-        <label for="config-plantilla-cumple">
-          🎂 Plantilla saludo de cumpleaños
-        </label>
-        <textarea
-          id="config-plantilla-cumple"
-          rows="6"
-          placeholder="Usá {nombre}"
-        ></textarea>
-        <p class="campo-ayuda">Variables: {nombre}</p>
-      </div>
-      <button type="submit" id="btn-guardar-config" class="btn-primario">
-        💾 Guardar configuración
-      </button>
-    </form>
+      <form id="form-config" class="form-config">
+        <div class="campo">
+          <label for="config-plantilla-turno">Confirmación de turno</label>
+          <textarea
+            id="config-plantilla-turno"
+            rows="6"
+            placeholder="Usá {nombre}, {fecha}, {hora}, {servicio}, {zona}, {duracion}"
+          ></textarea>
+          <p class="campo-ayuda">Variables: {nombre} {fecha} {hora} {servicio} {zona} {duracion}</p>
+        </div>
+        <div class="campo">
+          <label for="config-plantilla-cumple">Saludo de cumpleaños</label>
+          <textarea
+            id="config-plantilla-cumple"
+            rows="4"
+            placeholder="Usá {nombre}"
+          ></textarea>
+          <p class="campo-ayuda">Variables: {nombre}</p>
+        </div>
+        <button type="submit" id="btn-guardar-config" class="btn-primario">
+          💾 Guardar mensajes
+        </button>
+      </form>
+    </div>
 
-    <!-- Profesionales -->
-    <div class="config-profesionales-wrap">
-      <div class="config-seccion-header">
-        <p class="config-seccion-titulo">👩‍⚕️ Profesionales</p>
-        <button id="btn-nuevo-profesional" class="btn-admin btn-nueva-sucursal">➕ Agregar</button>
+    <!-- ── TARJETA 3: Profesionales ────────────────── -->
+    <div class="config-card">
+      <div class="config-card-header">
+        <span class="config-card-icon">👩‍⚕️</span>
+        <div>
+          <p class="config-card-titulo">Profesionales</p>
+          <p class="config-card-desc">Quiénes atienden y sus horarios</p>
+        </div>
+        <button id="btn-nuevo-profesional" class="btn-config-agregar">➕ Agregar</button>
       </div>
       <div id="lista-profesionales-config" class="lista-profesionales-config">
         <!-- Se renderiza con JS -->

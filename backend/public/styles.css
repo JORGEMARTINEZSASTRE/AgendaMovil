@@ -588,6 +588,65 @@ body {
 }
 .btn-cerrar-config:hover { background:var(--blush); color:var(--rosa-vino) }
 .form-config { display:flex; flex-direction:column; gap:14px }
+
+/* Tarjetas de configuración */
+.config-card {
+  background: var(--crema2);
+  border: 1.5px solid var(--borde);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.config-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.config-card-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.config-card-titulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--marron);
+  line-height: 1.2;
+}
+
+.config-card-desc {
+  font-size: 11px;
+  color: var(--gris);
+  margin-top: 2px;
+}
+
+.config-card-header > div { flex: 1; }
+
+.btn-config-agregar {
+  flex-shrink: 0;
+  background: var(--panel);
+  border: 1.5px solid var(--borde);
+  border-radius: 100px;
+  color: var(--rosa-vino);
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.btn-config-agregar:hover {
+  background: rgba(168,85,104,.08);
+  border-color: var(--rosa-vino);
+}
+
 .btn-config-flotante {
   position:fixed; bottom:22px; right:18px; z-index:350;
   width:48px; height:48px; border-radius:50%;
@@ -2113,21 +2172,11 @@ body {
 }
 
 /* Logo en config panel */
-.config-logo-wrap {
-  padding: 16px;
-  border-bottom: 1px solid var(--borde);
-}
 .config-logo-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-}
-.config-logo-section > label {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--rosa-vino);
 }
 .config-logo-preview {
   position: relative;
@@ -2332,11 +2381,8 @@ body {
 /* ═══════════════════════════════════════
    PROFESIONALES EN CONFIG
    ═══════════════════════════════════════ */
-.config-profesionales-wrap {
-  margin-top: 24px;
-  border-top: 1px solid var(--borde);
-  padding-top: 20px;
-}
+/* Ahora dentro de .config-card, no necesita margen/borde extra */
+.config-profesionales-wrap {}
 
 .config-seccion-header {
   display: flex;
@@ -2359,7 +2405,7 @@ body {
 }
 
 .prof-config-card {
-  background: var(--crema2);
+  background: var(--panel);
   border: 1.5px solid var(--borde);
   border-radius: var(--radio-sm);
   padding: 12px 14px;
