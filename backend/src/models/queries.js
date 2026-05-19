@@ -199,7 +199,6 @@ const Turnos = {
       servicioNombre, servicioZona, servicioColor,
       duracion, fecha, hora, notas,
       cumpleDia, cumpleMes, sucursalId,
-      profesionalId, profesionalNombre,
     } = datos;
 
     const { rows } = await query(
@@ -207,27 +206,24 @@ const Turnos = {
          (user_id, servicio_id, nombre, telefono,
           servicio_nombre, servicio_zona, servicio_color,
           duracion, fecha, hora, notas,
-          cumple_dia, cumple_mes, sucursal_id,
-          profesional_id, profesional_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+          cumple_dia, cumple_mes, sucursal_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         userId,
-        servicioId         || null,
+        servicioId     || null,
         nombre,
         telefono,
-        servicioNombre     || null,
-        servicioZona       || null,
-        servicioColor      || '#A85568',
+        servicioNombre || null,
+        servicioZona   || null,
+        servicioColor  || '#A85568',
         duracion,
         fecha,
         hora,
-        notas              || null,
-        cumpleDia          || null,
-        cumpleMes          || null,
-        sucursalId         || null,
-        profesionalId      || null,
-        profesionalNombre  || null,
+        notas          || null,
+        cumpleDia      || null,
+        cumpleMes      || null,
+        sucursalId     || null,
       ]
     );
     return rows[0];
@@ -239,47 +235,42 @@ const Turnos = {
       servicioNombre, servicioZona, servicioColor,
       duracion, fecha, hora, notas,
       cumpleDia, cumpleMes, estado, sucursalId,
-      profesionalId, profesionalNombre,
     } = datos;
 
     const { rows } = await query(
       `UPDATE turnos SET
-         servicio_id        = COALESCE($1, servicio_id),
-         nombre             = $2,
-         telefono           = $3,
-         servicio_nombre    = $4,
-         servicio_zona      = $5,
-         servicio_color     = $6,
-         duracion           = $7,
-         fecha              = $8,
-         hora               = $9,
-         notas              = $10,
-         cumple_dia         = $11,
-         cumple_mes         = $12,
-         estado             = COALESCE($13, estado),
-         sucursal_id        = COALESCE($14, sucursal_id),
-         profesional_id     = $15,
-         profesional_nombre = $16,
-         editado_en         = NOW()
-       WHERE id = $17 AND user_id = $18
+         servicio_id     = COALESCE($1, servicio_id),
+         nombre          = $2,
+         telefono        = $3,
+         servicio_nombre = $4,
+         servicio_zona   = $5,
+         servicio_color  = $6,
+         duracion        = $7,
+         fecha           = $8,
+         hora            = $9,
+         notas           = $10,
+         cumple_dia      = $11,
+         cumple_mes      = $12,
+         estado          = COALESCE($13, estado),
+         sucursal_id     = COALESCE($14, sucursal_id),
+         editado_en      = NOW()
+       WHERE id = $15 AND user_id = $16
        RETURNING *`,
       [
-        servicioId         || null,
+        servicioId     || null,
         nombre,
         telefono,
-        servicioNombre     || null,
-        servicioZona       || null,
-        servicioColor      || '#A85568',
+        servicioNombre || null,
+        servicioZona   || null,
+        servicioColor  || '#A85568',
         duracion,
         fecha,
         hora,
-        notas              || null,
-        cumpleDia          || null,
-        cumpleMes          || null,
-        estado             || null,
-        sucursalId         || null,
-        profesionalId      || null,
-        profesionalNombre  || null,
+        notas          || null,
+        cumpleDia      || null,
+        cumpleMes      || null,
+        estado         || null,
+        sucursalId     || null,
         id,
         userId,
       ]
@@ -740,91 +731,6 @@ const WaPendientes = {
     return true;
   },
 };
-
-// ─── CLIENTES ─────────────────────────────────────────────────
-const Clientes = {
-  async listar(userId) {
-    const { rows } = await query(
-      `SELECT
-         t.telefono,
-         MAX(t.nombre)          AS nombre,
-         COUNT(*)               AS total_turnos,
-         COALESCE(SUM(s.precio), 0) AS total_gastado,
-         MAX(t.fecha)           AS ultimo_turno,
-         MAX(t.creado_en)       AS primera_vez
-       FROM turnos t
-       LEFT JOIN servicios s ON s.id = t.servicio_id
-       WHERE t.user_id = $1 AND t.estado != 'cancelado'
-       GROUP BY t.telefono
-       ORDER BY total_gastado DESC NULLS LAST`,
-      [userId]
-    );
-    return rows;
-  },
-
-  async historial(userId, telefono) {
-    const { rows } = await query(
-      `SELECT t.*, s.precio as servicio_precio
-       FROM turnos t
-       LEFT JOIN servicios s ON s.id = t.servicio_id
-       WHERE t.user_id = $1 AND t.telefono = $2
-       ORDER BY t.fecha DESC, t.hora DESC`,
-      [userId, telefono]
-    );
-    return rows;
-  },
-};
-
-// ─── PROFESIONALES ────────────────────────────────────────────
-const Profesionales = {
-  async listar(userId) {
-    const { rows } = await query(
-      `SELECT * FROM profesionales
-       WHERE user_id = $1 AND activo = true
-       ORDER BY nombre ASC`,
-      [userId]
-    );
-    return rows;
-  },
-
-  async buscarPorId(id, userId) {
-    const { rows } = await query(
-      `SELECT * FROM profesionales WHERE id = $1 AND user_id = $2`,
-      [id, userId]
-    );
-    return rows[0] || null;
-  },
-
-  async crear(userId, { nombre, telefono, color }) {
-    const { rows } = await query(
-      `INSERT INTO profesionales (user_id, nombre, telefono, color)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [userId, nombre, telefono || null, color || '#A85568']
-    );
-    return rows[0];
-  },
-
-  async actualizar(id, userId, { nombre, telefono, color }) {
-    const { rows } = await query(
-      `UPDATE profesionales
-       SET nombre = $1, telefono = $2, color = $3
-       WHERE id = $4 AND user_id = $5
-       RETURNING *`,
-      [nombre, telefono || null, color || '#A85568', id, userId]
-    );
-    return rows[0] || null;
-  },
-
-  async eliminar(id, userId) {
-    await query(
-      `UPDATE profesionales SET activo = false WHERE id = $1 AND user_id = $2`,
-      [id, userId]
-    );
-    return true;
-  },
-};
-
 module.exports = {
   Usuarios,
   Turnos,
@@ -835,8 +741,5 @@ module.exports = {
   crearUsuarioAutoRegistro,
   buscarUsuarioPorEmail,
   WaPendientes,
-  Sucursales,
-  Clientes,
-  Profesionales,
-};
+  Sucursales
 };
