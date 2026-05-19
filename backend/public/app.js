@@ -2457,9 +2457,88 @@ document.addEventListener('click', (e) => {
 // ═══════════════════════════════════════════════════════════
 //  CLIENTES
 // ═══════════════════════════════════════════════════════════
+
+async function renderResumenFinanciero() {
+  const contenedor = document.getElementById('resumen-financiero');
+  if (!contenedor) return;
+
+  contenedor.innerHTML = `<div class="pub-cargando">Cargando resumen...</div>`;
+
+  try {
+    const r = await ClientesAPI.resumen();
+    if (!r) { contenedor.innerHTML = ''; return; }
+
+    const semanaGan  = parseFloat(r.semana_ganancia) || 0;
+    const semanaAnt  = parseFloat(r.semana_ant_ganancia) || 0;
+    const mesGan     = parseFloat(r.mes_ganancia) || 0;
+    const mesAnt     = parseFloat(r.mes_ant_ganancia) || 0;
+    const semanaTurnos = parseInt(r.semana_turnos) || 0;
+    const mesTurnos    = parseInt(r.mes_turnos) || 0;
+
+    const diffSemana = semanaAnt > 0 ? Math.round(((semanaGan - semanaAnt) / semanaAnt) * 100) : null;
+    const diffMes    = mesAnt > 0 ? Math.round(((mesGan - mesAnt) / mesAnt) * 100) : null;
+
+    const topServ = Array.isArray(r.top_servicios) ? r.top_servicios : [];
+    const clientaMes = Array.isArray(r.clienta_mes) && r.clienta_mes.length ? r.clienta_mes[0] : null;
+
+    const fmt = (n) => '$' + n.toLocaleString('es-UY');
+
+    const badge = (diff) => {
+      if (diff === null) return '';
+      if (diff > 0) return `<span class="resumen-badge positivo">+${diff}%</span>`;
+      if (diff < 0) return `<span class="resumen-badge negativo">${diff}%</span>`;
+      return `<span class="resumen-badge neutro">0%</span>`;
+    };
+
+    contenedor.innerHTML = `
+      <div class="resumen-grid">
+        <div class="resumen-card">
+          <p class="resumen-label">Esta semana</p>
+          <p class="resumen-valor">${fmt(semanaGan)}</p>
+          <p class="resumen-sub">${semanaTurnos} turno${semanaTurnos !== 1 ? 's' : ''}</p>
+          ${badge(diffSemana)}
+        </div>
+        <div class="resumen-card">
+          <p class="resumen-label">Este mes</p>
+          <p class="resumen-valor">${fmt(mesGan)}</p>
+          <p class="resumen-sub">${mesTurnos} turno${mesTurnos !== 1 ? 's' : ''}</p>
+          ${badge(diffMes)}
+        </div>
+      </div>
+      ${topServ.length ? `
+        <div class="resumen-seccion">
+          <p class="resumen-seccion-titulo">🔝 Top servicios del mes</p>
+          ${topServ.map((s, i) => `
+            <div class="resumen-fila">
+              <span class="resumen-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+              <span class="resumen-fila-nombre">${escaparHTML(s.nombre)}</span>
+              <span class="resumen-fila-valor">${parseInt(s.cantidad)} · ${fmt(parseFloat(s.total))}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      ${clientaMes ? `
+        <div class="resumen-seccion">
+          <p class="resumen-seccion-titulo">⭐ Clienta del mes</p>
+          <div class="resumen-fila">
+            <span class="resumen-rank">👑</span>
+            <span class="resumen-fila-nombre">${escaparHTML(clientaMes.nombre)}</span>
+            <span class="resumen-fila-valor">${parseInt(clientaMes.visitas)} visita${parseInt(clientaMes.visitas) !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+      ` : ''}
+    `;
+  } catch {
+    contenedor.innerHTML = '';
+  }
+}
+
 async function renderClientes() {
   const contenedor = document.getElementById('lista-clientes');
   if (!contenedor) return;
+
+  // Cargar resumen en paralelo
+  renderResumenFinanciero();
 
   contenedor.innerHTML = `<div class="pub-cargando">Cargando clientes...</div>`;
 

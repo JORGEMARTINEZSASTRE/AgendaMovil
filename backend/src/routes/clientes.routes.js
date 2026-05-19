@@ -21,6 +21,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/clientes/resumen — resumen financiero: semana, mes, top servicios, clienta del mes
+router.get('/resumen', async (req, res) => {
+  try {
+    const resumen = await Clientes.resumen(req.user.id);
+    return res.json({ ok: true, resumen });
+  } catch (err) {
+    console.error('[CLIENTES/resumen]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al obtener resumen' });
+  }
+});
+
 // GET /api/clientes/:telefono/historial — historial de turnos de un cliente
 router.get('/:telefono/historial', async (req, res) => {
   try {

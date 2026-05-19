@@ -2246,7 +2246,105 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   PANEL CLIENTES
+   RESUMEN FINANCIERO (panel clientes)
+   ═══════════════════════════════════════ */
+.resumen-financiero {
+  padding: 0 14px 12px;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.resumen-card {
+  background: var(--crema2);
+  border: 1.5px solid var(--borde);
+  border-radius: 14px;
+  padding: 14px 16px;
+  position: relative;
+}
+
+.resumen-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gris);
+  margin-bottom: 4px;
+}
+
+.resumen-valor {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--marron);
+  line-height: 1.1;
+}
+
+.resumen-sub {
+  font-size: 12px;
+  color: var(--gris);
+  margin-top: 2px;
+}
+
+.resumen-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+.resumen-badge.positivo { background: rgba(39,174,96,.12); color: #27ae60; }
+.resumen-badge.negativo { background: rgba(192,57,43,.12); color: #c0392b; }
+.resumen-badge.neutro    { background: var(--borde); color: var(--gris); }
+
+.resumen-seccion {
+  background: var(--crema2);
+  border: 1.5px solid var(--borde);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.resumen-seccion-titulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 10px;
+}
+
+.resumen-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--borde);
+  font-size: 13px;
+}
+.resumen-fila:last-child { border-bottom: none; }
+
+.resumen-rank { font-size: 16px; flex-shrink: 0; }
+
+.resumen-fila-nombre {
+  flex: 1;
+  font-weight: 600;
+  color: var(--marron2);
+}
+
+.resumen-fila-valor {
+  font-weight: 700;
+  color: var(--rosa-vino);
+  font-size: 12px;
+}
+
+/* ═══════════════════════════════════════
+   CLIENTES
    ═══════════════════════════════════════ */
 .lista-clientes {
   display: flex;

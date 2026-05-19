@@ -414,6 +414,10 @@ const ClientesAPI = {
     const data = await fetchAPI(`/clientes/${encodeURIComponent(telefono)}/historial`);
     return data?.historial ?? [];
   },
+  async resumen() {
+    const data = await fetchAPI('/clientes/resumen');
+    return data?.resumen ?? null;
+  },
 };
 
 // ─── PROFESIONALES API ────────────────────────────────────

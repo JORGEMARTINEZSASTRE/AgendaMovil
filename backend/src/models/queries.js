@@ -777,6 +777,76 @@ const Clientes = {
     );
     return rows;
   },
+
+  async resumen(userId) {
+    const { rows } = await query(`
+      WITH
+      semana_actual AS (
+        SELECT COALESCE(SUM(s.precio), 0) AS ganancia, COUNT(*) AS turnos
+        FROM turnos t
+        LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          AND t.fecha >= date_trunc('week', CURRENT_DATE)
+          AND t.fecha <  date_trunc('week', CURRENT_DATE) + INTERVAL '7 days'
+      ),
+      semana_anterior AS (
+        SELECT COALESCE(SUM(s.precio), 0) AS ganancia, COUNT(*) AS turnos
+        FROM turnos t
+        LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          AND t.fecha >= date_trunc('week', CURRENT_DATE) - INTERVAL '7 days'
+          AND t.fecha <  date_trunc('week', CURRENT_DATE)
+      ),
+      mes_actual AS (
+        SELECT COALESCE(SUM(s.precio), 0) AS ganancia, COUNT(*) AS turnos
+        FROM turnos t
+        LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          AND t.fecha >= date_trunc('month', CURRENT_DATE)
+          AND t.fecha <  date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+      ),
+      mes_anterior AS (
+        SELECT COALESCE(SUM(s.precio), 0) AS ganancia, COUNT(*) AS turnos
+        FROM turnos t
+        LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          AND t.fecha >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+          AND t.fecha <  date_trunc('month', CURRENT_DATE)
+      ),
+      top_servicios AS (
+        SELECT t.servicio_nombre AS nombre,
+               COUNT(*) AS cantidad,
+               COALESCE(SUM(s.precio), 0) AS total
+        FROM turnos t
+        LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          AND t.servicio_nombre IS NOT NULL
+          AND t.fecha >= date_trunc('month', CURRENT_DATE)
+        GROUP BY t.servicio_nombre
+        ORDER BY cantidad DESC
+        LIMIT 3
+      ),
+      clienta_mes AS (
+        SELECT t.nombre, t.telefono, COUNT(*) AS visitas
+        FROM turnos t
+        WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          AND t.fecha >= date_trunc('month', CURRENT_DATE)
+        GROUP BY t.nombre, t.telefono
+        ORDER BY visitas DESC
+        LIMIT 1
+      )
+      SELECT
+        (SELECT ganancia FROM semana_actual)  AS semana_ganancia,
+        (SELECT turnos   FROM semana_actual)  AS semana_turnos,
+        (SELECT ganancia FROM semana_anterior)AS semana_ant_ganancia,
+        (SELECT ganancia FROM mes_actual)     AS mes_ganancia,
+        (SELECT turnos   FROM mes_actual)     AS mes_turnos,
+        (SELECT ganancia FROM mes_anterior)   AS mes_ant_ganancia,
+        (SELECT JSON_AGG(t) FROM top_servicios t) AS top_servicios,
+        (SELECT JSON_AGG(c) FROM clienta_mes c)   AS clienta_mes
+    `, [userId]);
+    return rows[0];
+  },
 };
 
 // ─── PROFESIONALES ────────────────────────────────────────────
