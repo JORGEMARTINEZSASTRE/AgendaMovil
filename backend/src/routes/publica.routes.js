@@ -410,6 +410,16 @@ router.post('/:userId/turno', [
     if (!usuRows.length) return res.status(404).json({ ok: false, error: 'Agenda no encontrada' });
     const estetica = usuRows[0];
 
+    // Detectar si sucursal_id es un profesional o una sucursal real
+    const { rows: esProfRows } = await pool.query(
+      `SELECT id, nombre FROM profesionales WHERE id = $1 AND user_id = $2 AND activo = true`,
+      [sucursal_id, userId]
+    );
+    const esProfesional   = esProfRows.length > 0;
+    const realSucursalId  = esProfesional ? null : sucursal_id;
+    const realProfId      = esProfesional ? sucursal_id : null;
+    const realProfNombre  = esProfesional ? esProfRows[0].nombre : null;
+
     // Validar sucursal/profesional y horarios
     const { bloques, bloqueado } = await obtenerBloquesDia(userId, sucursal_id, fecha);
 
@@ -432,16 +442,17 @@ router.post('/:userId/turno', [
       }
     }
 
-    // Verificar conflicto
+    // Verificar conflicto (por profesional o por sucursal según corresponda)
     const horaMin = parseInt(hora.split(':')[0])*60 + parseInt(hora.split(':')[1]);
     const horaFin = horaMin + parseInt(duracion);
     const { rows: ocupados } = await pool.query(
-      `SELECT hora, duracion
-       FROM turnos
-       WHERE user_id = $1
-         AND fecha = $2
-         AND estado != 'cancelado'
-         AND sucursal_id = $3`,
+      esProfesional
+        ? `SELECT hora, duracion FROM turnos
+           WHERE user_id = $1 AND fecha = $2 AND estado != 'cancelado'
+           AND profesional_id = $3`
+        : `SELECT hora, duracion FROM turnos
+           WHERE user_id = $1 AND fecha = $2 AND estado != 'cancelado'
+           AND sucursal_id = $3`,
       [userId, fecha, sucursal_id]
     );
     for (const t of ocupados) {
@@ -480,14 +491,16 @@ router.post('/:userId/turno', [
          (user_id, nombre, telefono, fecha, hora, duracion,
           servicio_id, servicio_nombre, servicio_zona, servicio_color,
           notas, estado, sucursal_id,
+          profesional_id, profesional_nombre,
           senia_requerida, senia_pagada, monto_senia, estado_pago)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING *`,
       [
         userId, nombre, telefono, fecha, hora, duracion,
         servicio_ids?.[0] || null, servicio_nombres || null,
         servicio_zonas || null, servicio_colores || '#A85568',
-        notas || null, estadoTurno, sucursal_id,
+        notas || null, estadoTurno, realSucursalId,
+        realProfId, realProfNombre,
         seniaRequerida, false, montoSenia, estadoPago,
       ]
     );
