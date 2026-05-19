@@ -123,7 +123,7 @@ async function crear(req, res) {
       servicio_nombre, servicio_zona, servicio_color,
       duracion,        fecha,         hora,
       notas,           cumple_dia,    cumple_mes,
-      sucursal_id,
+      sucursal_id,     profesional_id, profesional_nombre,
     } = req.body;
 
     let sucursalNombre = null;
@@ -158,19 +158,21 @@ async function crear(req, res) {
     }
 
     const turno = await Turnos.crear(req.user.id, {
-      servicioId:     servicio_id,
+      servicioId:         servicio_id,
       nombre,
       telefono,
-      servicioNombre: servicio_nombre,
-      servicioZona:   servicio_zona,
-      servicioColor:  servicio_color,
+      servicioNombre:     servicio_nombre,
+      servicioZona:       servicio_zona,
+      servicioColor:      servicio_color,
       duracion,
       fecha,
       hora,
       notas,
-      cumpleDia:      cumple_dia,
-      cumpleMes:      cumple_mes,
-      sucursalId:     sucursal_id || null,
+      cumpleDia:          cumple_dia,
+      cumpleMes:          cumple_mes,
+      sucursalId:         sucursal_id || null,
+      profesionalId:      profesional_id || null,
+      profesionalNombre:  profesional_nombre || null,
     });
 
     enviarConfirmacionTurno({
@@ -213,7 +215,7 @@ async function actualizar(req, res) {
       servicio_nombre, servicio_zona, servicio_color,
       duracion,        fecha,         hora,
       notas,           cumple_dia,    cumple_mes,
-      estado,          sucursal_id,
+      estado,          sucursal_id,   profesional_id, profesional_nombre,
     } = req.body;
 
     const existente = await Turnos.buscarPorId(req.params.id, req.user.id);
@@ -267,20 +269,22 @@ async function actualizar(req, res) {
     }
 
     const turno = await Turnos.actualizar(req.params.id, req.user.id, {
-      servicioId:     servicio_id,
+      servicioId:         servicio_id,
       nombre,
       telefono,
-      servicioNombre: servicio_nombre,
-      servicioZona:   servicio_zona,
-      servicioColor:  servicio_color,
+      servicioNombre:     servicio_nombre,
+      servicioZona:       servicio_zona,
+      servicioColor:      servicio_color,
       duracion,
       fecha,
       hora,
       notas,
-      cumpleDia:      cumple_dia,
-      cumpleMes:      cumple_mes,
+      cumpleDia:          cumple_dia,
+      cumpleMes:          cumple_mes,
       estado,
-      sucursalId:     sucursalObjetivo,
+      sucursalId:         sucursalObjetivo,
+      profesionalId:      profesional_id || null,
+      profesionalNombre:  profesional_nombre || null,
     });
 
     const fechaAnterior = String(existente.fecha).slice(0, 10);

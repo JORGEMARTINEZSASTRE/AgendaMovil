@@ -294,6 +294,9 @@
     <button class="tab-btn" data-tab="sucursales">
       🏪 <span>Sucursales</span>
     </button>
+    <button class="tab-btn" data-tab="clientes">
+      👥 <span>Clientes</span>
+    </button>
   </nav>
 
   <!-- ─── CONTENIDO PRINCIPAL ─────────────────── -->
@@ -399,6 +402,29 @@
       </div>
     </section>
 
+    <!-- ══ PANEL: CLIENTES ════════════════════ -->
+    <section class="tab-panel" data-panel="clientes">
+
+      <div class="panel-header">
+        <p class="panel-titulo">👥 Mis clientes</p>
+      </div>
+
+      <div class="busqueda-servicios-wrap">
+        <input
+          type="text"
+          id="buscar-cliente"
+          class="input-busqueda-servicio"
+          placeholder="🔍 Buscar por nombre o teléfono..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div id="lista-clientes" class="lista-clientes">
+        <!-- Cards de clientes se renderizan aquí -->
+      </div>
+
+    </section>
+
   </main>
 
   <!-- ─── CONFIGURACIÓN (panel fijo abajo) ────── -->
@@ -453,6 +479,18 @@
         💾 Guardar configuración
       </button>
     </form>
+
+    <!-- Profesionales -->
+    <div class="config-profesionales-wrap">
+      <div class="config-seccion-header">
+        <p class="config-seccion-titulo">👩‍⚕️ Profesionales</p>
+        <button id="btn-nuevo-profesional" class="btn-admin btn-nueva-sucursal">➕ Agregar</button>
+      </div>
+      <div id="lista-profesionales-config" class="lista-profesionales-config">
+        <!-- Se renderiza con JS -->
+      </div>
+    </div>
+
   </div>
 
   <!-- ─── BTN CONFIG ───────────────────────────── -->
@@ -461,6 +499,53 @@
   </button>
 
 </div><!-- fin pantalla-principal -->
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: PROFESIONAL
+════════════════════════════════════════════════ -->
+<div id="modal-profesional" class="modal-overlay oculto">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 id="modal-profesional-titulo" class="modal-titulo">➕ Nuevo profesional</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+    <form id="form-profesional" class="form-modal" novalidate>
+      <input type="hidden" id="prof-id">
+      <div id="form-profesional-error" class="form-error oculto"></div>
+      <div class="campo">
+        <label for="prof-nombre">👤 Nombre *</label>
+        <input type="text" id="prof-nombre" placeholder="Ej: Vivi" required>
+      </div>
+      <div class="campo">
+        <label for="prof-telefono">📞 Teléfono (para recibir WhatsApp)</label>
+        <input type="tel" id="prof-telefono" placeholder="Ej: +59899123456">
+        <small>Con código de país. Ej: +598 para Uruguay, +54 para Argentina</small>
+      </div>
+      <div class="campo">
+        <label for="prof-color">🎨 Color identificador</label>
+        <input type="color" id="prof-color" value="#A85568">
+      </div>
+      <button type="submit" class="btn-primario" id="btn-guardar-profesional">
+        ✅ Guardar profesional
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: HISTORIAL CLIENTE
+════════════════════════════════════════════════ -->
+<div id="modal-historial-cliente" class="modal-overlay oculto">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 id="modal-historial-titulo" class="modal-titulo">📋 Historial</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+    <div id="modal-historial-contenido" class="historial-contenido">
+      <!-- Se renderiza con JS -->
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════
      MODAL: CONECTAR WHATSAPP
@@ -731,6 +816,13 @@
           </div>
         </div>
       </details>
+
+      <div id="campo-profesional" class="campo">
+        <label for="turno-profesional">👩‍⚕️ Profesional (opcional)</label>
+        <select id="turno-profesional">
+          <option value="">— Sin asignar —</option>
+        </select>
+      </div>
 
       <button type="submit" id="btn-guardar-turno" class="btn-primario">
         Guardar turno

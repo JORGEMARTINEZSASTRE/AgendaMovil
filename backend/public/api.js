@@ -403,3 +403,32 @@ const WhatsAppAPI = {
     });
   },
 };
+
+// ─── CLIENTES API ─────────────────────────────────────────
+const ClientesAPI = {
+  async getAll() {
+    const data = await fetchAPI('/clientes');
+    return data?.clientes ?? [];
+  },
+  async historial(telefono) {
+    const data = await fetchAPI(`/clientes/${encodeURIComponent(telefono)}/historial`);
+    return data?.historial ?? [];
+  },
+};
+
+// ─── PROFESIONALES API ────────────────────────────────────
+const ProfesionalesAPI = {
+  async getAll() {
+    const data = await fetchAPI('/profesionales');
+    return data?.profesionales ?? [];
+  },
+  async crear(payload) {
+    return await fetchAPI('/profesionales', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  async actualizar(id, payload) {
+    return await fetchAPI(`/profesionales/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  },
+  async eliminar(id) {
+    return await fetchAPI(`/profesionales/${id}`, { method: 'DELETE' });
+  },
+};
