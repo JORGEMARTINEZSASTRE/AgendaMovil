@@ -792,6 +792,36 @@ html, body { margin: 0; padding: 0; }
   display: inline-block;
 }
 
+/* ─── CAMBIAR HORARIO ───────────────── */
+.btn-cambiar-horario {
+  margin-top: 16px;
+  background: transparent;
+  border: 1.5px solid var(--borde2);
+  border-radius: 100px;
+  color: var(--marron2);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-cambiar-horario:hover {
+  border-color: var(--rosa-vino);
+  color: var(--rosa-vino);
+  background: rgba(168,85,104,.06);
+}
+
+.repro-subtitulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 12px;
+}
+
+.repro-paso { animation: aparecer .25s ease; }
+
 /* ─── ANIMACIONES ────────────────────── */
 @keyframes girar { to { transform: rotate(360deg); } }
 @keyframes aparecer {

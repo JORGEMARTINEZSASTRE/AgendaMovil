@@ -41,6 +41,44 @@
     <h2 class="exito-titulo">¡Turno reservado!</h2>
     <p id="exito-detalle" class="exito-detalle"></p>
     <p class="exito-sub">Te esperamos 🌸</p>
+    <button id="btn-cambiar-horario" class="btn-cambiar-horario">🔄 Cambiar horario</button>
+  </div>
+
+  <!-- REPROGRAMAR -->
+  <div id="publica-reprogramar" class="publica-card oculto">
+    <h2 class="pub-paso-titulo">🔄 Cambiar horario</h2>
+    <p id="repro-info" class="exito-sub" style="margin-bottom:16px;"></p>
+
+    <!-- Paso A: nueva fecha -->
+    <div id="repro-paso-fecha" class="repro-paso">
+      <h3 class="repro-subtitulo">📅 Elegí la nueva fecha</h3>
+      <div class="pub-calendario-wrap">
+        <div class="pub-calendario-header">
+          <button type="button" id="repro-cal-prev" class="pub-cal-btn">◀</button>
+          <span id="repro-cal-mes" class="pub-cal-mes"></span>
+          <button type="button" id="repro-cal-next" class="pub-cal-btn">▶</button>
+        </div>
+        <div class="pub-cal-grid">
+          <div class="pub-cal-dia-h">Lu</div><div class="pub-cal-dia-h">Ma</div>
+          <div class="pub-cal-dia-h">Mi</div><div class="pub-cal-dia-h">Ju</div>
+          <div class="pub-cal-dia-h">Vi</div><div class="pub-cal-dia-h">Sá</div>
+          <div class="pub-cal-dia-h">Do</div>
+        </div>
+        <div id="repro-cal-dias" class="pub-cal-dias"></div>
+      </div>
+      <button id="repro-btn-ver-horas" class="btn-primario" style="margin-top:12px;" disabled>Ver horarios disponibles</button>
+    </div>
+
+    <!-- Paso B: nueva hora -->
+    <div id="repro-paso-hora" class="repro-paso oculto">
+      <button type="button" id="repro-volver-fecha" class="btn-secundario" style="margin-bottom:12px;">← Cambiar fecha</button>
+      <h3 class="repro-subtitulo">🕐 Elegí el nuevo horario</h3>
+      <p id="repro-fecha-label" class="pub-fecha-label"></p>
+      <div id="repro-horarios" class="pub-horarios-grid"></div>
+      <button id="repro-btn-confirmar" class="btn-primario" style="margin-top:16px;" disabled>✅ Confirmar nuevo horario</button>
+    </div>
+
+    <div id="repro-error" class="form-error oculto" style="margin-top:12px;"></div>
   </div>
 
   <!-- ÉXITO — con seña pendiente -->
@@ -632,6 +670,13 @@ async function handleSubmit(e) {
 
     const fechaFormateada = new Date(datosReserva.fecha + 'T12:00:00').toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
 
+    // Guardar turno para posible reprogramación
+    turnoActual = data.turno;
+    turnoActual._telefono = telefonoLimpio;
+    document.getElementById('btn-cambiar-horario').style.display = '';
+    document.getElementById('btn-cambiar-horario').onclick = () =>
+      iniciarReprogramacion(turnoActual, turnoActual._telefono);
+
     if (data.turno?.senia_requerida) {
       const negocio = infoNegocio.nombre_negocio || infoNegocio.nombre;
       const telNegocio = infoNegocio.telefono || '';
@@ -652,6 +697,191 @@ async function handleSubmit(e) {
   } catch {
     mostrarFormError('Error de conexión. Intentá de nuevo.');
     setBtnLoading(false);
+  }
+}
+
+// ─── REPROGRAMAR TURNO ────────────────────────
+let turnoActual       = null; // turno recién agendado
+let reproMes, reproAnio;
+let reproFechaElegida = null;
+let reproHoraElegida  = null;
+
+function iniciarReprogramacion(turno, telefonoClienta) {
+  turnoActual = turno;
+  turnoActual._telefono = telefonoClienta;
+
+  const hoy = new Date();
+  reproMes  = hoy.getMonth();
+  reproAnio = hoy.getFullYear();
+  reproFechaElegida = null;
+  reproHoraElegida  = null;
+
+  document.getElementById('repro-info').textContent =
+    `Turno actual: ${formatearFecha(turno.fecha)} a las ${String(turno.hora).slice(0,5)} hs`;
+
+  document.getElementById('publica-exito').classList.add('oculto');
+  document.getElementById('publica-reprogramar').classList.remove('oculto');
+  document.getElementById('repro-paso-hora').classList.add('oculto');
+  document.getElementById('repro-paso-fecha').classList.remove('oculto');
+  document.getElementById('repro-error').classList.add('oculto');
+
+  renderReproCalendario();
+
+  document.getElementById('repro-cal-prev').onclick = () => {
+    reproMes--;
+    if (reproMes < 0) { reproMes = 11; reproAnio--; }
+    renderReproCalendario();
+  };
+  document.getElementById('repro-cal-next').onclick = () => {
+    reproMes++;
+    if (reproMes > 11) { reproMes = 0; reproAnio++; }
+    renderReproCalendario();
+  };
+  document.getElementById('repro-btn-ver-horas').onclick = async () => {
+    if (!reproFechaElegida) return;
+    document.getElementById('repro-paso-fecha').classList.add('oculto');
+    document.getElementById('repro-paso-hora').classList.remove('oculto');
+    document.getElementById('repro-fecha-label').textContent = formatearFecha(reproFechaElegida);
+    await cargarHorasRepro();
+  };
+  document.getElementById('repro-volver-fecha').onclick = () => {
+    document.getElementById('repro-paso-hora').classList.add('oculto');
+    document.getElementById('repro-paso-fecha').classList.remove('oculto');
+    reproHoraElegida = null;
+    document.getElementById('repro-btn-confirmar').disabled = true;
+  };
+  document.getElementById('repro-btn-confirmar').onclick = confirmarReprogramacion;
+}
+
+function renderReproCalendario() {
+  const mesNombre = new Date(reproAnio, reproMes, 1)
+    .toLocaleDateString('es-UY', { month: 'long', year: 'numeric' });
+  document.getElementById('repro-cal-mes').textContent =
+    mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
+
+  const cont = document.getElementById('repro-cal-dias');
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const primerDia = new Date(reproAnio, reproMes, 1).getDay();
+  const offset = (primerDia + 6) % 7;
+  const diasMes = new Date(reproAnio, reproMes + 1, 0).getDate();
+
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<div></div>';
+  for (let d = 1; d <= diasMes; d++) {
+    const fecha = new Date(reproAnio, reproMes, d);
+    const fechaStr = `${reproAnio}-${String(reproMes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const pasado = fecha < hoy;
+    const esMismaFecha = fechaStr === String(turnoActual?.fecha).slice(0,10);
+    const sel = fechaStr === reproFechaElegida;
+    html += `<button type="button" class="pub-cal-dia${pasado||esMismaFecha?' deshabilitado':''}${sel?' seleccionado':''}"
+      data-fecha="${fechaStr}" ${pasado||esMismaFecha?'disabled':''}>${d}</button>`;
+  }
+  cont.innerHTML = html;
+  cont.querySelectorAll('.pub-cal-dia:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      reproFechaElegida = btn.dataset.fecha;
+      document.getElementById('repro-btn-ver-horas').disabled = false;
+      renderReproCalendario();
+    });
+  });
+}
+
+async function cargarHorasRepro() {
+  const cont = document.getElementById('repro-horarios');
+  cont.innerHTML = '<p class="pub-cargando">Cargando horarios...</p>';
+  reproHoraElegida = null;
+  document.getElementById('repro-btn-confirmar').disabled = true;
+
+  const refId = turnoActual.profesional_id || turnoActual.sucursal_id;
+  if (!refId) { cont.innerHTML = '<p class="pub-vacio">Sin horarios configurados</p>'; return; }
+
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/disponibilidad?fecha=${reproFechaElegida}&sucursal_id=${encodeURIComponent(refId)}`);
+    const data = await resp.json();
+    if (data.bloqueado) { cont.innerHTML = '<p class="pub-vacio">🚫 La profesional no trabaja ese día.</p>'; return; }
+
+    const bloques  = data.bloques  || [];
+    const ocupados = data.ocupados || [];
+
+    if (!bloques.length) { cont.innerHTML = '<p class="pub-vacio">No hay horarios disponibles</p>'; return; }
+
+    const duracion = Number(turnoActual.duracion);
+    const disponibles = [];
+    for (const b of bloques) {
+      const inicio = horaAMinutos(b.desde);
+      const fin    = horaAMinutos(b.hasta);
+      for (let m = inicio; m < fin; m += 15) {
+        const horaFin = m + duracion;
+        const libre = !ocupados.some(t => {
+          const tMin = horaAMinutos(String(t.hora).slice(0,5));
+          return m < tMin + Number(t.duracion) && horaFin > tMin;
+        });
+        // Excluir la hora actual del turno
+        const esMismaHora = minutosAHora(m) === String(turnoActual.hora).slice(0,5) &&
+                            reproFechaElegida === String(turnoActual.fecha).slice(0,10);
+        if (libre && horaFin <= fin && !esMismaHora) disponibles.push(minutosAHora(m));
+      }
+    }
+
+    if (!disponibles.length) { cont.innerHTML = '<p class="pub-vacio">No quedan horarios disponibles</p>'; return; }
+
+    cont.innerHTML = disponibles.map(h =>
+      `<button type="button" class="pub-hora-btn" data-hora="${h}">${h} hs</button>`
+    ).join('');
+    cont.querySelectorAll('.pub-hora-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cont.querySelectorAll('.pub-hora-btn').forEach(b => b.classList.remove('seleccionado'));
+        btn.classList.add('seleccionado');
+        reproHoraElegida = btn.dataset.hora;
+        document.getElementById('repro-btn-confirmar').disabled = false;
+      });
+    });
+  } catch {
+    cont.innerHTML = '<p class="pub-vacio">Error al cargar horarios</p>';
+  }
+}
+
+async function confirmarReprogramacion() {
+  if (!reproFechaElegida || !reproHoraElegida) return;
+  const btn = document.getElementById('repro-btn-confirmar');
+  const errEl = document.getElementById('repro-error');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  errEl.classList.add('oculto');
+
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/turno/${turnoActual.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fecha:    reproFechaElegida,
+        hora:     reproHoraElegida,
+        telefono: turnoActual._telefono,
+      }),
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      errEl.textContent = data.error || 'Error al cambiar horario';
+      errEl.classList.remove('oculto');
+      btn.disabled = false;
+      btn.textContent = '✅ Confirmar nuevo horario';
+      return;
+    }
+    // Éxito
+    document.getElementById('publica-reprogramar').classList.add('oculto');
+    const fechaFormateada = new Date(reproFechaElegida + 'T12:00:00')
+      .toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+    document.getElementById('exito-detalle').textContent =
+      `Listo! Tu nuevo turno es el ${fechaFormateada} a las ${reproHoraElegida} hs.`;
+    document.getElementById('btn-cambiar-horario').style.display = 'none';
+    document.getElementById('publica-exito').classList.remove('oculto');
+    turnoActual = data.turno;
+    turnoActual._telefono = data.turno.telefono;
+  } catch {
+    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
+    errEl.classList.remove('oculto');
+    btn.disabled = false;
+    btn.textContent = '✅ Confirmar nuevo horario';
   }
 }
 

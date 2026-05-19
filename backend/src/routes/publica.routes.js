@@ -591,4 +591,106 @@ router.post('/:userId/turno', [
   }
 });
 
+// ─── PUT /api/publica/:userId/turno/:turnoId ─────────────────
+// Permite a la clienta reprogramar su turno si lo agendó hace menos de 24h
+router.put('/:userId/turno/:turnoId', [
+  body('fecha').matches(/^\d{4}-\d{2}-\d{2}$/),
+  body('hora').matches(/^\d{2}:\d{2}$/),
+  body('telefono').trim().notEmpty(),
+], async (req, res) => {
+  const errores = validationResult(req);
+  if (!errores.isEmpty()) {
+    return res.status(422).json({ ok: false, error: 'Datos inválidos' });
+  }
+
+  try {
+    const { userId, turnoId } = req.params;
+    const { fecha, hora, telefono } = req.body;
+
+    // Buscar el turno — verificar que pertenece a este usuario y a este teléfono
+    const { rows: tRows } = await pool.query(
+      `SELECT * FROM turnos WHERE id = $1 AND user_id = $2 AND estado != 'cancelado'`,
+      [turnoId, userId]
+    );
+    if (!tRows.length) {
+      return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
+    }
+    const turno = tRows[0];
+
+    // Verificar que el teléfono coincide (para que solo la clienta pueda cambiar su turno)
+    const telLimpio = (telefono || '').replace(/\D/g, '');
+    const telGuardado = (turno.telefono || '').replace(/\D/g, '');
+    if (!telGuardado.endsWith(telLimpio) && !telLimpio.endsWith(telGuardado)) {
+      return res.status(403).json({ ok: false, error: 'Número de teléfono incorrecto' });
+    }
+
+    // Verificar que el turno se agendó hace menos de 24 horas
+    const creadoEn = new Date(turno.creado_en);
+    const ahora    = new Date();
+    const horasDesdCreacion = (ahora - creadoEn) / (1000 * 60 * 60);
+    if (horasDesdCreacion > 24) {
+      return res.status(403).json({
+        ok: false,
+        error: 'El plazo para cambiar el horario venció. Solo se puede modificar dentro de las 24 horas de haberlo agendado.',
+      });
+    }
+
+    // Verificar disponibilidad en la nueva fecha/hora
+    const refId = turno.profesional_id || turno.sucursal_id;
+    if (refId) {
+      const { bloques, bloqueado } = await obtenerBloquesDia(userId, refId, fecha);
+      if (bloqueado) {
+        return res.status(409).json({ ok: false, error: 'La profesional no trabaja ese día.' });
+      }
+      if (bloques.length > 0) {
+        const inicioTurno = toMin(hora);
+        const finTurno    = inicioTurno + Number(turno.duracion);
+        const ok = bloques.some(b => inicioTurno >= toMin(b.desde) && finTurno <= toMin(b.hasta));
+        if (!ok) {
+          return res.status(409).json({ ok: false, error: 'Ese horario está fuera del horario disponible.' });
+        }
+      }
+    }
+
+    // Verificar conflicto con otros turnos (excluyendo el propio)
+    const horaMin = toMin(hora);
+    const horaFin = horaMin + Number(turno.duracion);
+    const filtroCol = turno.profesional_id ? 'profesional_id' : 'sucursal_id';
+    const filtroVal = turno.profesional_id || turno.sucursal_id;
+
+    const { rows: ocupados } = filtroVal
+      ? await pool.query(
+          `SELECT hora, duracion FROM turnos
+           WHERE user_id = $1 AND fecha = $2 AND estado != 'cancelado'
+           AND ${filtroCol} = $3 AND id != $4`,
+          [userId, fecha, filtroVal, turnoId]
+        )
+      : await pool.query(
+          `SELECT hora, duracion FROM turnos
+           WHERE user_id = $1 AND fecha = $2 AND estado != 'cancelado' AND id != $3`,
+          [userId, fecha, turnoId]
+        );
+
+    for (const t of ocupados) {
+      const tMin = toMin(String(t.hora).slice(0, 5));
+      if (horaMin < tMin + Number(t.duracion) && horaFin > tMin) {
+        return res.status(409).json({ ok: false, error: 'Ese horario ya está ocupado. Elegí otro.' });
+      }
+    }
+
+    // Actualizar fecha y hora
+    const { rows: updated } = await pool.query(
+      `UPDATE turnos SET fecha = $1, hora = $2, editado_en = NOW()
+       WHERE id = $3 AND user_id = $4 RETURNING *`,
+      [fecha, hora, turnoId, userId]
+    );
+
+    return res.json({ ok: true, turno: updated[0] });
+
+  } catch (err) {
+    console.error('[PUBLICA/reprogramar]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al reprogramar el turno' });
+  }
+});
+
 module.exports = router;
