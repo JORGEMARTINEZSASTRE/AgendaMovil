@@ -180,7 +180,7 @@ function bindTabs() {
 
 function renderTabActual() {
   switch (tabActual) {
-    case 'agenda':     renderAgenda();     break;
+    case 'agenda':     renderAgenda();     cargarContactosParaTurno(); break;
     case 'calendario': renderCalendario(); break;
     case 'servicios':  renderServicios();  break;
     case 'cumples':    renderCumples();    break;
@@ -199,6 +199,8 @@ function irATab(tab) {
     p.classList.toggle('activo', p.dataset.panel === tab);
   });
   renderTabActual();
+  if (tab === 'agenda') cargarContactosParaTurno();
+  if (tab === 'clientes') cargarContactosParaTurno();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -610,6 +612,19 @@ function bindFormTurno() {
   }
 }
 
+async function cargarContactosParaTurno() {
+  try {
+    const [auto, manuales] = await Promise.all([
+      ClientesAPI.getAll(),
+      ClientesAPI.getManuales(),
+    ]);
+    clientes = auto;
+    clientesManuales = manuales;
+  } catch (e) {
+    // Silencioso, ya se cargan en renderClientes
+  }
+}
+
 function abrirFormTurno(turno = null) {
   editandoId = turno?.id || null;
   limpiarFormTurno();
@@ -662,6 +677,41 @@ function abrirFormTurno(turno = null) {
       }).join('');
   }
 
+  // Poblar selector de contactos
+  const selectContacto = document.getElementById('turno-contacto-select');
+  if (selectContacto) {
+    const todosContactos = [...(clientes || []), ...(clientesManuales || [])];
+    const unicos = new Map();
+    for (const c of todosContactos) {
+      if (!unicos.has(c.telefono) || c.favorito) unicos.set(c.telefono, c);
+    }
+    const lista = [...unicos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    selectContacto.innerHTML = '<option value="">— Escribir manualmente —</option>' +
+      lista.map(c =>
+        `<option value="${escaparHTML(c.telefono)}" data-nombre="${escaparHTML(c.nombre)}" data-favorito="${c.favorito ? '1' : '0'}">
+          ${c.favorito ? '⭐ ' : ''}${escaparHTML(c.nombre)} — ${escaparHTML(c.telefono)}
+        </option>`
+      ).join('');
+
+    selectContacto.onchange = () => {
+      const opt = selectContacto.options[selectContacto.selectedIndex];
+      if (opt && opt.value) {
+        setVal('turno-nombre', opt.dataset.nombre);
+        const tel = opt.value.replace(/\D/g, '');
+        if (tel.startsWith('598')) {
+          setVal('turno-codigo-pais', '598');
+          setVal('turno-telefono', tel.slice(3));
+        } else if (tel.startsWith('54')) {
+          setVal('turno-codigo-pais', '54');
+          setVal('turno-telefono', tel.slice(2));
+        } else {
+          setVal('turno-codigo-pais', '598');
+          setVal('turno-telefono', tel);
+        }
+      }
+    };
+  }
+
   // Setear fecha mínima (hoy) excepto si estoy editando
   const inputFecha = document.getElementById('turno-fecha');
   if (inputFecha && !turno) {
@@ -707,6 +757,8 @@ function abrirFormTurno(turno = null) {
     setVal('turno-fecha',          fechaSeleccionada);
     setVal('turno-servicio-color', '#A85568');
     setVal('turno-codigo-pais',    '598');
+    const selectContacto = document.getElementById('turno-contacto-select');
+    if (selectContacto) selectContacto.value = '';
 
     // Si hay una sola sucursal, seleccionarla por defecto
     if (!turno && (sucursales || []).length === 1) {

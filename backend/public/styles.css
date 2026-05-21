@@ -2735,6 +2735,11 @@ body {
   border-color: var(--rosa-vino);
 }
 
+#turno-contacto-select {
+  font-size: 13px;
+  max-height: 180px;
+}
+
 .cliente-favorito-btn {
   cursor: pointer;
   font-size: 16px;
