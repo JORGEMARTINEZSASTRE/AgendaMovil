@@ -469,7 +469,14 @@ router.post('/:userId/turno', [
     let estadoPago     = 'no_aplica';
     let estadoTurno    = 'activo';
 
-    if (servicio_ids && servicio_ids.length > 0) {
+    // Verificar si la clienta es favorita (exenta de seña)
+    const { rows: favRows } = await pool.query(
+      `SELECT favorito FROM clientes WHERE user_id = $1 AND telefono = $2`,
+      [userId, telefono]
+    );
+    const esFavorita = favRows.length > 0 && favRows[0].favorito === true;
+
+    if (servicio_ids && servicio_ids.length > 0 && !esFavorita) {
       const { rows: sRows } = await pool.query(
         `SELECT requiere_senia, monto_senia FROM servicios WHERE id = ANY($1) AND user_id = $2 AND activo = true`,
         [servicio_ids, userId]
