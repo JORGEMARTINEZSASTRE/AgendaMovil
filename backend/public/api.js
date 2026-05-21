@@ -418,6 +418,20 @@ const ClientesAPI = {
     const data = await fetchAPI('/clientes/resumen');
     return data?.resumen ?? null;
   },
+  // Clientes manuales
+  async getManuales() {
+    const data = await fetchAPI('/clientes/manual');
+    return data?.clientes ?? [];
+  },
+  async crearManual(payload) {
+    return await fetchAPI('/clientes/manual', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  async toggleFavorito(id) {
+    return await fetchAPI(`/clientes/manual/${id}/favorito`, { method: 'PATCH' });
+  },
+  async eliminarManual(id) {
+    return await fetchAPI(`/clientes/manual/${id}`, { method: 'DELETE' });
+  },
 };
 
 // ─── PROFESIONALES API ────────────────────────────────────

@@ -430,6 +430,15 @@
         >
       </div>
 
+      <!-- ── Clientes manuales ── -->
+      <div class="clientes-manuales-header">
+        <h3 class="clientes-manuales-titulo">📝 Clientes manuales</h3>
+        <button type="button" id="btn-agregar-cliente" class="btn-agregar-cliente">➕ Agregar</button>
+      </div>
+      <div id="lista-clientes-manuales" class="lista-clientes-manuales">
+        <!-- Cards de clientes manuales -->
+      </div>
+
       <div id="lista-clientes" class="lista-clientes">
         <!-- Cards de clientes se renderizan aquí -->
       </div>
@@ -599,6 +608,25 @@
         <!-- Se genera con JS -->
       </ul>
     </section>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODAL: NUEVO CLIENTE MANUAL
+════════════════════════════════════════════════ -->
+<div id="modal-nuevo-cliente" class="modal-overlay oculto">
+  <div class="modal-card modal-sm">
+    <div class="modal-header">
+      <h2 class="modal-titulo">➕ Nuevo cliente</h2>
+      <button class="btn-cerrar-modal">✕</button>
+    </div>
+    <form id="form-nuevo-cliente" class="form-nuevo-cliente">
+      <label class="form-label">Nombre</label>
+      <input type="text" id="input-nombre-cliente" class="form-input" placeholder="Nombre completo" required>
+      <label class="form-label">Teléfono</label>
+      <input type="tel" id="input-telefono-cliente" class="form-input" placeholder="099 123 456" required>
+      <button type="submit" class="btn-primary btn-block">Guardar</button>
+    </form>
   </div>
 </div>
 

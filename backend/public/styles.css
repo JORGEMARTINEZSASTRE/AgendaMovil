@@ -2708,3 +2708,117 @@ body {
   font-size: 13px;
   color: var(--marron2);
 }
+
+/* ── Clientes manuales ── */
+.clientes-manuales-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0 10px;
+  padding: 0 4px;
+}
+
+.clientes-manuales-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marron2);
+  margin: 0;
+}
+
+.btn-agregar-cliente {
+  background: var(--rosa-vino);
+  color: white;
+  border: none;
+  border-radius: var(--radio-sm);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.btn-agregar-cliente:hover {
+  background: var(--marron2);
+}
+
+.lista-clientes-manuales {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.cliente-card-manual {
+  position: relative;
+}
+
+.cliente-favorito-btn {
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 6px;
+  user-select: none;
+}
+
+.cliente-acciones {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-agendar-desde-card,
+.btn-eliminar-cliente {
+  background: none;
+  border: 1.5px solid var(--borde);
+  border-radius: var(--radio-sm);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all .2s;
+}
+
+.btn-agendar-desde-card:hover {
+  border-color: var(--rosa-vino);
+  background: var(--crema2);
+}
+
+.btn-eliminar-cliente:hover {
+  border-color: #c0392b;
+  background: #fdecea;
+}
+
+/* Modal nuevo cliente */
+.form-nuevo-cliente {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--marron2);
+}
+
+.form-input {
+  border: 1.5px solid var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: 'Nunito', sans-serif;
+  background: var(--crema2);
+  color: var(--marron2);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--rosa-vino);
+}
+
+.modal-sm .modal-card {
+  max-width: 360px;
+}

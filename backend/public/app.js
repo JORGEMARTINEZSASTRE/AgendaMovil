@@ -9,7 +9,8 @@
 let turnos        = [];
 let servicios     = [];
 let sucursales    = [];
-let clientes      = [];
+let clientes        = [];
+let clientesManuales = [];
 let profesionales = [];
 let config      = {
   plantilla_turno:  '',
@@ -2535,6 +2536,7 @@ async function renderResumenFinanciero() {
 
 async function renderClientes() {
   const contenedor = document.getElementById('lista-clientes');
+  const contenedorManuales = document.getElementById('lista-clientes-manuales');
   if (!contenedor) return;
 
   // Toggle del resumen
@@ -2549,6 +2551,47 @@ async function renderClientes() {
       resumenDiv.dataset.cargado = 'true';
     }
   };
+
+  // ── Clientes manuales ──
+  if (contenedorManuales) {
+    contenedorManuales.innerHTML = `<div class="pub-cargando">Cargando...</div>`;
+    try {
+      clientesManuales = await ClientesAPI.getManuales();
+    } catch (e) {
+      contenedorManuales.innerHTML = `<div class="pub-vacio">Error al cargar</div>`;
+    }
+    renderManuales();
+
+    // Botón agregar
+    const btnAgregar = document.getElementById('btn-agregar-cliente');
+    if (btnAgregar) {
+      btnAgregar.onclick = () => {
+        document.getElementById('modal-nuevo-cliente').classList.remove('oculto');
+        document.getElementById('input-nombre-cliente').value = '';
+        document.getElementById('input-telefono-cliente').value = '';
+        document.getElementById('input-nombre-cliente').focus();
+      };
+    }
+
+    // Formulario nuevo cliente
+    const form = document.getElementById('form-nuevo-cliente');
+    if (form) {
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const nombre = document.getElementById('input-nombre-cliente').value.trim();
+        const telefono = document.getElementById('input-telefono-cliente').value.trim();
+        if (!nombre || !telefono) return;
+        try {
+          await ClientesAPI.crearManual({ nombre, telefono });
+          document.getElementById('modal-nuevo-cliente').classList.add('oculto');
+          clientesManuales = await ClientesAPI.getManuales();
+          renderManuales();
+        } catch (err) {
+          alert('Error al crear cliente');
+        }
+      };
+    }
+  }
 
   contenedor.innerHTML = `<div class="pub-cargando">Cargando clientes...</div>`;
 
@@ -2613,6 +2656,81 @@ async function renderClientes() {
     buscar.value = '';
     buscar.oninput = (e) => renderLista(e.target.value.trim());
   }
+}
+
+function renderManuales() {
+  const contenedor = document.getElementById('lista-clientes-manuales');
+  if (!contenedor) return;
+
+  if (!clientesManuales.length) {
+    contenedor.innerHTML = `<div class="pub-vacio">Sin clientes manuales. ¡Agregá uno!</div>`;
+    return;
+  }
+
+  const filtrados = [...clientesManuales].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  contenedor.innerHTML = filtrados.map(c => {
+    const inicial = (c.nombre || '?')[0].toUpperCase();
+    const gasto   = parseFloat(c.total_gastado) || 0;
+    const estrella = c.favorito ? '⭐' : '☆';
+    return `
+      <div class="cliente-card cliente-card-manual" data-id="${c.id}" data-tel="${escaparHTML(c.telefono)}">
+        <div class="cliente-avatar">${inicial}</div>
+        <div class="cliente-info">
+          <p class="cliente-nombre">${escaparHTML(c.nombre)} <span class="cliente-favorito-btn" data-id="${c.id}">${estrella}</span></p>
+          <p class="cliente-tel">📞 ${escaparHTML(c.telefono)}</p>
+          ${gasto > 0 ? `<p class="cliente-ultimo">Gasto: $${gasto.toLocaleString('es-UY')}</p>` : ''}
+        </div>
+        <div class="cliente-acciones">
+          <button class="btn-agendar-desde-card" data-tel="${escaparHTML(c.telefono)}" data-nombre="${escaparHTML(c.nombre)}">📅</button>
+          <button class="btn-eliminar-cliente" data-id="${c.id}">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Toggle favorito
+  contenedor.querySelectorAll('.cliente-favorito-btn').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        await ClientesAPI.toggleFavorito(btn.dataset.id);
+        clientesManuales = await ClientesAPI.getManuales();
+        renderManuales();
+      } catch (err) {
+        alert('Error al actualizar favorito');
+      }
+    };
+  });
+
+  // Agendar desde card
+  contenedor.querySelectorAll('.btn-agendar-desde-card').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      cambiarSeccion('agenda');
+      // Rellenar nombre y teléfono en el formulario de agenda
+      setTimeout(() => {
+        const inputNombre = document.getElementById('input-nombre');
+        const inputTelefono = document.getElementById('input-telefono');
+        if (inputNombre) inputNombre.value = btn.dataset.nombre;
+        if (inputTelefono) inputTelefono.value = btn.dataset.tel;
+      }, 100);
+    };
+  });
+
+  // Eliminar
+  contenedor.querySelectorAll('.btn-eliminar-cliente').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm('¿Eliminar este cliente?')) return;
+      try {
+        await ClientesAPI.eliminarManual(btn.dataset.id);
+        clientesManuales = await ClientesAPI.getManuales();
+        renderManuales();
+      } catch (err) {
+        alert('Error al eliminar cliente');
+      }
+    };
+  });
 }
 
 async function abrirHistorialCliente(telefono) {
