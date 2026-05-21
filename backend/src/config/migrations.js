@@ -72,6 +72,20 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Tabla bloqueos_profesional OK');
 
+    // ── 6. Tabla clientes (agregar manual + estrella favorito) ─────────
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.clientes (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id     UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+        nombre      VARCHAR(255) NOT NULL,
+        telefono    VARCHAR(50) NOT NULL,
+        favorito    BOOLEAN DEFAULT false,
+        creado_en   TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (user_id, telefono)
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ Tabla clientes OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);
