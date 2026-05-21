@@ -2,6 +2,14 @@
 
 let usuarios   = [];
 
+function formatearTelefonoDisplay(numero) {
+  const tel = String(numero || '').replace(/\D/g, '');
+  if (!tel) return '';
+  if (tel.startsWith('598') && tel.length > 3) return '0' + tel.slice(3);
+  if (tel.startsWith('54') && tel.length > 2) return '0' + tel.slice(2);
+  return tel.startsWith('0') ? tel : '0' + tel;
+}
+
 function formatearTelefono(numero, codigoPais) {
   let limpio = (numero || '').replace(/\D/g, '');
 
@@ -149,7 +157,7 @@ function cardClientaHTML(u) {
           <p class="clienta-nombre">${escaparHTML(u.nombre)}</p>
           ${u.nombre_negocio ? `<p class="clienta-negocio">🏪 ${escaparHTML(u.nombre_negocio)}</p>` : ''}
           <p class="clienta-email">📧 ${escaparHTML(u.email)}</p>
-          ${u.telefono ? `<p class="clienta-email">📞 ${escaparHTML(u.telefono)}</p>` : ''}
+          ${u.telefono ? `<p class="clienta-email">📞 ${escaparHTML(formatearTelefonoDisplay(u.telefono))}</p>` : ''}
         </div>
       </div>
 

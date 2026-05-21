@@ -58,9 +58,18 @@ router.get('/manual', async (req, res) => {
 // POST /api/clientes/manual — crear
 router.post('/manual', async (req, res) => {
   try {
-    const { nombre, telefono } = req.body;
+    let { nombre, telefono } = req.body;
     if (!nombre || !telefono) {
       return res.status(400).json({ ok: false, error: 'Nombre y teléfono requeridos' });
+    }
+    // Normalizar a formato internacional
+    const limpio = String(telefono).replace(/\D/g, '');
+    if (limpio.startsWith('0')) {
+      telefono = '+598' + limpio.slice(1);
+    } else if (!limpio.startsWith('+')) {
+      telefono = '+598' + limpio;
+    } else {
+      telefono = '+' + limpio.replace('+', '');
     }
     const cliente = await ClientesManual.crear(req.user.id, { nombre, telefono });
     return res.json({ ok: true, cliente });

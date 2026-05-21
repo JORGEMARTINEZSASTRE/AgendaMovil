@@ -398,9 +398,19 @@ router.post('/:userId/turno', [
 
   try {
     const { userId } = req.params;
-    const { nombre, telefono, fecha, hora, duracion,
+    let { nombre, telefono, fecha, hora, duracion,
             servicio_ids, servicio_nombres, servicio_zonas,
             servicio_colores, notas, email_clienta, sucursal_id } = req.body;
+
+    // Normalizar teléfono a formato internacional
+    const telLimpio = String(telefono || '').replace(/\D/g, '');
+    if (telLimpio.startsWith('0')) {
+      telefono = '+598' + telLimpio.slice(1);
+    } else if (!telLimpio.startsWith('+')) {
+      telefono = '+598' + telLimpio;
+    } else {
+      telefono = '+' + telLimpio.replace('+', '');
+    }
 
     // Verificar usuario
     const { rows: usuRows } = await pool.query(

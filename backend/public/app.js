@@ -5,6 +5,40 @@
 //  Versión SaaS — consume API REST con JWT
 // ═══════════════════════════════════════════════════════════
 
+// ─── UTILIDADES DE TELÉFONO ────────────────────────────────
+// Normaliza a formato internacional (+598...) para guardar
+function normalizarTelefono(raw, codigoPais = '598') {
+  const limpio = String(raw || '').replace(/\D/g, '');
+  if (!limpio) return '';
+
+  // Si ya empieza con +, extraer código de país
+  if (String(raw).trim().startsWith('+')) {
+    // Detectar código de país
+    if (limpio.startsWith('598')) return '+' + limpio;
+    if (limpio.startsWith('54'))  return '+' + limpio;
+    return '+' + limpio; // fallback
+  }
+
+  // Quitar 0 inicial si existe
+  let numero = limpio.startsWith('0') ? limpio.slice(1) : limpio;
+  return '+' + codigoPais + numero;
+}
+
+// Convierte formato internacional a local para mostrar (+59892787477 → 092787477)
+function formatearTelefonoDisplay(raw) {
+  const tel = String(raw || '').replace(/\D/g, '');
+  if (!tel) return raw || '';
+
+  if (tel.startsWith('598') && tel.length > 3) {
+    return '0' + tel.slice(3);
+  }
+  if (tel.startsWith('54') && tel.length > 2) {
+    return '0' + tel.slice(2);
+  }
+  // Si no tiene código de país reconocido, devolver con 0 si no lo tiene
+  return tel.startsWith('0') ? tel : '0' + tel;
+}
+
 // ─── ESTADO EN MEMORIA ───────────────────────────────────────
 let turnos        = [];
 let servicios     = [];
@@ -487,7 +521,7 @@ function cardTurno(t) {
       </div>
       <div class="turno-body">
         <p class="turno-nombre">${escaparHTML(t.nombre)}</p>
-        <p class="turno-tel">📞 ${escaparHTML(t.telefono)}</p>
+        <p class="turno-tel">📞 ${escaparHTML(formatearTelefonoDisplay(t.telefono))}</p>
         ${t.servicio_nombre ? `
           <p class="turno-servicio" style="color:${c.borde}">
             ✂️ ${escaparHTML(t.servicio_nombre)}
@@ -689,7 +723,7 @@ function abrirFormTurno(turno = null) {
     selectContacto.innerHTML = '<option value="">— Escribir manualmente —</option>' +
       lista.map(c =>
         `<option value="${escaparHTML(c.telefono)}" data-nombre="${escaparHTML(c.nombre)}" data-favorito="${c.favorito ? '1' : '0'}">
-          ${c.favorito ? '⭐ ' : ''}${escaparHTML(c.nombre)} — ${escaparHTML(c.telefono)}
+          ${c.favorito ? '⭐ ' : ''}${escaparHTML(c.nombre)} — ${escaparHTML(formatearTelefonoDisplay(c.telefono))}
         </option>`
       ).join('');
 
@@ -1630,7 +1664,7 @@ function cardCumple(c, esHoy) {
         <div>
           <p class="cumple-nombre">${escaparHTML(c.nombre)}</p>
           <p class="cumple-fecha">${fechaCumple}</p>
-          <p class="cumple-tel">📞 ${escaparHTML(c.telefono)}</p>
+          <p class="cumple-tel">📞 ${escaparHTML(formatearTelefonoDisplay(c.telefono))}</p>
         </div>
       </div>
       <button class="btn-icon btn-wa-cumple" data-id="${c.id}" title="Enviar saludo">
@@ -2063,7 +2097,7 @@ async function cargarWaPendientes() {
           <span class="wa-item-tiempo">${tiempoRelativoCorto(m.creado_en)}</span>
         </div>
         <p class="wa-item-destinatario">${escaparHTML(m.destinatario_nombre || '—')}</p>
-        <p class="wa-item-tel">📞 ${escaparHTML(m.destinatario_telefono || '—')}</p>
+        <p class="wa-item-tel">📞 ${escaparHTML(formatearTelefonoDisplay(m.destinatario_telefono || ''))}</p>
         <div class="wa-item-mensaje">${escaparHTML(m.mensaje)}</div>
         <div class="wa-item-acciones">
           <button class="wa-btn-enviar" data-id="${m.id}" data-tel="${escaparHTML(m.destinatario_telefono || '')}" data-msg="${encodeURIComponent(m.mensaje)}">
@@ -2631,10 +2665,10 @@ async function renderClientes() {
     form.onsubmit = async (e) => {
       e.preventDefault();
       const nombre = document.getElementById('input-nombre-cliente').value.trim();
-      const telefono = document.getElementById('input-telefono-cliente').value.trim();
-      if (!nombre || !telefono) return;
+      const telefonoRaw = document.getElementById('input-telefono-cliente').value.trim();
+      if (!nombre || !telefonoRaw) return;
       try {
-        await ClientesAPI.crearManual({ nombre, telefono });
+        await ClientesAPI.crearManual({ nombre, telefono: normalizarTelefono(telefonoRaw) });
         document.getElementById('modal-nuevo-cliente').classList.add('oculto');
         await cargarYRenderizarClientes();
       } catch (err) {
@@ -2710,7 +2744,7 @@ async function cargarYRenderizarClientes() {
           <div class="cliente-avatar">${inicial}</div>
           <div class="cliente-info">
             <p class="cliente-nombre">${escaparHTML(c.nombre)} <span class="cliente-favorito-btn" data-tel="${escaparHTML(c.telefono)}">${estrella}</span></p>
-            <p class="cliente-tel">📞 ${escaparHTML(c.telefono)}</p>
+            <p class="cliente-tel">📞 ${escaparHTML(formatearTelefonoDisplay(c.telefono))}</p>
             <p class="cliente-ultimo">${fecha !== '—' ? 'Último: ' + fecha : ''}</p>
           </div>
           <div class="cliente-stats">
@@ -2768,7 +2802,7 @@ async function cargarYRenderizarClientes() {
           const inputNombre = document.getElementById('input-nombre');
           const inputTelefono = document.getElementById('input-telefono');
           if (inputNombre) inputNombre.value = btn.dataset.nombre;
-          if (inputTelefono) inputTelefono.value = btn.dataset.tel;
+          if (inputTelefono) inputTelefono.value = formatearTelefonoDisplay(btn.dataset.tel);
         }, 100);
       };
     });
@@ -2799,7 +2833,7 @@ function renderProfesionalesConfig() {
       <span class="prof-color-dot" style="background:${p.color}"></span>
       <div class="prof-config-info">
         <p class="prof-config-nombre">${escaparHTML(p.nombre)}</p>
-        ${p.telefono ? `<p class="prof-config-tel">📞 ${escaparHTML(p.telefono)}</p>` : ''}
+        ${p.telefono ? `<p class="prof-config-tel">📞 ${escaparHTML(formatearTelefonoDisplay(p.telefono))}</p>` : ''}
       </div>
       <div class="prof-config-acciones">
         <button class="btn-icon btn-horarios-prof" data-id="${p.id}" data-nombre="${escaparHTML(p.nombre)}" title="Horarios">🕐</button>
