@@ -2536,7 +2536,6 @@ async function renderResumenFinanciero() {
 
 async function renderClientes() {
   const contenedor = document.getElementById('lista-clientes');
-  const contenedorManuales = document.getElementById('lista-clientes-manuales');
   if (!contenedor) return;
 
   // Toggle del resumen
@@ -2552,57 +2551,68 @@ async function renderClientes() {
     }
   };
 
-  // ── Clientes manuales ──
-  if (contenedorManuales) {
-    contenedorManuales.innerHTML = `<div class="pub-cargando">Cargando...</div>`;
-    try {
-      clientesManuales = await ClientesAPI.getManuales();
-    } catch (e) {
-      contenedorManuales.innerHTML = `<div class="pub-vacio">Error al cargar</div>`;
-    }
-    renderManuales();
-
-    // Botón agregar
-    const btnAgregar = document.getElementById('btn-agregar-cliente');
-    if (btnAgregar) {
-      btnAgregar.onclick = () => {
-        document.getElementById('modal-nuevo-cliente').classList.remove('oculto');
-        document.getElementById('input-nombre-cliente').value = '';
-        document.getElementById('input-telefono-cliente').value = '';
-        document.getElementById('input-nombre-cliente').focus();
-      };
-    }
-
-    // Formulario nuevo cliente
-    const form = document.getElementById('form-nuevo-cliente');
-    if (form) {
-      form.onsubmit = async (e) => {
-        e.preventDefault();
-        const nombre = document.getElementById('input-nombre-cliente').value.trim();
-        const telefono = document.getElementById('input-telefono-cliente').value.trim();
-        if (!nombre || !telefono) return;
-        try {
-          await ClientesAPI.crearManual({ nombre, telefono });
-          document.getElementById('modal-nuevo-cliente').classList.add('oculto');
-          clientesManuales = await ClientesAPI.getManuales();
-          renderManuales();
-        } catch (err) {
-          alert('Error al crear cliente');
-        }
-      };
-    }
+  // Botón agregar cliente
+  const btnAgregar = document.getElementById('btn-agregar-cliente');
+  if (btnAgregar) {
+    btnAgregar.onclick = () => {
+      document.getElementById('modal-nuevo-cliente').classList.remove('oculto');
+      document.getElementById('input-nombre-cliente').value = '';
+      document.getElementById('input-telefono-cliente').value = '';
+      document.getElementById('input-nombre-cliente').focus();
+    };
   }
 
+  const form = document.getElementById('form-nuevo-cliente');
+  if (form) {
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('input-nombre-cliente').value.trim();
+      const telefono = document.getElementById('input-telefono-cliente').value.trim();
+      if (!nombre || !telefono) return;
+      try {
+        await ClientesAPI.crearManual({ nombre, telefono });
+        document.getElementById('modal-nuevo-cliente').classList.add('oculto');
+        await cargarYRenderizarClientes();
+      } catch (err) {
+        alert('Error al crear cliente');
+      }
+    };
+  }
+
+  await cargarYRenderizarClientes();
+}
+
+async function cargarYRenderizarClientes() {
+  const contenedor = document.getElementById('lista-clientes');
   contenedor.innerHTML = `<div class="pub-cargando">Cargando clientes...</div>`;
 
   try {
-    clientes = await ClientesAPI.getAll();
+    [clientes, clientesManuales] = await Promise.all([
+      ClientesAPI.getAll(),
+      ClientesAPI.getManuales(),
+    ]);
   } catch (e) {
     contenedor.innerHTML = `<div class="pub-vacio">Error al cargar clientes</div>`;
     return;
   }
 
-  if (!clientes.length) {
+  const todos = [...clientes];
+  const manualesTel = new Set(clientesManuales.map(c => c.telefono));
+
+  // Merge: clientes manuales tienen prioridad (favorito flag)
+  for (const cm of clientesManuales) {
+    const idx = todos.findIndex(c => c.telefono === cm.telefono);
+    if (idx >= 0) {
+      todos[idx].favorito = cm.favorito;
+      todos[idx].cliente_manual_id = cm.id;
+    } else {
+      todos.push({ ...cm, cliente_manual_id: cm.id, total_turnos: 0, total_gastado: 0, ultimo_turno: null });
+    }
+  }
+
+  todos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  if (!todos.length) {
     contenedor.innerHTML = `
       <div class="empty-state">
         <span class="empty-icono">👥</span>
@@ -2615,11 +2625,11 @@ async function renderClientes() {
   const buscar = document.getElementById('buscar-cliente');
   const renderLista = (filtro = '') => {
     const filtrados = filtro
-      ? clientes.filter(c =>
+      ? todos.filter(c =>
           c.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
           c.telefono.includes(filtro)
         )
-      : clientes;
+      : todos;
 
     if (!filtrados.length) {
       contenedor.innerHTML = `<div class="pub-vacio">Sin resultados para "${filtro}"</div>`;
@@ -2630,23 +2640,73 @@ async function renderClientes() {
       const inicial = (c.nombre || '?')[0].toUpperCase();
       const gasto   = parseFloat(c.total_gastado) || 0;
       const fecha   = c.ultimo_turno ? formatearFecha(c.ultimo_turno.toString().split('T')[0]) : '—';
+      const estrella = c.favorito ? '⭐' : '☆';
       return `
         <div class="cliente-card" data-tel="${escaparHTML(c.telefono)}">
           <div class="cliente-avatar">${inicial}</div>
           <div class="cliente-info">
-            <p class="cliente-nombre">${escaparHTML(c.nombre)}</p>
+            <p class="cliente-nombre">${escaparHTML(c.nombre)} <span class="cliente-favorito-btn" data-tel="${escaparHTML(c.telefono)}">${estrella}</span></p>
             <p class="cliente-tel">📞 ${escaparHTML(c.telefono)}</p>
-            <p class="cliente-ultimo">Último: ${fecha}</p>
+            <p class="cliente-ultimo">${fecha !== '—' ? 'Último: ' + fecha : ''}</p>
           </div>
           <div class="cliente-stats">
             <p class="cliente-gasto">$${gasto.toLocaleString('es-UY')}</p>
             <p class="cliente-turnos">${c.total_turnos} turno${c.total_turnos != 1 ? 's' : ''}</p>
           </div>
+          <div class="cliente-acciones">
+            <button class="btn-agendar-desde-card" data-tel="${escaparHTML(c.telefono)}" data-nombre="${escaparHTML(c.nombre)}">📅</button>
+          </div>
         </div>`;
     }).join('');
 
+    // Click en card → historial
     contenedor.querySelectorAll('.cliente-card').forEach(card => {
-      card.addEventListener('click', () => abrirHistorialCliente(card.dataset.tel));
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.cliente-favorito-btn') || e.target.closest('.btn-agendar-desde-card')) return;
+        abrirHistorialCliente(card.dataset.tel);
+      });
+    });
+
+    // Toggle favorito
+    contenedor.querySelectorAll('.cliente-favorito-btn').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const tel = btn.dataset.tel;
+        const cliente = todos.find(c => c.telefono === tel);
+        if (!cliente) return;
+
+        if (cliente.cliente_manual_id) {
+          try {
+            await ClientesAPI.toggleFavorito(cliente.cliente_manual_id);
+            await cargarYRenderizarClientes();
+          } catch (err) {
+            alert('Error al actualizar favorito');
+          }
+        } else {
+          // Crear como manual y marcar favorito
+          try {
+            const res = await ClientesAPI.crearManual({ nombre: cliente.nombre, telefono: cliente.telefono });
+            await ClientesAPI.toggleFavorito(res.cliente.id);
+            await cargarYRenderizarClientes();
+          } catch (err) {
+            alert('Error al marcar favorito');
+          }
+        }
+      };
+    });
+
+    // Agendar desde card
+    contenedor.querySelectorAll('.btn-agendar-desde-card').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        cambiarSeccion('agenda');
+        setTimeout(() => {
+          const inputNombre = document.getElementById('input-nombre');
+          const inputTelefono = document.getElementById('input-telefono');
+          if (inputNombre) inputNombre.value = btn.dataset.nombre;
+          if (inputTelefono) inputTelefono.value = btn.dataset.tel;
+        }, 100);
+      };
     });
   };
 
@@ -2655,117 +2715,6 @@ async function renderClientes() {
   if (buscar) {
     buscar.value = '';
     buscar.oninput = (e) => renderLista(e.target.value.trim());
-  }
-}
-
-function renderManuales() {
-  const contenedor = document.getElementById('lista-clientes-manuales');
-  if (!contenedor) return;
-
-  if (!clientesManuales.length) {
-    contenedor.innerHTML = `<div class="pub-vacio">Sin clientes manuales. ¡Agregá uno!</div>`;
-    return;
-  }
-
-  const filtrados = [...clientesManuales].sort((a, b) => a.nombre.localeCompare(b.nombre));
-
-  contenedor.innerHTML = filtrados.map(c => {
-    const inicial = (c.nombre || '?')[0].toUpperCase();
-    const gasto   = parseFloat(c.total_gastado) || 0;
-    const estrella = c.favorito ? '⭐' : '☆';
-    return `
-      <div class="cliente-card cliente-card-manual" data-id="${c.id}" data-tel="${escaparHTML(c.telefono)}">
-        <div class="cliente-avatar">${inicial}</div>
-        <div class="cliente-info">
-          <p class="cliente-nombre">${escaparHTML(c.nombre)} <span class="cliente-favorito-btn" data-id="${c.id}">${estrella}</span></p>
-          <p class="cliente-tel">📞 ${escaparHTML(c.telefono)}</p>
-          ${gasto > 0 ? `<p class="cliente-ultimo">Gasto: $${gasto.toLocaleString('es-UY')}</p>` : ''}
-        </div>
-        <div class="cliente-acciones">
-          <button class="btn-agendar-desde-card" data-tel="${escaparHTML(c.telefono)}" data-nombre="${escaparHTML(c.nombre)}">📅</button>
-          <button class="btn-eliminar-cliente" data-id="${c.id}">🗑️</button>
-        </div>
-      </div>`;
-  }).join('');
-
-  // Toggle favorito
-  contenedor.querySelectorAll('.cliente-favorito-btn').forEach(btn => {
-    btn.onclick = async (e) => {
-      e.stopPropagation();
-      try {
-        await ClientesAPI.toggleFavorito(btn.dataset.id);
-        clientesManuales = await ClientesAPI.getManuales();
-        renderManuales();
-      } catch (err) {
-        alert('Error al actualizar favorito');
-      }
-    };
-  });
-
-  // Agendar desde card
-  contenedor.querySelectorAll('.btn-agendar-desde-card').forEach(btn => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      cambiarSeccion('agenda');
-      // Rellenar nombre y teléfono en el formulario de agenda
-      setTimeout(() => {
-        const inputNombre = document.getElementById('input-nombre');
-        const inputTelefono = document.getElementById('input-telefono');
-        if (inputNombre) inputNombre.value = btn.dataset.nombre;
-        if (inputTelefono) inputTelefono.value = btn.dataset.tel;
-      }, 100);
-    };
-  });
-
-  // Eliminar
-  contenedor.querySelectorAll('.btn-eliminar-cliente').forEach(btn => {
-    btn.onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm('¿Eliminar este cliente?')) return;
-      try {
-        await ClientesAPI.eliminarManual(btn.dataset.id);
-        clientesManuales = await ClientesAPI.getManuales();
-        renderManuales();
-      } catch (err) {
-        alert('Error al eliminar cliente');
-      }
-    };
-  });
-}
-
-async function abrirHistorialCliente(telefono) {
-  const cliente = clientes.find(c => c.telefono === telefono);
-  if (!cliente) return;
-
-  const modal    = document.getElementById('modal-historial-cliente');
-  const titulo   = document.getElementById('modal-historial-titulo');
-  const contenido = document.getElementById('modal-historial-contenido');
-
-  titulo.textContent = `📋 ${cliente.nombre}`;
-  contenido.innerHTML = `<div class="pub-cargando">Cargando historial...</div>`;
-  modal.classList.remove('oculto');
-
-  try {
-    const historial = await ClientesAPI.historial(telefono);
-    if (!historial.length) {
-      contenido.innerHTML = `<div class="pub-vacio">Sin turnos registrados</div>`;
-      return;
-    }
-    contenido.innerHTML = historial.map(t => {
-      const fecha   = formatearFecha(t.fecha?.toString().split('T')[0]);
-      const hora    = formatearHora(t.hora);
-      const precio  = parseFloat(t.servicio_precio) || 0;
-      const cancelado = t.estado === 'cancelado';
-      return `
-        <div class="historial-item">
-          <p class="historial-fecha">${fecha} · ${hora} hs</p>
-          <p class="historial-servicio">${escaparHTML(t.servicio_nombre || 'Sin servicio')}</p>
-          ${precio > 0 ? `<p class="historial-precio">$${precio.toLocaleString('es-UY')}</p>` : ''}
-          ${cancelado ? `<p class="historial-estado-cancelado">🚫 Cancelado</p>` : ''}
-        </div>`;
-    }).join('');
-  } catch (e) {
-    contenido.innerHTML = `<div class="pub-vacio">Error al cargar historial</div>`;
   }
 }
 

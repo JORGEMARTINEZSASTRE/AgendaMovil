@@ -2710,46 +2710,29 @@ body {
 }
 
 /* ── Clientes manuales ── */
-.clientes-manuales-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 16px 0 10px;
-  padding: 0 4px;
+.busqueda-servicios-wrap {
+  position: relative;
 }
 
-.clientes-manuales-titulo {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--marron2);
-  margin: 0;
-}
-
-.btn-agregar-cliente {
-  background: var(--rosa-vino);
-  color: white;
-  border: none;
+.btn-agregar-cliente-inline {
+  width: 100%;
+  background: var(--crema2);
+  color: var(--rosa-vino);
+  border: 1.5px dashed var(--rosa-polvo);
   border-radius: var(--radio-sm);
-  padding: 6px 14px;
+  padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
+  font-family: 'Nunito', sans-serif;
   cursor: pointer;
-  transition: background .2s;
+  transition: all .2s;
+  margin-top: 6px;
 }
 
-.btn-agregar-cliente:hover {
-  background: var(--marron2);
-}
-
-.lista-clientes-manuales {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.cliente-card-manual {
-  position: relative;
+.btn-agregar-cliente-inline:hover {
+  background: var(--rosa-vino);
+  color: white;
+  border-color: var(--rosa-vino);
 }
 
 .cliente-favorito-btn {
@@ -2765,8 +2748,7 @@ body {
   align-items: center;
 }
 
-.btn-agendar-desde-card,
-.btn-eliminar-cliente {
+.btn-agendar-desde-card {
   background: none;
   border: 1.5px solid var(--borde);
   border-radius: var(--radio-sm);
@@ -2783,11 +2765,6 @@ body {
 .btn-agendar-desde-card:hover {
   border-color: var(--rosa-vino);
   background: var(--crema2);
-}
-
-.btn-eliminar-cliente:hover {
-  border-color: #c0392b;
-  background: #fdecea;
 }
 
 /* Modal nuevo cliente */
