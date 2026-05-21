@@ -189,6 +189,18 @@ function renderTabActual() {
   }
 }
 
+function irATab(tab) {
+  if (tab === tabActual) return;
+  tabActual = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('activo', b.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('activo', p.dataset.panel === tab);
+  });
+  renderTabActual();
+}
+
 // ═══════════════════════════════════════════════════════════
 //  BOTONES HEADER
 // ═══════════════════════════════════════════════════════════
@@ -2699,7 +2711,7 @@ async function cargarYRenderizarClientes() {
     contenedor.querySelectorAll('.btn-agendar-desde-card').forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
-        cambiarSeccion('agenda');
+        irATab('agenda');
         setTimeout(() => {
           const inputNombre = document.getElementById('input-nombre');
           const inputTelefono = document.getElementById('input-telefono');
