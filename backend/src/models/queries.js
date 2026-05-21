@@ -967,6 +967,55 @@ const BloqueosProfesional = {
   },
 };
 
+// ─── CLIENTES (tabla manual) ──────────────────────────────────────────
+const ClientesManual = {
+  async listar(userId) {
+    const { rows } = await query(
+      `SELECT c.*,
+         COALESCE(SUM(s.precio), 0) AS total_gastado,
+         COUNT(t.id)                AS total_turnos,
+         MAX(t.fecha)               AS ultimo_turno
+       FROM clientes c
+       LEFT JOIN turnos t ON t.user_id = c.user_id AND t.telefono = c.telefono AND t.estado != 'cancelado'
+       LEFT JOIN servicios s ON s.id = t.servicio_id
+       WHERE c.user_id = $1
+       GROUP BY c.id
+       ORDER BY c.nombre ASC`,
+      [userId]
+    );
+    return rows;
+  },
+
+  async crear(userId, { nombre, telefono }) {
+    const { rows } = await query(
+      `INSERT INTO clientes (user_id, nombre, telefono)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, telefono) DO UPDATE SET nombre = EXCLUDED.nombre
+       RETURNING *`,
+      [userId, nombre, telefono]
+    );
+    return rows[0];
+  },
+
+  async toggleFavorito(id, userId) {
+    const { rows } = await query(
+      `UPDATE clientes SET favorito = NOT favorito
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [id, userId]
+    );
+    return rows[0] || null;
+  },
+
+  async eliminar(id, userId) {
+    await query(
+      `DELETE FROM clientes WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+    return true;
+  },
+};
+
 module.exports = {
   Usuarios,
   Turnos,
@@ -982,4 +1031,5 @@ module.exports = {
   Profesionales,
   HorariosProfesional,
   BloqueosProfesional,
+  ClientesManual,
 };
