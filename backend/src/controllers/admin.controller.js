@@ -17,7 +17,7 @@ async function listarUsuarios(req, res) {
 
 async function crearUsuario(req, res) {
   try {
-    const { email, password, nombre, plan, dias_trial, nombre_negocio, telefono } = req.body;
+    const { email, password, nombre, plan, dias_trial, nombre_negocio, telefono, rol } = req.body;
     const existente = await Usuarios.buscarPorEmail(email);
     if (existente) {
       return res.status(409).json({ ok: false, error: 'Ya existe una cuenta con ese email' });
@@ -31,7 +31,7 @@ async function crearUsuario(req, res) {
       email,
       passwordHash,
       nombre,
-      rol:           'cliente',
+      rol:           rol === 'admin' ? 'admin' : 'cliente',
       plan:          plan || 'trial',
       trialInicio:   plan === 'trial' ? trialInicio : null,
       trialFin:      plan === 'trial' ? trialFin    : null,

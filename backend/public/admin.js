@@ -88,8 +88,7 @@ async function cargarUsuarios() {
     const data = await resp.json();
     if (!data.ok) return;
 
-    // Filtrar solo clientas (no admins)
-    usuarios = data.usuarios.filter(u => u.rol === 'cliente');
+    usuarios = data.usuarios || [];
     renderStats();
     renderClientas();
   } catch (err) {
@@ -123,8 +122,8 @@ function renderClientas() {
     contenedor.innerHTML = `
       <div class="empty-state">
         <span class="empty-icono">👥</span>
-        <p class="empty-titulo">Sin clientas</p>
-        <p class="empty-sub">Creá tu primera clienta con el botón de arriba</p>
+        <p class="empty-titulo">Sin usuarios</p>
+        <p class="empty-sub">Creá el primer usuario con el botón de arriba</p>
       </div>`;
     return;
   }
@@ -138,6 +137,9 @@ function renderClientas() {
 // ═══════════════════════════════════════════════════════════
 function cardClientaHTML(u) {
   const trialInfo  = calcTrialInfo(u);
+  const badgeAdmin = u.rol === 'admin'
+    ? `<span class="badge badge-admin">⭐ Admin</span>`
+    : '';
   const badgePlan  = u.plan === 'premium'
     ? `<span class="badge badge-premium">⭐ Premium</span>`
     : `<span class="badge badge-trial">🕐 Trial</span>`;
@@ -162,6 +164,7 @@ function cardClientaHTML(u) {
       </div>
 
       <div class="clienta-badges">
+        ${badgeAdmin}
         ${badgePlan}
         ${badgeEstado}
         ${badgeVencido}
@@ -361,6 +364,7 @@ async function handleNuevaClienta(e) {
   const password      = document.getElementById('clienta-password').value;
   const plan          = document.getElementById('clienta-plan').value;
   const dias          = parseInt(document.getElementById('clienta-dias').value) || 30;
+  const rol           = document.getElementById('clienta-rol').value;
 
   if (!nombre || !email || !password) {
     mostrarFormError('form-clienta-error', 'Completá todos los campos obligatorios');
@@ -386,6 +390,7 @@ async function handleNuevaClienta(e) {
         password,
         plan,
         dias_trial: dias,
+        rol,
       })
     });
 

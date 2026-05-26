@@ -30,6 +30,9 @@ const validarCrearUsuario = [
   body('dias_trial')
     .optional()
     .isInt({ min: 1, max: 365 }).withMessage('Días de trial entre 1 y 365'),
+  body('rol')
+    .optional()
+    .isIn(['cliente', 'admin']).withMessage('Rol inválido'),
 ];
 
 const validarInvitacion = [

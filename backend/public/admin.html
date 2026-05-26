@@ -43,7 +43,7 @@
   <div class="admin-stats">
     <div class="stat-card">
       <p id="stat-total" class="stat-num">0</p>
-      <p class="stat-label">Total clientas</p>
+      <p class="stat-label">Total usuarios</p>
     </div>
     <div class="stat-card">
       <p id="stat-activas" class="stat-num">0</p>
@@ -129,6 +129,13 @@
       <div class="campo">
         <label for="clienta-password">🔒 Contraseña *</label>
         <input type="password" id="clienta-password" placeholder="Mínimo 8 caracteres" required>
+      </div>
+      <div class="campo">
+        <label for="clienta-rol">👤 Rol *</label>
+        <select id="clienta-rol">
+          <option value="cliente">Cliente</option>
+          <option value="admin">⭐ Admin</option>
+        </select>
       </div>
       <div class="campo">
         <label for="clienta-plan">📋 Plan *</label>

@@ -90,6 +90,10 @@
   background:rgba(224,85,85,.1); color:var(--rojo);
   border:1px solid rgba(224,85,85,.25);
 }
+.badge-admin {
+  background:rgba(255,215,0,.18); color:#7A6200;
+  border:1px solid rgba(255,215,0,.5);
+}
 .clienta-trial-info {
   font-size:11px; color:var(--gris); margin-top:6px;
 }
