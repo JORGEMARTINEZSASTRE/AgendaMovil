@@ -52,8 +52,13 @@ async function toggleActivo(req, res) {
       return res.status(400).json({ ok: false, error: 'No podes desactivar tu propia cuenta' });
     }
 
-    // Buscar primero para tener nombre completo
     const usuarioCompleto = await Usuarios.buscarPorId(req.params.id);
+    if (!usuarioCompleto) {
+      return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+    }
+    if (usuarioCompleto.rol === 'admin') {
+      return res.status(403).json({ ok: false, error: 'No se puede desactivar un administrador' });
+    }
     if (!usuarioCompleto) {
       return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
     }
@@ -109,6 +114,9 @@ async function eliminarUsuario(req, res) {
     const existente = await Usuarios.buscarPorId(req.params.id);
     if (!existente) {
       return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+    }
+    if (existente.rol === 'admin') {
+      return res.status(403).json({ ok: false, error: 'No se puede eliminar un administrador' });
     }
     await Usuarios.eliminar(req.params.id);
 

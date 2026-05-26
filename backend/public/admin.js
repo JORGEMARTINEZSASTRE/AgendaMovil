@@ -182,11 +182,12 @@ function cardClientaHTML(u) {
           ✏️ Editar
         </button>
 
+        ${u.rol !== 'admin' ? `
         <button class="btn-admin btn-cambiar-plan" data-id="${u.id}" data-nombre="${escaparHTML(u.nombre)}" data-plan="${u.plan}">
           🔄 Cambiar plan
         </button>
 
-        <button class="btn-admin btn-copiar-link btn-link" data-link="${linkPublico}">
+        <button class="btn-admin btn-copiar-link" data-link="${linkPublico}">
           🔗 Copiar link
         </button>
 
@@ -206,6 +207,7 @@ function cardClientaHTML(u) {
         <button class="btn-admin btn-danger btn-eliminar-clienta" data-id="${u.id}" data-nombre="${escaparHTML(u.nombre)}">
           🗑 Eliminar
         </button>
+        ` : ''}
       </div>
     </div>`;
 }
