@@ -312,7 +312,9 @@ async function cargarSucursales() {
 
 async function cargarServicios() {
   try {
-    const resp = await fetch(`${API_URL}/publica/${userId}/servicios`);
+    const sid = datosReserva.sucursalId;
+    const qs  = sid ? `?sucursal_id=${encodeURIComponent(sid)}` : '';
+    const resp = await fetch(`${API_URL}/publica/${userId}/servicios${qs}`);
     const data = await resp.json();
     if (!data.ok) return;
     servicios = data.servicios;
@@ -393,6 +395,8 @@ function renderPaso1() {
       card.classList.add('seleccionado');
       datosReserva.sucursalId = card.dataset.id;
       datosReserva.sucursalNombre = card.querySelector('.pub-ubicacion-nombre').textContent;
+      // Recargar servicios filtrados por esta sucursal
+      cargarServicios().then(() => renderPaso2());
     });
   });
 }

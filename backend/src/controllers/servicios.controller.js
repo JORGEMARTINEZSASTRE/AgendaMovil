@@ -27,15 +27,15 @@ async function obtener(req, res) {
 
 async function crear(req, res) {
   try {
-   const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria, precio } = req.body;
+   const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria, precio, sucursal_ids } = req.body;
 
   const servicio = await Servicios.crear(req.user.id, {
   nombre, zona, duracion, color, descripcion,
-  precio: parseFloat(precio) || 0,   // ← agregá
+  precio: parseFloat(precio) || 0,
   requiereSenia: !!requiere_senia,
   montoSenia:    monto_senia || 0,
   categoria:     (categoria && categoria.trim()) || 'General',
-
+  sucursalIds:   Array.isArray(sucursal_ids) ? sucursal_ids : [],
 });
     return res.status(201).json({ ok: true, mensaje: 'Servicio creado exitosamente', servicio });
   } catch (err) {
@@ -51,14 +51,15 @@ async function actualizar(req, res) {
     if (!existente) {
       return res.status(404).json({ ok: false, error: 'Servicio no encontrado' });
     }
-    const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria, precio } = req.body;
+    const { nombre, zona, duracion, color, descripcion, requiere_senia, monto_senia, categoria, precio, sucursal_ids } = req.body;
 
 const servicio = await Servicios.actualizar(req.params.id, req.user.id, {
   nombre, zona, duracion, color, descripcion,
-  precio: parseFloat(precio) || 0,   // ← agregá
+  precio: parseFloat(precio) || 0,
   requiereSenia: !!requiere_senia,
   montoSenia:    monto_senia || 0,
   categoria:     (categoria && categoria.trim()) || 'General',
+  sucursalIds:   Array.isArray(sucursal_ids) ? sucursal_ids : [],
   });
 
     return res.json({ ok: true, mensaje: 'Servicio actualizado exitosamente', servicio });

@@ -1439,6 +1439,25 @@ function bindFormServicio() {
   }
 
   modal?.classList.remove('oculto');
+
+  // Poblar checkboxes de sucursales
+  const checksContainer = document.getElementById('serv-sucursales-checks');
+  const wrap = document.getElementById('serv-sucursales-wrap');
+  if (checksContainer) {
+    if (!sucursales.length) {
+      if (wrap) wrap.classList.add('oculto');
+    } else {
+      if (wrap) wrap.classList.remove('oculto');
+      const seleccionadas = serv?.sucursal_ids || [];
+      checksContainer.innerHTML = sucursales.map(s => `
+        <label class="sucursal-check-item">
+          <input type="checkbox" name="serv-sucursal" value="${s.id}"
+            ${seleccionadas.includes(s.id) ? 'checked' : ''}>
+          ${escaparHTML(s.nombre)}
+        </label>
+      `).join('');
+    }
+  }
 }
 
 function limpiarFormServicio() {
@@ -1498,6 +1517,7 @@ const payload = {
   requiere_senia: requiereSenia,
   monto_senia:    montoSenia,
   precio:           precio,
+  sucursal_ids: [...document.querySelectorAll('input[name="serv-sucursal"]:checked')].map(c => c.value),
 };
 
   setBtnLoading('btn-guardar-servicio', true);

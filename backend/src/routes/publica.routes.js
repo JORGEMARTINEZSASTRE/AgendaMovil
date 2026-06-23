@@ -369,12 +369,22 @@ router.get('/:userId/disponibilidad', async (req, res) => {
 // ─── GET /api/publica/:userId/servicios ──────────────────────
 router.get('/:userId/servicios', async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT id, nombre, zona, duracion, color, categoria,
+    const { sucursal_id } = req.query;
+
+    let queryStr = `SELECT id, nombre, zona, duracion, color, categoria,
               requiere_senia, monto_senia, precio, descripcion, foto_url
-       FROM servicios WHERE user_id = $1 AND activo = true ORDER BY categoria, nombre`,
-      [req.params.userId]
-    );
+       FROM servicios WHERE user_id = $1 AND activo = true`;
+    const params = [req.params.userId];
+
+    // Filtrar: si sucursal_id indicado, devolver servicios sin restricción O que incluyan esa sucursal
+    if (sucursal_id) {
+      queryStr += ` AND (sucursal_ids = '{}' OR $2::uuid = ANY(sucursal_ids))`;
+      params.push(sucursal_id);
+    }
+
+    queryStr += ` ORDER BY categoria, nombre`;
+
+    const { rows } = await pool.query(queryStr, params);
     return res.json({ ok: true, servicios: rows });
   } catch(err) {
     console.error('[PUBLICA/servicios]', err.message);

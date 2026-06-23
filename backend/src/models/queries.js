@@ -426,7 +426,7 @@ const Servicios = {
               color, descripcion, activo, creado_en,
               requiere_senia, monto_senia, precio,
               COALESCE(categoria, 'General') as categoria,
-              foto_url
+              foto_url, sucursal_ids
        FROM servicios
        WHERE user_id = $1
          AND activo  = true
@@ -456,26 +456,28 @@ const Servicios = {
       requiereSenia,
       montoSenia,
       precio,
+      sucursalIds,
     } = datos;
 
     const { rows } = await query(
       `INSERT INTO servicios
          (user_id, nombre, precio, zona, duracion,
           color, descripcion, categoria,
-          requiere_senia, monto_senia)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          requiere_senia, monto_senia, sucursal_ids)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
       [
         userId,
         nombre,
         precio        || 0,
-          zona          || 'Sin zona',
+        zona          || 'Sin zona',
         duracion,
         color         || '#A85568',
         descripcion   || null,
         categoria?.trim() || 'General',
         requiereSenia || false,
         montoSenia    || 0,
+        sucursalIds   || [],
       ]
     );
     return rows[0];
@@ -492,6 +494,7 @@ const Servicios = {
       requiereSenia,
       montoSenia,
       precio,
+      sucursalIds,
     } = datos;
 
     const { rows } = await query(
@@ -505,13 +508,14 @@ const Servicios = {
          requiere_senia = $7,
          monto_senia    = $8,
          precio         = $9,
+         sucursal_ids   = $10,
          editado_en     = NOW()
-       WHERE id = $10
-         AND user_id = $11
+       WHERE id = $11
+         AND user_id = $12
        RETURNING *`,
       [
         nombre,
-          zona          || 'Sin zona',
+        zona          || 'Sin zona',
         duracion,
         color         || '#A85568',
         descripcion   || null,
@@ -519,6 +523,7 @@ const Servicios = {
         requiereSenia || false,
         montoSenia    || 0,
         precio        || 0,
+        sucursalIds   || [],
         id,
         userId,
       ]
