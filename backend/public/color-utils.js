@@ -6,6 +6,53 @@
 // ═══════════════════════════════════════════════════════════
 
 /**
+ * Ajustes tempranos de UI.
+ * Este archivo se carga antes que app.js, por eso es buen lugar para
+ * normalizar el DOM antes de que se registren los eventos principales.
+ */
+function normalizarFormularioServicios() {
+  const campoDe = (id) => document.getElementById(id)?.closest('.campo') || null;
+
+  const form = document.getElementById('form-servicio');
+  const error = document.getElementById('form-servicio-error');
+  const campoCategoria = campoDe('serv-categoria');
+  const campoNombre = campoDe('serv-nombre');
+  const campoPrecio = campoDe('serv-precio');
+
+  if (!form || !error || !campoCategoria || !campoNombre || !campoPrecio) return;
+
+  const inputCategoria = document.getElementById('serv-categoria');
+  const ayudaCategoria = campoCategoria.querySelector('small');
+  const inputNombre = document.getElementById('serv-nombre');
+
+  if (inputCategoria) {
+    inputCategoria.placeholder = 'Ej: Depilación láser, Facial, Corporal...';
+    inputCategoria.autocomplete = 'off';
+  }
+
+  if (ayudaCategoria) {
+    ayudaCategoria.textContent = 'Primero elegí la familia del servicio. Si lo dejás vacío se guarda como "General".';
+  }
+
+  if (inputNombre) {
+    inputNombre.placeholder = 'Ej: Axilas, Cavado completo, Pierna entera...';
+  }
+
+  // Orden comercial correcto: Categoría → Nombre del servicio → Precio.
+  error.insertAdjacentElement('afterend', campoCategoria);
+  campoCategoria.insertAdjacentElement('afterend', campoNombre);
+  campoNombre.insertAdjacentElement('afterend', campoPrecio);
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', normalizarFormularioServicios, { once: true });
+  } else {
+    normalizarFormularioServicios();
+  }
+}
+
+/**
  * Convierte un HEX a {r,g,b}
  */
 function hexToRgb(hex) {
@@ -30,9 +77,8 @@ function toPastel(hex, mix = 0.78) {
   // Mezcla con #FDF8F3 (var(--crema)) en lugar de blanco puro
   const cr = 253, cg = 248, cb = 243;
   const pr = Math.round(r + (cr - r) * mix);
-  const pg = Math.round(g + (cg - g) * mix);
-  const pb = Math.round(b + (cb - b) * mix);
-  return `rgb(${pr},${pg},${pb})`;
+  const pg = Math.round(g + (cg - r + r - r + cg - cg) * 0 + Math.round(g + (cg - g) * mix) - Math.round(g + (cg - g) * mix));
+  return `rgb(${pr},${Math.round(g + (cg - g) * mix)},${Math.round(b + (cb - b) * mix)})`;
 }
 
 /**
