@@ -2,8 +2,63 @@
 
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { Usuarios, Invitaciones } = require('../models/queries');
 const { enviarBienvenida, enviarCambioPlan, enviarCuentaBaja, enviarCuentaEliminada } = require('../services/mailer');
+
+function basePublica(req) {
+  const base = process.env.PUBLIC_APP_URL
+    || process.env.APP_URL
+    || process.env.FRONTEND_URL
+    || process.env.CORS_ORIGIN
+    || `${req.protocol}://${req.get('host')}`;
+
+  return String(base).split(',')[0].trim().replace(/\/$/, '');
+}
+
+async function enviarMailInvitacionOperadora({ email, urlActivacion, plan, diasTrial }) {
+  const t = nodemailer.createTransport({
+    host: process.env.MAIL_HOST,
+    port: parseInt(process.env.MAIL_PORT) || 587,
+    secure: process.env.MAIL_SECURE === 'true',
+    family: 4,
+    auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+  });
+
+  const diasTexto = plan === 'trial' ? `${diasTrial} días gratis` : 'plan premium';
+
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#FAF6F7;padding:24px;border-radius:14px;">
+    <div style="background:#A85568;border-radius:10px 10px 0 0;padding:24px;text-align:center;">
+      <p style="margin:0;font-size:28px;">🌸</p>
+      <h1 style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:700;">DEPIMÓVIL PRO</h1>
+      <p style="margin:6px 0 0;color:rgba(255,255,255,.85);font-size:13px;">Tu agenda profesional</p>
+    </div>
+    <div style="background:#fff;padding:24px;border-radius:0 0 10px 10px;">
+      <h2 style="color:#4A3840;font-size:18px;margin:0 0 12px;">Activá tu cuenta 🌸</h2>
+      <p style="color:#6B5A60;font-size:15px;line-height:1.6;margin:0 0 16px;">
+        Te invitaron a crear tu cuenta en AgendaMóvil PRO con ${diasTexto}.
+      </p>
+      <div style="text-align:center;margin:22px 0;">
+        <a href="${urlActivacion}" style="display:inline-block;background:#A85568;color:white;font-weight:700;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:15px;">
+          ✅ Activar mi cuenta
+        </a>
+      </div>
+      <p style="color:#9A8F92;font-size:13px;margin:16px 0 0;text-align:center;line-height:1.5;">
+        Si el botón no abre, copiá y pegá este link en el navegador:<br>
+        <a href="${urlActivacion}" style="color:#A85568;word-break:break-all;">${urlActivacion}</a>
+      </p>
+    </div>
+    <p style="color:#9A8F92;font-size:12px;margin-top:16px;text-align:center;">© 2026 DEPIMÓVIL PRO</p>
+  </div>`;
+
+  await t.sendMail({
+    from: `"DEPIMÓVIL PRO" <${process.env.MAIL_USER}>`,
+    to: email,
+    subject: '🌸 Activá tu cuenta de AgendaMóvil PRO',
+    text: `Activá tu cuenta de AgendaMóvil PRO acá: ${urlActivacion}`,
+    html,
+  });
+}
 
 async function listarUsuarios(req, res) {
   try {
@@ -137,16 +192,42 @@ async function crearInvitacion(req, res) {
     if (existente) {
       return res.status(409).json({ ok: false, error: 'Ya existe una cuenta con ese email' });
     }
-    const token      = crypto.randomBytes(32).toString('hex');
+
+    const planFinal = plan || 'trial';
+    const diasTrial = parseInt(dias_trial) || 30;
+    const token = crypto.randomBytes(32).toString('hex');
+
     const invitacion = await Invitaciones.crear({
       token,
       email,
-      plan:      plan      || 'trial',
-      diasTrial: dias_trial || 30,
+      plan: planFinal,
+      diasTrial,
       creadoPor: req.user.id,
     });
-    const urlActivacion = `${process.env.CORS_ORIGIN}/login.html?inv=${token}`;
-    return res.status(201).json({ ok: true, mensaje: 'Invitacion creada exitosamente', invitacion: { ...invitacion, url_activacion: urlActivacion } });
+
+    const urlActivacion = `${basePublica(req)}/login.html?inv=${encodeURIComponent(token)}`;
+
+    let mailEnviado = true;
+    try {
+      await enviarMailInvitacionOperadora({
+        email,
+        urlActivacion,
+        plan: planFinal,
+        diasTrial,
+      });
+    } catch (mailErr) {
+      mailEnviado = false;
+      console.error('[ADMIN/crearInvitacion/mail]', mailErr.message);
+    }
+
+    return res.status(201).json({
+      ok: true,
+      mensaje: mailEnviado
+        ? 'Invitacion creada y enviada por mail exitosamente'
+        : 'Invitacion creada, pero no se pudo enviar el mail',
+      mail_enviado: mailEnviado,
+      invitacion: { ...invitacion, url_activacion: urlActivacion },
+    });
   } catch (err) {
     console.error('[ADMIN/crearInvitacion]', err.message);
     return res.status(500).json({ ok: false, error: 'Error al crear la invitacion' });
