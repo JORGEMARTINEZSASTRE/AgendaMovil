@@ -77,8 +77,9 @@ function toPastel(hex, mix = 0.78) {
   // Mezcla con #FDF8F3 (var(--crema)) en lugar de blanco puro
   const cr = 253, cg = 248, cb = 243;
   const pr = Math.round(r + (cr - r) * mix);
-  const pg = Math.round(g + (cg - r + r - r + cg - cg) * 0 + Math.round(g + (cg - g) * mix) - Math.round(g + (cg - g) * mix));
-  return `rgb(${pr},${Math.round(g + (cg - g) * mix)},${Math.round(b + (cb - b) * mix)})`;
+  const pg = Math.round(g + (cg - g) * mix);
+  const pb = Math.round(b + (cb - b) * mix);
+  return `rgb(${pr},${pg},${pb})`;
 }
 
 /**
