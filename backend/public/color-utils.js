@@ -18,12 +18,15 @@ function normalizarFormularioServicios() {
   const campoCategoria = campoDe('serv-categoria');
   const campoNombre = campoDe('serv-nombre');
   const campoPrecio = campoDe('serv-precio');
+  const campoZona = campoDe('serv-zona');
 
   if (!form || !error || !campoCategoria || !campoNombre || !campoPrecio) return;
 
   const inputCategoria = document.getElementById('serv-categoria');
   const ayudaCategoria = campoCategoria.querySelector('small');
   const inputNombre = document.getElementById('serv-nombre');
+  const inputZona = document.getElementById('serv-zona');
+  const labelZona = campoZona?.querySelector('label');
 
   if (inputCategoria) {
     inputCategoria.placeholder = 'Ej: Depilación láser, Facial, Corporal...';
@@ -36,6 +39,16 @@ function normalizarFormularioServicios() {
 
   if (inputNombre) {
     inputNombre.placeholder = 'Ej: Axilas, Cavado completo, Pierna entera...';
+  }
+
+  if (inputZona) {
+    inputZona.required = false;
+    inputZona.removeAttribute('required');
+    inputZona.placeholder = 'Opcional. Ej: Piernas completas, rostro, axilas...';
+  }
+
+  if (labelZona) {
+    labelZona.textContent = '📍 Zona (opcional)';
   }
 
   // Orden comercial correcto: Categoría → Nombre del servicio → Precio.
