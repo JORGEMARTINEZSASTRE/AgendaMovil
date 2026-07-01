@@ -65,6 +65,29 @@ const validarId = [
     .isUUID().withMessage('ID inválido'),
 ];
 
+function normalizarUrlAbsoluta(url, fallbackOrigin) {
+  const valor = String(url || '').trim();
+  if (!valor) return null;
+
+  try {
+    return new URL(valor).toString();
+  } catch {
+    try {
+      return new URL(valor.startsWith('/') ? valor : `/${valor}`, fallbackOrigin).toString();
+    } catch {
+      return null;
+    }
+  }
+}
+
+function obtenerOrigenPublico(link) {
+  try {
+    return new URL(link).origin;
+  } catch {
+    return String(process.env.CORS_ORIGIN || '').replace(/\/$/, '');
+  }
+}
+
 // ─── Rutas ───────────────────────────────────────────────────
 
 // GET /api/admin/usuarios
@@ -178,7 +201,7 @@ router.put('/usuarios/:id',
   }
 );
 
-// POST /api/admin/enviar-link — enviar link de agenda por mail
+// POST /api/admin/enviar-link — enviar link útil a nueva operadora por mail
 router.post('/enviar-link',
   [
     body('email').isEmail().normalizeEmail(),
@@ -190,42 +213,65 @@ router.post('/enviar-link',
     try {
       const { email, nombre, link } = req.body;
       const nodemailer = require('nodemailer');
+
+      const origenPublico = obtenerOrigenPublico(link);
+      const linkAgenda = normalizarUrlAbsoluta(link, origenPublico);
+      const linkPanel = normalizarUrlAbsoluta('/login.html', origenPublico);
+
+      if (!linkAgenda || !linkPanel) {
+        return res.status(400).json({ ok: false, error: 'Link inválido para enviar por mail' });
+      }
+
       const t = nodemailer.createTransport({
-        host: process.env.MAIL_HOST, port: parseInt(process.env.MAIL_PORT)||587,
-        secure: process.env.MAIL_SECURE==='true',
+        host: process.env.MAIL_HOST,
+        port: parseInt(process.env.MAIL_PORT) || 587,
+        secure: process.env.MAIL_SECURE === 'true',
         auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
       });
-      const html = `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;background:#FAF6F7;padding:24px;border-radius:14px;">
+
+      const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#FAF6F7;padding:24px;border-radius:14px;">
         <div style="background:#A85568;border-radius:10px 10px 0 0;padding:24px;text-align:center;">
           <p style="margin:0;font-size:28px;">🌸</p>
           <h1 style="margin:6px 0 0;color:#fff;font-size:20px;font-weight:700;">DEPIMÓVIL PRO</h1>
         </div>
         <div style="background:#fff;padding:24px;border-radius:0 0 10px 10px;">
           <h2 style="color:#4A3840;font-size:18px;margin:0 0 12px;">¡Hola ${nombre}! 🌸</h2>
-          <p style="color:#6B5A60;font-size:15px;line-height:1.6;margin:0 0 20px;">
-            Te compartimos el link para reservar tu próximo turno de forma rápida y fácil:
+          <p style="color:#6B5A60;font-size:15px;line-height:1.6;margin:0 0 16px;">
+            Te compartimos los accesos importantes para empezar a usar tu agenda.
           </p>
+
           <div style="text-align:center;margin:20px 0;">
-            <a href="${link}" style="display:inline-block;background:#A85568;color:white;font-weight:700;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:15px;">
-              📅 Reservar mi turno
+            <a href="${linkPanel}" style="display:inline-block;background:#A85568;color:white;font-weight:700;padding:14px 28px;border-radius:100px;text-decoration:none;font-size:15px;">
+              🌸 Entrar a mi AgendaMóvil
             </a>
           </div>
-          <p style="color:#9A8F92;font-size:13px;margin:16px 0 0;text-align:center;">
-            O copiá este link: <a href="${link}" style="color:#A85568;">${link}</a>
+
+          <div style="background:#FAF6F7;border:1px solid #F0E4E8;border-radius:12px;padding:16px;margin:18px 0;">
+            <p style="color:#4A3840;font-size:14px;line-height:1.5;margin:0 0 10px;">
+              Este es tu link público para que tus clientas puedan reservar turno:
+            </p>
+            <p style="word-break:break-all;margin:0;">
+              <a href="${linkAgenda}" style="color:#A85568;font-size:13px;">${linkAgenda}</a>
+            </p>
+          </div>
+
+          <p style="color:#9A8F92;font-size:13px;margin:16px 0 0;text-align:center;line-height:1.5;">
+            Si el botón no abre, copiá y pegá este link en el navegador:<br>
+            <a href="${linkPanel}" style="color:#A85568;word-break:break-all;">${linkPanel}</a>
           </p>
         </div>
-        <p style="color:#9A8F92;font-size:12px;margin-top:16px;text-align:center;">© 2025 DEPIMÓVIL PRO</p>
+        <p style="color:#9A8F92;font-size:12px;margin-top:16px;text-align:center;">© 2026 DEPIMÓVIL PRO</p>
       </div>`;
 
       await t.sendMail({
         from:    `"DEPIMÓVIL PRO" <${process.env.MAIL_USER}>`,
         to:      email,
-        subject: '🌸 Tu link para reservar turno — DEPIMÓVIL PRO',
-        text:    `Hola ${nombre}! Reservá tu turno en: ${link}`,
+        subject: '🌸 Tus accesos a AgendaMóvil PRO',
+        text:    `Hola ${nombre}. Entrá a tu AgendaMóvil acá: ${linkPanel}\n\nTu link público de reservas: ${linkAgenda}`,
         html,
       });
 
-      return res.json({ ok: true, mensaje: 'Link enviado exitosamente' });
+      return res.json({ ok: true, mensaje: 'Accesos enviados exitosamente' });
     } catch(err) {
       console.error('[ADMIN/enviar-link]', err.message);
       return res.status(500).json({ ok: false, error: 'Error al enviar el mail' });
