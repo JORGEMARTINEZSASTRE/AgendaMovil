@@ -5,6 +5,63 @@
 //  Convierte colores saturados a pastel para combinar con la paleta
 // ═══════════════════════════════════════════════════════════
 
+const ZONAS_DEPILACION_SUGERIDAS = [
+  'Bozo',
+  'Mentón',
+  'Rostro completo',
+  'Cuello',
+  'Nuca',
+  'Axilas',
+  'Brazos completos',
+  'Medio brazo',
+  'Manos y dedos',
+  'Pecho',
+  'Abdomen',
+  'Línea alba',
+  'Espalda completa',
+  'Media espalda',
+  'Hombros',
+  'Glúteos',
+  'Cavado simple',
+  'Cavado completo',
+  'Cavado bikini',
+  'Tira de cola',
+  'Pierna entera',
+  'Media pierna',
+  'Muslos',
+  'Rodillas',
+  'Pies y dedos',
+  'Cuerpo completo',
+];
+
+function asegurarDatalistZonasDepilacion(inputZona, campoZona) {
+  if (!inputZona || !campoZona) return;
+
+  const datalistId = 'zonas-depilacion-sugeridas';
+  let datalist = document.getElementById(datalistId);
+
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = datalistId;
+    datalist.innerHTML = ZONAS_DEPILACION_SUGERIDAS
+      .map(zona => `<option value="${zona}"></option>`)
+      .join('');
+    campoZona.appendChild(datalist);
+  }
+
+  inputZona.setAttribute('list', datalistId);
+  inputZona.autocomplete = 'off';
+
+  let ayuda = campoZona.querySelector('[data-zonas-depi-help]');
+  if (!ayuda) {
+    ayuda = document.createElement('small');
+    ayuda.dataset.zonasDepiHelp = 'true';
+    ayuda.style.cssText = 'font-size:11px;color:var(--gris);margin-top:4px;display:block';
+    campoZona.appendChild(ayuda);
+  }
+  ayuda.textContent = 'Elegí una zona sugerida o escribí una nueva.';
+}
+
 /**
  * Ajustes tempranos de UI.
  * Este archivo se carga antes que app.js, por eso es buen lugar para
@@ -44,11 +101,12 @@ function normalizarFormularioServicios() {
   if (inputZona) {
     inputZona.required = false;
     inputZona.removeAttribute('required');
-    inputZona.placeholder = 'Opcional. Ej: Piernas completas, rostro, axilas...';
+    inputZona.placeholder = 'Elegí una zona. Ej: Axilas, cavado completo, pierna entera...';
+    asegurarDatalistZonasDepilacion(inputZona, campoZona);
   }
 
   if (labelZona) {
-    labelZona.textContent = '📍 Zona (opcional)';
+    labelZona.textContent = '📍 Zona de depilación (opcional)';
   }
 
   // Orden comercial correcto: Categoría → Nombre del servicio → Precio.
