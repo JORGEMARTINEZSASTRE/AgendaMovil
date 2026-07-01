@@ -2,19 +2,36 @@
 
 // Ajuste comercial: el primer link público que se comparte con operadoras
 // comunica 30 días de prueba, alineado con el alta real del sistema.
-document.addEventListener('DOMContentLoaded', () => {
-  const btnOriginal = document.getElementById('btn-compartir-registro');
-  if (!btnOriginal) return;
+(function configurarLinkRegistro30Dias() {
+  const MENSAJE_30_DIAS = 'Hola! Te invito a probar DEPIMÓVIL PRO, la agenda online para estéticas. ';
 
-  const btn = btnOriginal.cloneNode(true);
-  btnOriginal.replaceWith(btn);
-
-  btn.addEventListener('click', () => {
+  function abrirWhatsAppRegistro30Dias() {
     const linkRegistro = `${window.location.origin}/registro.html`;
     const texto = encodeURIComponent(
-      `Hola! Te invito a probar DEPIMÓVIL PRO, la agenda online para estéticas. ` +
-      `Creá tu cuenta con 30 días gratis: ${linkRegistro}`
+      MENSAJE_30_DIAS + `Creá tu cuenta con 30 días gratis: ${linkRegistro}`
     );
     window.open(`https://wa.me/?text=${texto}`, '_blank');
-  });
-});
+  }
+
+  function instalarHandler() {
+    const btn = document.getElementById('btn-compartir-registro');
+    if (!btn || btn.dataset.trial30Ready === 'true') return;
+
+    btn.dataset.trial30Ready = 'true';
+    btn.title = 'Compartir link de registro — 30 días gratis';
+
+    // Captura el click antes que listeners legacy de admin.js y evita
+    // que también se dispare el mensaje anterior de 14 días.
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      abrirWhatsAppRegistro30Dias();
+    }, true);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', instalarHandler, { once: true });
+  } else {
+    instalarHandler();
+  }
+})();
