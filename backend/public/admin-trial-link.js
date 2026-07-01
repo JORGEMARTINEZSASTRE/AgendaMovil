@@ -35,3 +35,14 @@
     instalarHandler();
   }
 })();
+
+// Carga de módulos pequeños del panel admin.
+(function cargarModuloAccionesSucursales() {
+  if (document.querySelector('script[data-module="admin-sucursales-actions"]')) return;
+
+  const script = document.createElement('script');
+  script.src = 'admin-sucursales-actions.js';
+  script.defer = true;
+  script.dataset.module = 'admin-sucursales-actions';
+  document.head.appendChild(script);
+})();
