@@ -5,6 +5,7 @@ const { autenticar } = require('../middleware/auth');
 const { planActivo } = require('../middleware/planGuard');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const { Clientes, ClientesManual } = require('../models/queries');
+const { normalizarTelefono } = require('../utils/telefono');
 
 router.use(autenticar);
 router.use(planActivo);
@@ -63,14 +64,7 @@ router.post('/manual', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Nombre y teléfono requeridos' });
     }
     // Normalizar a formato internacional
-    const limpio = String(telefono).replace(/\D/g, '');
-    if (limpio.startsWith('0')) {
-      telefono = '+598' + limpio.slice(1);
-    } else if (!limpio.startsWith('+')) {
-      telefono = '+598' + limpio;
-    } else {
-      telefono = '+' + limpio.replace('+', '');
-    }
+    telefono = normalizarTelefono(telefono);
     const cliente = await ClientesManual.crear(req.user.id, { nombre, telefono });
     return res.json({ ok: true, cliente });
   } catch (err) {

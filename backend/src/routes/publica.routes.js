@@ -10,6 +10,7 @@ const { body, validationResult } = require('express-validator');
 const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
+const { normalizarTelefono } = require('../utils/telefono');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
 const pool = new Pool({
@@ -417,14 +418,7 @@ router.post('/:userId/turno', [
             servicio_colores, notas, email_clienta, sucursal_id } = req.body;
 
     // Normalizar teléfono a formato internacional
-    const telLimpio = String(telefono || '').replace(/\D/g, '');
-    if (telLimpio.startsWith('0')) {
-      telefono = '+598' + telLimpio.slice(1);
-    } else if (!telLimpio.startsWith('+')) {
-      telefono = '+598' + telLimpio;
-    } else {
-      telefono = '+' + telLimpio.replace('+', '');
-    }
+    telefono = normalizarTelefono(telefono);
 
     // Verificar usuario
     const { rows: usuRows } = await pool.query(
