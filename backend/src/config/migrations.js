@@ -130,6 +130,62 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Tabla servicio_fotos OK');
 
+    // ── 9. Reparar teléfonos con el código de país duplicado ───────────
+    // Un bug de normalización anteponía '598' a números que YA lo tenían,
+    // dejándolos como +59859899921164. WhatsApp los rechaza por inválidos.
+    //
+    // Esto NO borra ninguna fila ni ningún dato: solo le saca al teléfono
+    // los 3 dígitos sobrantes. El WHERE solo alcanza a los que empiezan
+    // con 598598, así que un número correcto nunca se toca. Y es
+    // idempotente: después de la primera corrida ya no queda ninguno.
+    const roto      = `regexp_replace(telefono, '\\D', '', 'g') LIKE '598598%'`;
+    const reparado  = `'+' || substring(regexp_replace(telefono, '\\D', '', 'g') from 4)`;
+
+    // turnos: sin restricción de unicidad, se reparan todos.
+    try {
+      const { rows } = await query(
+        `SELECT COUNT(*)::int AS total FROM public.turnos WHERE ${roto}`
+      );
+      if (rows[0].total > 0) {
+        const r = await query(
+          `UPDATE public.turnos SET telefono = ${reparado} WHERE ${roto}`
+        );
+        console.log(`[MIGRATIONS] ✓ turnos: ${r.rowCount} teléfono(s) reparado(s)`);
+      } else {
+        console.log('[MIGRATIONS] ✓ turnos: sin teléfonos que reparar');
+      }
+    } catch (e) {
+      console.error('[MIGRATIONS] turnos: no se pudieron reparar:', e.message);
+    }
+
+    // clientes: tiene UNIQUE (user_id, telefono). Si ya existe una fila
+    // con el número correcto, reparar la rota chocaría contra el índice.
+    // Esas se saltean y quedan como están: preferible dejarlas a borrarlas.
+    try {
+      const { rows } = await query(
+        `SELECT COUNT(*)::int AS total FROM public.clientes WHERE ${roto}`
+      );
+      if (rows[0].total > 0) {
+        const r = await query(
+          `UPDATE public.clientes c
+              SET telefono = ${reparado}
+            WHERE ${roto}
+              AND NOT EXISTS (
+                SELECT 1 FROM public.clientes c2
+                 WHERE c2.user_id = c.user_id
+                   AND c2.telefono = '+' || substring(regexp_replace(c.telefono, '\\D', '', 'g') from 4)
+              )`
+        );
+        const salteadas = rows[0].total - r.rowCount;
+        console.log(`[MIGRATIONS] ✓ clientes: ${r.rowCount} reparado(s)` +
+          (salteadas > 0 ? `, ${salteadas} salteado(s) por duplicado` : ''));
+      } else {
+        console.log('[MIGRATIONS] ✓ clientes: sin teléfonos que reparar');
+      }
+    } catch (e) {
+      console.error('[MIGRATIONS] clientes: no se pudieron reparar:', e.message);
+    }
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);
