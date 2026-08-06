@@ -11,6 +11,7 @@ const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
 const { normalizarTelefono } = require('../utils/telefono');
+const { ServicioFotos } = require('../models/queries');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
 const pool = new Pool({
@@ -390,7 +391,20 @@ router.get('/:userId/servicios', async (req, res) => {
     queryStr += ` ORDER BY categoria, nombre`;
 
     const { rows } = await pool.query(queryStr, params);
-    return res.json({ ok: true, servicios: rows });
+
+    // Adjuntar la galería de cada servicio (la vitrina las muestra todas;
+    // foto_url sigue siendo la portada para quien solo necesite una).
+    // Si la galería falla, se devuelven igual los servicios: que no se pueda
+    // reservar por un problema de fotos sería mucho peor que no verlas.
+    let fotosPorServicio = {};
+    try {
+      fotosPorServicio = await ServicioFotos.listarDeServicios(rows.map(s => s.id));
+    } catch (errFotos) {
+      console.error('[PUBLICA/servicios] galería no disponible:', errFotos.message);
+    }
+    const servicios = rows.map(s => ({ ...s, fotos: fotosPorServicio[s.id] || [] }));
+
+    return res.json({ ok: true, servicios });
   } catch(err) {
     console.error('[PUBLICA/servicios]', err.message);
     return res.status(500).json({ ok: false, error: 'Error interno' });

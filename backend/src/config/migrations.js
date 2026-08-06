@@ -99,6 +99,37 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Columnas extra en servicios OK');
 
+    // ── 8. Galería de fotos por servicio (vitrina) ─────────────────────
+    // servicios.foto_url se mantiene como foto de portada para no romper
+    // lo que ya la usa; esta tabla guarda todas las fotos, la de portada
+    // incluida, con su orden.
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.servicio_fotos (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        servicio_id UUID NOT NULL REFERENCES public.servicios(id) ON DELETE CASCADE,
+        url         TEXT NOT NULL,
+        orden       SMALLINT NOT NULL DEFAULT 0,
+        creado_en   TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_servicio_fotos_servicio
+        ON public.servicio_fotos (servicio_id, orden)
+    `);
+
+    // Backfill: pasar las foto_url que ya existen a la galería.
+    // El NOT EXISTS lo hace idempotente: no duplica si ya se corrió.
+    await query(`
+      INSERT INTO public.servicio_fotos (servicio_id, url, orden)
+      SELECT s.id, s.foto_url, 0
+        FROM public.servicios s
+       WHERE s.foto_url IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM public.servicio_fotos f WHERE f.servicio_id = s.id
+         )
+    `);
+    console.log('[MIGRATIONS] ✓ Tabla servicio_fotos OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

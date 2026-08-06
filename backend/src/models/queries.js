@@ -541,6 +541,95 @@ const Servicios = {
   },
 };
 
+// ═══════════════════════════════════════════════════════════
+//  FOTOS DE SERVICIOS (vitrina)
+//  servicios.foto_url sigue siendo la portada; acá viven todas.
+// ═══════════════════════════════════════════════════════════
+const MAX_FOTOS_POR_SERVICIO = 8;
+
+const ServicioFotos = {
+  MAX: MAX_FOTOS_POR_SERVICIO,
+
+  async listar(servicioId) {
+    const { rows } = await query(
+      `SELECT id, url, orden
+         FROM servicio_fotos
+        WHERE servicio_id = $1
+        ORDER BY orden ASC, creado_en ASC`,
+      [servicioId]
+    );
+    return rows;
+  },
+
+  /** Trae las fotos de varios servicios de una, agrupadas por servicio_id. */
+  async listarDeServicios(servicioIds) {
+    if (!servicioIds || !servicioIds.length) return {};
+    const { rows } = await query(
+      `SELECT servicio_id, id, url, orden
+         FROM servicio_fotos
+        WHERE servicio_id = ANY($1::uuid[])
+        ORDER BY orden ASC, creado_en ASC`,
+      [servicioIds]
+    );
+    const porServicio = {};
+    for (const r of rows) {
+      (porServicio[r.servicio_id] ||= []).push({ id: r.id, url: r.url, orden: r.orden });
+    }
+    return porServicio;
+  },
+
+  async contar(servicioId) {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS total FROM servicio_fotos WHERE servicio_id = $1`,
+      [servicioId]
+    );
+    return rows[0].total;
+  },
+
+  async agregar(servicioId, url) {
+    const { rows } = await query(
+      `INSERT INTO servicio_fotos (servicio_id, url, orden)
+       VALUES ($1, $2, COALESCE(
+         (SELECT MAX(orden) + 1 FROM servicio_fotos WHERE servicio_id = $1), 0
+       ))
+       RETURNING id, url, orden`,
+      [servicioId, url]
+    );
+    return rows[0];
+  },
+
+  /** Borra una foto y devuelve su url, para poder limpiarla en Cloudinary. */
+  async eliminar(fotoId, servicioId) {
+    const { rows } = await query(
+      `DELETE FROM servicio_fotos
+        WHERE id = $1 AND servicio_id = $2
+        RETURNING url`,
+      [fotoId, servicioId]
+    );
+    return rows[0]?.url || null;
+  },
+
+  /**
+   * Deja servicios.foto_url apuntando a la primera foto de la galería.
+   * Así todo lo que ya lee foto_url (agenda pública, panel) sigue andando.
+   */
+  async sincronizarPortada(servicioId) {
+    const { rows } = await query(
+      `UPDATE servicios
+          SET foto_url = (
+            SELECT url FROM servicio_fotos
+             WHERE servicio_id = $1
+             ORDER BY orden ASC, creado_en ASC
+             LIMIT 1
+          )
+        WHERE id = $1
+        RETURNING foto_url`,
+      [servicioId]
+    );
+    return rows[0]?.foto_url || null;
+  },
+};
+
 // ─── CONFIGURACIÓN ───────────────────────────────────────────
 const Configuracion = {
 
@@ -1025,6 +1114,7 @@ module.exports = {
   Usuarios,
   Turnos,
   Servicios,
+  ServicioFotos,
   Configuracion,
   Invitaciones,
   LoginIntentos,

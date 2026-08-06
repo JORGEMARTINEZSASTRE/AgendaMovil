@@ -283,6 +283,33 @@ const ServiciosAPI = {
       method: 'DELETE',
     });
   },
+
+  // ── Galería de fotos (vitrina) ──────────────────────────
+  async getFotos(id) {
+    const data = await fetchAPI(`/servicios/${id}/fotos`);
+    return data?.fotos ?? [];
+  },
+
+  async subirFotos(id, files) {
+    const formData = new FormData();
+    for (const f of files) formData.append('fotos', f);
+
+    const resp = await fetch(`${API_URL}/servicios/${id}/fotos`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${getToken()}` },
+      body:    formData,
+    });
+
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || `Error ${resp.status}`);
+    return data;
+  },
+
+  async eliminarFotoGaleria(servicioId, fotoId) {
+    return await fetchAPI(`/servicios/${servicioId}/fotos/${fotoId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ═══════════════════════════════════════════════════════════

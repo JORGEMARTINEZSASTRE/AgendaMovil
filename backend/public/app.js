@@ -1337,7 +1337,9 @@ function bindAccordionServicios() {
 // ═══════════════════════════════════════════════════════════
 //  FORMULARIO SERVICIO
 // ═══════════════════════════════════════════════════════════
-let fotoQuitadaExplicitamente = false;
+const MAX_FOTOS_SERVICIO = 8;
+let fotosServicio   = [];  // fotos ya guardadas del servicio en edición
+let fotosPendientes = [];  // archivos elegidos, se suben al guardar
 
 function bindFormServicio() {
   const form = document.getElementById('form-servicio');
@@ -1354,49 +1356,116 @@ function bindFormServicio() {
     });
   }
 
-  // Preview foto
-  const fotoInput = document.getElementById('serv-foto-input');
-  const fotoPreview = document.getElementById('serv-foto-preview');
-  const fotoImg = document.getElementById('serv-foto-img');
-  if (fotoInput && fotoPreview && fotoImg) {
-    fotoInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      if (!file.type.startsWith('image/')) {
-        mostrarToast('Solo se permiten imágenes', 'error');
-        fotoInput.value = '';
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        mostrarToast('La imagen no debe superar 5MB', 'error');
-        fotoInput.value = '';
-        return;
-      }
-      fotoQuitadaExplicitamente = false;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        fotoImg.src = ev.target.result;
-        fotoPreview.classList.remove('oculto');
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // Quitar foto
-  const btnQuitarFoto = document.getElementById('btn-quitar-foto');
-  if (btnQuitarFoto) {
-    btnQuitarFoto.addEventListener('click', () => {
-      fotoPreview.classList.add('oculto');
-      fotoImg.src = '';
-      fotoInput.value = '';
-      fotoQuitadaExplicitamente = true;
+  // Galería de fotos
+  const fotosInput = document.getElementById('serv-fotos-input');
+  if (fotosInput) {
+    fotosInput.addEventListener('change', (e) => {
+      agregarFotosPendientes(Array.from(e.target.files || []));
+      fotosInput.value = ''; // permitir volver a elegir el mismo archivo
     });
   }
 }
 
+// ── Galería de fotos del servicio ──────────────────────────
+// fotosServicio  = las que ya están guardadas (tienen id y url)
+// fotosPendientes = archivos elegidos que se suben al guardar
+
+function agregarFotosPendientes(archivos) {
+  const errorEl = document.getElementById('serv-fotos-error');
+  const lugar = MAX_FOTOS_SERVICIO - (fotosServicio.length + fotosPendientes.length);
+
+  if (lugar <= 0) {
+    mostrarErrorForm('serv-fotos-error', `Máximo ${MAX_FOTOS_SERVICIO} fotos. Borrá alguna para agregar otra.`);
+    return;
+  }
+
+  const rechazadas = [];
+  for (const file of archivos) {
+    if (fotosPendientes.length + fotosServicio.length >= MAX_FOTOS_SERVICIO) {
+      rechazadas.push(`${file.name}: no entra, ya son ${MAX_FOTOS_SERVICIO}`);
+      continue;
+    }
+    if (!file.type.startsWith('image/')) {
+      rechazadas.push(`${file.name}: no es una imagen`);
+      continue;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      rechazadas.push(`${file.name}: pesa más de 5 MB`);
+      continue;
+    }
+    fotosPendientes.push(file);
+  }
+
+  if (rechazadas.length) mostrarErrorForm('serv-fotos-error', rechazadas.join('. '));
+  else if (errorEl) errorEl.classList.add('oculto');
+
+  renderFotosServicio();
+}
+
+function renderFotosServicio() {
+  const grid = document.getElementById('serv-fotos-grid');
+  if (!grid) return;
+
+  const guardadas = fotosServicio.map((f, i) => `
+    <div class="serv-foto-item">
+      <img src="${f.url}" alt="Foto ${i + 1}" loading="lazy">
+      ${i === 0 ? '<span class="serv-foto-portada">Portada</span>' : ''}
+      <button type="button" class="btn-quitar-foto" data-foto-id="${f.id}" title="Borrar foto">✕</button>
+    </div>
+  `);
+
+  const pendientes = fotosPendientes.map((file, i) => `
+    <div class="serv-foto-item serv-foto-pendiente">
+      <img src="${URL.createObjectURL(file)}" alt="${escaparHTML(file.name)}">
+      <span class="serv-foto-nueva">Nueva</span>
+      <button type="button" class="btn-quitar-foto" data-pendiente="${i}" title="Quitar">✕</button>
+    </div>
+  `);
+
+  grid.innerHTML = [...guardadas, ...pendientes].join('') ||
+    '<p class="serv-fotos-vacio">Todavía no cargaste fotos.</p>';
+
+  grid.querySelectorAll('[data-foto-id]').forEach(btn => {
+    btn.addEventListener('click', () => borrarFotoGuardada(btn.dataset.fotoId));
+  });
+  grid.querySelectorAll('[data-pendiente]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      fotosPendientes.splice(Number(btn.dataset.pendiente), 1);
+      renderFotosServicio();
+    });
+  });
+}
+
+async function borrarFotoGuardada(fotoId) {
+  if (!editandoServId) return;
+  try {
+    await ServiciosAPI.eliminarFotoGaleria(editandoServId, fotoId);
+    fotosServicio = fotosServicio.filter(f => String(f.id) !== String(fotoId));
+    sincronizarPortadaLocal();
+    renderFotosServicio();
+  } catch (err) {
+    mostrarErrorForm('serv-fotos-error', detalleError(err, 'No se pudo borrar la foto'));
+  }
+}
+
+/** Deja el servicio local con la misma portada que quedó en el servidor. */
+function sincronizarPortadaLocal() {
+  const idx = servicios.findIndex(s => String(s.id) === String(editandoServId));
+  if (idx !== -1) servicios[idx].foto_url = fotosServicio[0]?.url || null;
+}
+
+/** Sube las fotos pendientes de un servicio ya creado. */
+async function subirFotosPendientes(servId) {
+  if (!fotosPendientes.length) return;
+  const data = await ServiciosAPI.subirFotos(servId, fotosPendientes);
+  fotosPendientes = [];
+  const idx = servicios.findIndex(s => String(s.id) === String(servId));
+  if (idx !== -1) servicios[idx].foto_url = data?.portada || servicios[idx].foto_url;
+  if (data?.mensaje) mostrarToast(data.mensaje, 'error');
+}
+
  function abrirFormServicio(serv = null) {
   editandoServId = serv?.id || null;
-  fotoQuitadaExplicitamente = false;
   limpiarFormServicio();
 
   const modal      = document.getElementById('modal-servicio');
@@ -1423,13 +1492,8 @@ function bindFormServicio() {
 
     setVal('serv-monto-senia', serv.monto_senia || '');
 
-    // Mostrar foto existente
-    const preview = document.getElementById('serv-foto-preview');
-    const img     = document.getElementById('serv-foto-img');
-    if (serv.foto_url && preview && img) {
-      img.src = serv.foto_url;
-      preview.classList.remove('oculto');
-    }
+    // Traer la galería del servicio
+    cargarFotosServicio(serv.id);
   } else {
     setVal('serv-color', '#A85568');
     setVal('serv-categoria', '');
@@ -1465,12 +1529,25 @@ function limpiarFormServicio() {
   if (form) form.reset();
   const errEl = document.getElementById('form-servicio-error');
   if (errEl) errEl.classList.add('oculto');
-  // Limpiar preview de foto
-  const preview = document.getElementById('serv-foto-preview');
-  const input   = document.getElementById('serv-foto-input');
-  if (preview) preview.classList.add('oculto');
-  if (input)   input.value = '';
-  fotoQuitadaExplicitamente = false;
+
+  // Limpiar la galería
+  const errFotos = document.getElementById('serv-fotos-error');
+  if (errFotos) errFotos.classList.add('oculto');
+  const inputFotos = document.getElementById('serv-fotos-input');
+  if (inputFotos) inputFotos.value = '';
+  fotosServicio   = [];
+  fotosPendientes = [];
+  renderFotosServicio();
+}
+
+/** Trae del servidor las fotos ya guardadas del servicio. */
+async function cargarFotosServicio(servId) {
+  try {
+    fotosServicio = await ServiciosAPI.getFotos(servId);
+  } catch {
+    fotosServicio = [];
+  }
+  renderFotosServicio();
 }
 
 async function handleSubmitServicio(e) {
@@ -1548,33 +1625,15 @@ const payload = {
       mostrarToast('Servicio creado ✅', 'exito');
     }
 
-    // Subir foto si hay archivo seleccionado
+    // Subir las fotos que se eligieron antes de guardar.
+    // Las que se borraron ya se borraron al tocar la ✕, no hace falta nada acá.
     const servId = editandoServId || data.servicio?.id;
-    const fotoInput = document.getElementById('serv-foto-input');
-    if (servId && fotoInput?.files[0]) {
+    if (servId) {
       try {
-        const fotoData = await ServiciosAPI.subirFoto(servId, fotoInput.files[0]);
-        // Actualizar foto_url en el servicio local
-        const servIdx = servicios.findIndex(s => String(s.id) === String(servId));
-        if (servIdx !== -1) {
-          servicios[servIdx].foto_url = fotoData.url;
-        }
+        await subirFotosPendientes(servId);
       } catch (e) {
-        console.error('[FOTO] Error al subir foto:', e.message);
-        mostrarToast('Servicio guardado pero hubo un error al subir la foto', 'error');
-      }
-    }
-
-    // Eliminar foto solo si el usuario la quitó explícitamente
-    if (servId && fotoQuitadaExplicitamente) {
-      const servActual = servicios.find(s => String(s.id) === String(servId));
-      if (servActual?.foto_url) {
-        try {
-          await ServiciosAPI.eliminarFoto(servId);
-          servActual.foto_url = null;
-        } catch (e) {
-          console.error('[FOTO] Error al eliminar foto:', e.message);
-        }
+        console.error('[FOTOS] Error al subir:', e.message);
+        mostrarToast('El servicio se guardó, pero falló la subida de las fotos', 'error');
       }
     }
 

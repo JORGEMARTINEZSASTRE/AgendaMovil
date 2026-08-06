@@ -1021,21 +1021,21 @@
         ></textarea>
       </div>
 
-      <!-- Foto del servicio -->
+      <!-- Fotos del servicio (vitrina) -->
       <div class="campo">
-        <label>📷 Foto del servicio</label>
+        <label>📷 Fotos del servicio</label>
         <div class="serv-foto-wrap">
-          <div id="serv-foto-preview" class="serv-foto-preview oculto">
-            <img id="serv-foto-img" src="" alt="Foto del servicio">
-            <button type="button" id="btn-quitar-foto" class="btn-quitar-foto" title="Quitar foto">✕</button>
-          </div>
-          <label for="serv-foto-input" class="btn-subir-foto">
-            📷 Subir foto
+          <div id="serv-fotos-grid" class="serv-fotos-grid"></div>
+
+          <label for="serv-fotos-input" class="btn-subir-foto">
+            📷 Agregar fotos
           </label>
-          <input type="file" id="serv-foto-input" accept="image/*" class="oculto">
+          <input type="file" id="serv-fotos-input" accept="image/*" multiple class="oculto">
+
           <small style="font-size:11px;color:var(--gris);margin-top:4px;display:block">
-            JPG, PNG o WebP — Máx 5MB
+            Hasta 8 fotos, máx 5 MB cada una. La primera es la portada, la que se ve en la agenda.
           </small>
+          <div id="serv-fotos-error" class="form-error oculto"></div>
         </div>
       </div>
 
