@@ -376,9 +376,13 @@ router.get('/:userId/servicios', async (req, res) => {
        FROM servicios WHERE user_id = $1 AND activo = true`;
     const params = [req.params.userId];
 
-    // Filtrar: si sucursal_id indicado, devolver servicios sin restricción O que incluyan esa sucursal
+    // Filtrar: si sucursal_id indicado, devolver servicios sin restricción O que incluyan esa sucursal.
+    // Se compara como texto porque sucursal_ids se agregó a mano y puede ser uuid[] o text[];
+    // comparar un uuid contra un text[] hace fallar la consulta entera.
     if (sucursal_id) {
-      queryStr += ` AND (sucursal_ids = '{}' OR $2::uuid = ANY(sucursal_ids))`;
+      queryStr += ` AND (sucursal_ids IS NULL
+                         OR cardinality(sucursal_ids) = 0
+                         OR $2 = ANY(sucursal_ids::text[]))`;
       params.push(sucursal_id);
     }
 

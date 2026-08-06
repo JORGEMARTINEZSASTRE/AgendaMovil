@@ -1489,6 +1489,11 @@ async function handleSubmitServicio(e) {
     return;
   }
 
+  if (nombre.length < 2) {
+    mostrarErrorForm('form-servicio-error', 'El nombre debe tener al menos 2 caracteres');
+    return;
+  }
+
   if (duracion < 5 || duracion > 480) {
     mostrarErrorForm('form-servicio-error', 'La duración debe ser entre 5 y 480 minutos');
     return;
@@ -1577,7 +1582,7 @@ const payload = {
     renderServicios();
 
   } catch (err) {
-    mostrarErrorForm('form-servicio-error', err.message || 'Error al guardar el servicio');
+    mostrarErrorForm('form-servicio-error', detalleError(err, 'Error al guardar el servicio'));
   } finally {
     setBtnLoading('btn-guardar-servicio', false);
   }
@@ -2001,6 +2006,19 @@ function mostrarErrorForm(id, mensaje) {
   el.textContent = mensaje;
   el.classList.remove('oculto');
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/**
+ * Arma un mensaje legible a partir de un error de la API.
+ * Las validaciones responden 422 con { error, errores: [{campo, mensaje}] };
+ * sin esto el usuario solo vería "Datos inválidos" y no sabría qué corregir.
+ */
+function detalleError(err, respaldo) {
+  const errores = err?.data?.errores;
+  if (Array.isArray(errores) && errores.length) {
+    return errores.map(e => e.mensaje).join('. ');
+  }
+  return err?.message || respaldo;
 }
 
 /**

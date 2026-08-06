@@ -86,6 +86,19 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Tabla clientes OK');
 
+    // ── 7. Columnas de servicios agregadas a mano fuera del schema ─────
+    // El código las usa (crear/listar servicios, agenda pública, vitrina)
+    // pero no estaban en schema.sql ni acá: si a una base le faltan,
+    // el alta de servicios y la reserva pública fallan con 500.
+    await query(`
+      ALTER TABLE public.servicios
+        ADD COLUMN IF NOT EXISTS categoria    VARCHAR(100) DEFAULT 'General',
+        ADD COLUMN IF NOT EXISTS precio       NUMERIC(10,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS foto_url     TEXT,
+        ADD COLUMN IF NOT EXISTS sucursal_ids UUID[] DEFAULT '{}'
+    `);
+    console.log('[MIGRATIONS] ✓ Columnas extra en servicios OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

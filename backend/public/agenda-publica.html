@@ -316,9 +316,14 @@ async function cargarServicios() {
     const qs  = sid ? `?sucursal_id=${encodeURIComponent(sid)}` : '';
     const resp = await fetch(`${API_URL}/publica/${userId}/servicios${qs}`);
     const data = await resp.json();
-    if (!data.ok) return;
+    if (!data.ok) {
+      console.error('[cargarServicios]', resp.status, data?.error);
+      return;
+    }
     servicios = data.servicios;
-  } catch {}
+  } catch (err) {
+    console.error('[cargarServicios]', err.message);
+  }
 }
 
 // ─── NAVEGACIÓN DE PASOS ─────────────────────
