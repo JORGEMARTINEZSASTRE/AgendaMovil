@@ -429,6 +429,7 @@
           autocomplete="off"
         >
         <button type="button" id="btn-agregar-cliente" class="btn-agregar-cliente-inline">➕ Agregar cliente</button>
+        <button type="button" id="btn-limpiar-inactivos" class="btn-agregar-cliente-inline">🧹 Limpiar inactivas</button>
       </div>
 
       <div id="lista-clientes" class="lista-clientes">
@@ -743,6 +744,48 @@
       <div class="form-error" style="margin-top:10px">
         <p id="wa-error-msg">Error</p>
       </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL: LIMPIAR CLIENTAS INACTIVAS
+════════════════════════════════════════════════ -->
+<div id="modal-limpiar-inactivos" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">🧹 Limpiar clientas inactivas</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="campo">
+      <label for="inactivos-meses">Mostrar las que no vienen hace más de:</label>
+      <select id="inactivos-meses">
+        <option value="3">3 meses</option>
+        <option value="6" selected>6 meses</option>
+        <option value="12">1 año</option>
+        <option value="24">2 años</option>
+      </select>
+    </div>
+
+    <div id="inactivos-resultado" class="inactivos-resultado">
+      <p class="serv-fotos-vacio">Elegí un período y tocá Buscar.</p>
+    </div>
+
+    <div id="inactivos-resumen" class="inactivos-resumen oculto"></div>
+
+    <div id="inactivos-error" class="form-error oculto"></div>
+
+    <label id="inactivos-confirmo-wrap" class="sucursal-check-item oculto">
+      <input type="checkbox" id="inactivos-confirmo">
+      Entiendo que esto borra sus turnos y no se puede deshacer
+    </label>
+
+    <div class="modal-acciones">
+      <button type="button" id="btn-buscar-inactivos" class="btn-primario">Buscar</button>
+      <button type="button" id="btn-borrar-inactivos" class="btn-peligro oculto" disabled>Borrar seleccionadas</button>
     </div>
 
   </div>

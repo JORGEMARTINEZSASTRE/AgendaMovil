@@ -2189,6 +2189,67 @@ body {
   margin: 0;
 }
 
+/* Limpiar clientas inactivas */
+.modal-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.modal-acciones > button { flex: 1; }
+.btn-peligro {
+  padding: 11px 18px;
+  border-radius: 100px;
+  border: none;
+  background: var(--rojo);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.btn-peligro:hover:not(:disabled) { opacity: .88; }
+.btn-peligro:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.inactivos-resultado {
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  background: var(--crema);
+}
+.inactivo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde);
+  cursor: pointer;
+  font-size: 13px;
+}
+.inactivo-item:last-child { border-bottom: none; }
+.inactivo-item:hover { background: rgba(168,85,104,.05); }
+.inactivo-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.inactivo-datos small {
+  font-size: 11px;
+  color: var(--gris);
+}
+.inactivos-resumen {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: rgba(224,85,85,.08);
+  border: 1.5px solid rgba(224,85,85,.25);
+  font-size: 13px;
+  color: var(--texto);
+}
+
 /* Foto en card de servicio */
 .serv-foto-card {
   width: 64px;

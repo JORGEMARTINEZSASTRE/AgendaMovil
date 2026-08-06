@@ -2774,7 +2774,137 @@ async function renderClientes() {
     };
   }
 
+  bindLimpiarInactivos();
+
   await cargarYRenderizarClientes();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LIMPIAR CLIENTAS INACTIVAS
+//  Borra la clienta Y TODOS sus turnos: los ingresos de esos
+//  meses bajan y no hay vuelta atrás. Por eso siempre se
+//  muestra primero qué se va a perder.
+// ═══════════════════════════════════════════════════════════
+let inactivosEncontrados = [];
+
+function bindLimpiarInactivos() {
+  const btnAbrir   = document.getElementById('btn-limpiar-inactivos');
+  const modal      = document.getElementById('modal-limpiar-inactivos');
+  const btnBuscar  = document.getElementById('btn-buscar-inactivos');
+  const btnBorrar  = document.getElementById('btn-borrar-inactivos');
+  const confirmo   = document.getElementById('inactivos-confirmo');
+  if (!btnAbrir || !modal) return;
+
+  btnAbrir.onclick = () => {
+    inactivosEncontrados = [];
+    document.getElementById('inactivos-resultado').innerHTML =
+      '<p class="serv-fotos-vacio">Elegí un período y tocá Buscar.</p>';
+    document.getElementById('inactivos-resumen').classList.add('oculto');
+    document.getElementById('inactivos-error').classList.add('oculto');
+    document.getElementById('inactivos-confirmo-wrap').classList.add('oculto');
+    btnBorrar.classList.add('oculto');
+    if (confirmo) confirmo.checked = false;
+    modal.classList.remove('oculto');
+  };
+
+  if (btnBuscar) btnBuscar.onclick = buscarInactivos;
+  if (confirmo)  confirmo.onchange = actualizarResumenInactivos;
+  if (btnBorrar) btnBorrar.onclick = borrarInactivosSeleccionados;
+}
+
+async function buscarInactivos() {
+  const meses = document.getElementById('inactivos-meses').value;
+  const cont  = document.getElementById('inactivos-resultado');
+  cont.innerHTML = '<div class="pub-cargando">Buscando...</div>';
+  document.getElementById('inactivos-error').classList.add('oculto');
+
+  try {
+    const data = await ClientesAPI.inactivos(meses);
+    inactivosEncontrados = data?.clientes || [];
+
+    if (!inactivosEncontrados.length) {
+      cont.innerHTML = '<p class="serv-fotos-vacio">No hay clientas inactivas en ese período. 🎉</p>';
+      document.getElementById('inactivos-resumen').classList.add('oculto');
+      document.getElementById('inactivos-confirmo-wrap').classList.add('oculto');
+      document.getElementById('btn-borrar-inactivos').classList.add('oculto');
+      return;
+    }
+
+    cont.innerHTML = inactivosEncontrados.map((c, i) => {
+      const ultimo = c.ultimo_turno
+        ? formatearFecha(c.ultimo_turno.toString().split('T')[0])
+        : 'nunca vino';
+      const gasto = (parseFloat(c.total_gastado) || 0).toLocaleString('es-UY');
+      return `
+        <label class="inactivo-item">
+          <input type="checkbox" data-inactivo="${i}" ${c.favorito ? '' : 'checked'}>
+          <span class="inactivo-datos">
+            <strong>${escaparHTML(c.nombre || 'Sin nombre')}</strong>${c.favorito ? ' ⭐' : ''}
+            <small>${escaparHTML(formatearTelefonoDisplay(c.telefono))} · último: ${ultimo}</small>
+            <small>${c.total_turnos} turno(s) · $${gasto}</small>
+          </span>
+        </label>`;
+    }).join('');
+
+    cont.querySelectorAll('[data-inactivo]').forEach(chk => {
+      chk.addEventListener('change', actualizarResumenInactivos);
+    });
+
+    document.getElementById('inactivos-confirmo-wrap').classList.remove('oculto');
+    document.getElementById('btn-borrar-inactivos').classList.remove('oculto');
+    actualizarResumenInactivos();
+
+  } catch (err) {
+    cont.innerHTML = '';
+    mostrarErrorForm('inactivos-error', detalleError(err, 'No se pudo buscar'));
+  }
+}
+
+/** Devuelve las clientas tildadas en la lista. */
+function inactivosSeleccionados() {
+  return Array.from(document.querySelectorAll('[data-inactivo]:checked'))
+    .map(chk => inactivosEncontrados[Number(chk.dataset.inactivo)])
+    .filter(Boolean);
+}
+
+function actualizarResumenInactivos() {
+  const sel      = inactivosSeleccionados();
+  const resumen  = document.getElementById('inactivos-resumen');
+  const btn      = document.getElementById('btn-borrar-inactivos');
+  const confirmo = document.getElementById('inactivos-confirmo');
+
+  const turnos = sel.reduce((n, c) => n + Number(c.total_turnos || 0), 0);
+  const plata  = sel.reduce((n, c) => n + (parseFloat(c.total_gastado) || 0), 0);
+
+  resumen.innerHTML = sel.length
+    ? `Vas a borrar <strong>${sel.length}</strong> clienta(s), <strong>${turnos}</strong> turno(s)
+       y <strong>$${plata.toLocaleString('es-UY')}</strong> de historial de ingresos.`
+    : 'No seleccionaste ninguna.';
+  resumen.classList.remove('oculto');
+
+  if (btn) btn.disabled = !sel.length || !confirmo?.checked;
+}
+
+async function borrarInactivosSeleccionados() {
+  const sel = inactivosSeleccionados();
+  if (!sel.length) return;
+
+  const turnos = sel.reduce((n, c) => n + Number(c.total_turnos || 0), 0);
+  if (!confirm(`Se van a borrar ${sel.length} clienta(s) y ${turnos} turno(s).\n\nEsto no se puede deshacer. ¿Seguimos?`)) return;
+
+  const btn = document.getElementById('btn-borrar-inactivos');
+  if (btn) { btn.disabled = true; btn.textContent = 'Borrando...'; }
+
+  try {
+    const data = await ClientesAPI.eliminar(sel.map(c => c.telefono));
+    cerrarModales();
+    mostrarToast(data?.mensaje || 'Clientas borradas', 'exito');
+    await cargarYRenderizarClientes();
+  } catch (err) {
+    mostrarErrorForm('inactivos-error', detalleError(err, 'No se pudieron borrar'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Borrar seleccionadas'; }
+  }
 }
 
 async function cargarYRenderizarClientes() {

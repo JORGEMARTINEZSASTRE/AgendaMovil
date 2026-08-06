@@ -44,6 +44,59 @@ router.get('/:telefono/historial', async (req, res) => {
   }
 });
 
+// ─── LIMPIEZA DE CLIENTES INACTIVOS ─────────────────────────────────
+
+// GET /api/clientes/inactivos?meses=6 — vista previa, no borra nada
+router.get('/inactivos', async (req, res) => {
+  try {
+    const meses = Math.min(Math.max(parseInt(req.query.meses) || 6, 1), 120);
+    const clientes = await Clientes.inactivos(req.user.id, meses);
+
+    const totales = clientes.reduce((acc, c) => ({
+      clientes: acc.clientes + 1,
+      turnos:   acc.turnos + Number(c.total_turnos || 0),
+      gastado:  acc.gastado + Number(c.total_gastado || 0),
+    }), { clientes: 0, turnos: 0, gastado: 0 });
+
+    return res.json({ ok: true, meses, clientes, totales });
+  } catch (err) {
+    console.error('[CLIENTES/inactivos]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al buscar clientes inactivos' });
+  }
+});
+
+// POST /api/clientes/eliminar — borra clientas y TODOS sus turnos.
+// Destructivo y sin vuelta atrás: por eso exige la lista explícita de
+// teléfonos que la operadora confirmó, no un criterio del tipo "todo lo viejo".
+router.post('/eliminar', async (req, res) => {
+  try {
+    const { telefonos } = req.body;
+
+    if (!Array.isArray(telefonos) || !telefonos.length) {
+      return res.status(400).json({ ok: false, error: 'Hay que indicar qué clientas borrar' });
+    }
+    if (telefonos.length > 500) {
+      return res.status(400).json({ ok: false, error: 'Demasiadas de una vez. Hacelo en tandas de hasta 500.' });
+    }
+    if (!telefonos.every(t => typeof t === 'string' && t.trim())) {
+      return res.status(400).json({ ok: false, error: 'Lista de teléfonos inválida' });
+    }
+
+    const borrado = await Clientes.eliminarPorTelefonos(req.user.id, telefonos);
+
+    console.log(`[CLIENTES/eliminar] user=${req.user.id} clientes=${borrado.clientes} turnos=${borrado.turnos}`);
+
+    return res.json({
+      ok: true,
+      ...borrado,
+      mensaje: `Se borraron ${telefonos.length} clienta(s) y ${borrado.turnos} turno(s).`,
+    });
+  } catch (err) {
+    console.error('[CLIENTES/eliminar]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al borrar las clientas' });
+  }
+});
+
 // ─── CLIENTES MANUALES ──────────────────────────────────────────────
 // GET /api/clientes/manual — lista
 router.get('/manual', async (req, res) => {

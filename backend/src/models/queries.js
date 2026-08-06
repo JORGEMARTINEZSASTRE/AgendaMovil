@@ -1,6 +1,6 @@
 'use strict';
 
-const { query } = require('../config/db');
+const { query, getClient } = require('../config/db');
 
 // ═══════════════════════════════════════════════════════════
 //  QUERIES — DEPIMÓVIL PRO
@@ -870,6 +870,73 @@ const Clientes = {
       [userId, telefono]
     );
     return rows;
+  },
+
+  /**
+   * Clientas sin turnos en los últimos N meses, más las cargadas a mano
+   * que nunca tuvieron uno. Devuelve lo que se perdería al borrarlas
+   * para poder mostrárselo a la operadora ANTES de que confirme.
+   */
+  async inactivos(userId, meses = 6) {
+    const { rows } = await query(
+      `WITH desde_turnos AS (
+         SELECT t.telefono,
+                MAX(t.nombre)              AS nombre,
+                COUNT(*)                   AS total_turnos,
+                COALESCE(SUM(s.precio), 0) AS total_gastado,
+                MAX(t.fecha)               AS ultimo_turno
+           FROM turnos t
+           LEFT JOIN servicios s ON s.id = t.servicio_id
+          WHERE t.user_id = $1 AND t.estado != 'cancelado'
+          GROUP BY t.telefono
+       )
+       SELECT COALESCE(d.telefono, c.telefono)   AS telefono,
+              COALESCE(d.nombre, c.nombre)       AS nombre,
+              COALESCE(d.total_turnos, 0)        AS total_turnos,
+              COALESCE(d.total_gastado, 0)       AS total_gastado,
+              d.ultimo_turno,
+              COALESCE(c.favorito, false)        AS favorito
+         FROM desde_turnos d
+         FULL OUTER JOIN clientes c
+           ON c.user_id = $1 AND c.telefono = d.telefono
+        WHERE COALESCE(d.ultimo_turno, DATE '1900-01-01')
+              < (CURRENT_DATE - make_interval(months => $2::int))
+        ORDER BY d.ultimo_turno ASC NULLS FIRST`,
+      [userId, meses]
+    );
+    return rows;
+  },
+
+  /**
+   * Borra clientas y TODOS sus turnos, en una transacción.
+   * Es destructivo y no tiene vuelta atrás: los ingresos de los meses
+   * en que se las atendió bajan. Solo se llama con una lista explícita
+   * de teléfonos que la operadora ya confirmó.
+   */
+  async eliminarPorTelefonos(userId, telefonos) {
+    if (!telefonos?.length) return { turnos: 0, clientes: 0 };
+
+    const cliente = await getClient();
+    try {
+      await cliente.query('BEGIN');
+
+      const t = await cliente.query(
+        `DELETE FROM turnos WHERE user_id = $1 AND telefono = ANY($2::text[])`,
+        [userId, telefonos]
+      );
+      const c = await cliente.query(
+        `DELETE FROM clientes WHERE user_id = $1 AND telefono = ANY($2::text[])`,
+        [userId, telefonos]
+      );
+
+      await cliente.query('COMMIT');
+      return { turnos: t.rowCount, clientes: c.rowCount };
+    } catch (err) {
+      await cliente.query('ROLLBACK');
+      throw err;
+    } finally {
+      cliente.release();
+    }
   },
 
   async resumen(userId) {

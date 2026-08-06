@@ -459,6 +459,20 @@ const ClientesAPI = {
   async eliminarManual(id) {
     return await fetchAPI(`/clientes/manual/${id}`, { method: 'DELETE' });
   },
+
+  // ── Limpieza de inactivas ───────────────────────────────
+  /** Vista previa: no borra nada, solo muestra qué se perdería. */
+  async inactivos(meses = 6) {
+    return await fetchAPI(`/clientes/inactivos?meses=${encodeURIComponent(meses)}`);
+  },
+
+  /** Borra las clientas indicadas y TODOS sus turnos. Irreversible. */
+  async eliminar(telefonos) {
+    return await fetchAPI('/clientes/eliminar', {
+      method: 'POST',
+      body:   JSON.stringify({ telefonos }),
+    });
+  },
 };
 
 // ─── PROFESIONALES API ────────────────────────────────────
