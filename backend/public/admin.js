@@ -660,6 +660,81 @@ function escaparHTML(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ═══════════════════════════════════════════════════════════
+//  QUIÉN ESTÁ USANDO LA APP
+//  El uso se mide por turnos agendados. Una operadora puede
+//  entrar, mirar y no trabajar: eso no es uso.
+// ═══════════════════════════════════════════════════════════
+const ESTADOS_ACTIVIDAD = {
+  activa:        { etiqueta: 'Activa',        emoji: '🟢', ayuda: 'Agendó esta semana' },
+  floja:         { etiqueta: 'Poco activa',   emoji: '🟡', ayuda: 'Agendó este mes, pero no esta semana' },
+  en_riesgo:     { etiqueta: 'En riesgo',     emoji: '🟠', ayuda: 'Hace entre 1 y 2 meses que no agenda' },
+  abandonada:    { etiqueta: 'Abandonó',      emoji: '🔴', ayuda: 'Hace más de 2 meses que no agenda' },
+  nunca_arranco: { etiqueta: 'Nunca arrancó', emoji: '⚫', ayuda: 'Se registró pero nunca agendó un turno' },
+  desactivada:   { etiqueta: 'Desactivada',   emoji: '⛔', ayuda: 'Cuenta dada de baja' },
+};
+
+async function cargarActividad() {
+  const lista   = document.getElementById('actividad-lista');
+  const resumen = document.getElementById('actividad-resumen');
+  const btn     = document.getElementById('btn-cargar-actividad');
+  if (!lista) return;
+
+  lista.innerHTML = '<p class="actividad-vacio">Cargando...</p>';
+  if (btn) btn.disabled = true;
+
+  try {
+    const data = await fetchAPI('/admin/actividad');
+    const usuarios = data?.usuarios || [];
+
+    if (!usuarios.length) {
+      lista.innerHTML = '<p class="actividad-vacio">Todavía no hay operadoras registradas.</p>';
+      return;
+    }
+
+    // Resumen por estado, en orden de urgencia
+    const orden = ['activa', 'floja', 'en_riesgo', 'abandonada', 'nunca_arranco', 'desactivada'];
+    resumen.innerHTML = orden
+      .filter(e => data.resumen?.[e])
+      .map(e => `
+        <span class="actividad-chip" title="${ESTADOS_ACTIVIDAD[e].ayuda}">
+          ${ESTADOS_ACTIVIDAD[e].emoji} ${ESTADOS_ACTIVIDAD[e].etiqueta}: <strong>${data.resumen[e]}</strong>
+        </span>`).join('');
+    resumen.classList.remove('oculto');
+
+    lista.innerHTML = usuarios.map(u => {
+      const est = ESTADOS_ACTIVIDAD[u.estado] || ESTADOS_ACTIVIDAD.nunca_arranco;
+      const desde = u.dias_sin_usar === null
+        ? 'nunca agendó'
+        : u.dias_sin_usar === 0 ? 'agendó hoy' : `hace ${u.dias_sin_usar} día(s)`;
+
+      return `
+        <div class="actividad-fila actividad-${u.estado}">
+          <div class="actividad-quien">
+            <p class="actividad-nombre">${est.emoji} ${escaparHTML(u.nombre_negocio || u.nombre)}</p>
+            <p class="actividad-mail">${escaparHTML(u.email)}</p>
+          </div>
+          <div class="actividad-datos">
+            <span title="Último turno agendado">🕐 ${desde}</span>
+            <span title="Turnos en los últimos 7 y 30 días">📅 ${u.turnos_7d} / ${u.turnos_30d}</span>
+            <span title="Servicios cargados">✂️ ${u.servicios}</span>
+            <span class="actividad-plan">${u.plan === 'premium' ? '💎 Premium' : '🕐 Trial'}</span>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch (err) {
+    lista.innerHTML = `<p class="actividad-vacio">No se pudo cargar: ${escaparHTML(err.message)}</p>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-cargar-actividad');
+  if (btn) btn.addEventListener('click', cargarActividad);
+});
+
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 function normalizarHorariosUI(horarios) {

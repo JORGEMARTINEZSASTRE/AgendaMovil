@@ -142,6 +142,73 @@
   padding: 14px;
 }
 
+/* Quien esta usando la app */
+.actividad-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.actividad-chip {
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 100px;
+  background: var(--crema);
+  border: 1px solid var(--borde);
+  white-space: nowrap;
+}
+.actividad-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.actividad-vacio {
+  font-size: 13px;
+  color: var(--gris);
+  text-align: center;
+  padding: 16px 0;
+  margin: 0;
+}
+.actividad-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: var(--crema);
+  border-left: 4px solid var(--borde);
+}
+.actividad-activa        { border-left-color: #3FB950; }
+.actividad-floja         { border-left-color: var(--dorado); }
+.actividad-en_riesgo     { border-left-color: #E8912D; }
+.actividad-abandonada    { border-left-color: var(--rojo); }
+.actividad-nunca_arranco { border-left-color: var(--gris); }
+.actividad-desactivada   { border-left-color: var(--marron); opacity: .6; }
+.actividad-nombre {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto);
+}
+.actividad-mail {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--gris);
+}
+.actividad-datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--texto);
+}
+.actividad-plan {
+  font-weight: 700;
+  color: var(--rosa-vino);
+}
+
 .admin-bloque-header h2 {
   font-family: 'Cormorant Garamond', serif;
   font-size: 24px;

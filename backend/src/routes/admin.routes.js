@@ -279,4 +279,77 @@ router.post('/enviar-link',
   }
 );
 
+// GET /api/admin/actividad — quién está usando la app de verdad
+//
+// La señal de uso son los turnos creados: una operadora puede entrar y
+// mirar, pero si no agenda no está trabajando con la app. Se cuentan por
+// creado_en (cuándo lo cargó), no por fecha del turno, que puede ser futura.
+router.get('/actividad', async (req, res) => {
+  try {
+    const { query } = require('../config/db');
+
+    const { rows } = await query(
+      `SELECT u.id,
+              u.nombre,
+              u.nombre_negocio,
+              u.email,
+              u.telefono,
+              u.plan,
+              u.trial_fin,
+              u.activo,
+              u.creado_en,
+              COALESCE(t.total, 0) AS turnos_total,
+              COALESCE(t.d7,    0) AS turnos_7d,
+              COALESCE(t.d30,   0) AS turnos_30d,
+              t.ultimo_uso,
+              COALESCE(s.total, 0) AS servicios
+         FROM usuarios u
+         LEFT JOIN (
+           SELECT user_id,
+                  COUNT(*)                                                        AS total,
+                  COUNT(*) FILTER (WHERE creado_en > NOW() - INTERVAL '7 days')   AS d7,
+                  COUNT(*) FILTER (WHERE creado_en > NOW() - INTERVAL '30 days')  AS d30,
+                  MAX(creado_en)                                                  AS ultimo_uso
+             FROM turnos
+            GROUP BY user_id
+         ) t ON t.user_id = u.id
+         LEFT JOIN (
+           SELECT user_id, COUNT(*) AS total
+             FROM servicios
+            WHERE activo = true
+            GROUP BY user_id
+         ) s ON s.user_id = u.id
+        WHERE u.rol = 'cliente'
+        ORDER BY t.ultimo_uso DESC NULLS LAST`
+    );
+
+    const ahora = Date.now();
+    const usuarios = rows.map(u => {
+      const diasSinUsar = u.ultimo_uso
+        ? Math.floor((ahora - new Date(u.ultimo_uso).getTime()) / 86400000)
+        : null;
+
+      let estado;
+      if (!u.activo)                        estado = 'desactivada';
+      else if (u.turnos_total === 0)        estado = 'nunca_arranco';
+      else if (diasSinUsar <= 7)            estado = 'activa';
+      else if (diasSinUsar <= 30)           estado = 'floja';
+      else if (diasSinUsar <= 60)           estado = 'en_riesgo';
+      else                                  estado = 'abandonada';
+
+      return { ...u, dias_sin_usar: diasSinUsar, estado };
+    });
+
+    const resumen = usuarios.reduce((acc, u) => {
+      acc[u.estado] = (acc[u.estado] || 0) + 1;
+      return acc;
+    }, {});
+
+    return res.json({ ok: true, total: usuarios.length, resumen, usuarios });
+  } catch (err) {
+    console.error('[ADMIN/actividad]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al obtener la actividad' });
+  }
+});
+
 module.exports = router;
