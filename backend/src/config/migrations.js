@@ -186,6 +186,29 @@ async function correrMigraciones() {
       console.error('[MIGRATIONS] clientes: no se pudieron reparar:', e.message);
     }
 
+    // ── 10. Recordatorio de regreso (recompra) ────────────────────────
+    // Marca el turno que ya disparó el aviso de "tocaría volver", para
+    // que no se le escriba a la misma clienta una y otra vez.
+    //
+    // Arranque limpio: la columna se crea con DEFAULT TRUE, así los
+    // turnos que YA existen quedan marcados como avisados y ninguna
+    // clienta vieja recibe un mensaje sorpresa el día del despliegue.
+    // Inmediatamente después el default pasa a FALSE, para que los
+    // turnos nuevos sí entren en el circuito.
+    //
+    // No se puede hacer con un UPDATE: correría en cada arranque y
+    // marcaría también los turnos que recién cumplen las 3 semanas,
+    // con lo cual el recordatorio no se enviaría nunca.
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS recordatorio_regreso_enviado BOOLEAN DEFAULT TRUE
+    `);
+    await query(`
+      ALTER TABLE public.turnos
+        ALTER COLUMN recordatorio_regreso_enviado SET DEFAULT FALSE
+    `);
+    console.log('[MIGRATIONS] ✓ Columna recordatorio_regreso_enviado OK (arranque limpio)');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

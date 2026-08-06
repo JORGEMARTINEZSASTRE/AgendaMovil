@@ -66,6 +66,79 @@ async function marcarEnviado2h(id) {
   );
 }
 
+// ─── RECORDATORIO DE REGRESO (recompra) ──────────────────────
+// La depilación es cíclica: se avisa a las 3 semanas para que la
+// clienta vuelva a la cuarta, cuando se cumple el mes.
+const REGRESO_DIAS_AVISO = 21;   // a las 3 semanas
+const REGRESO_DIAS_LIMITE = 40;  // más viejo que esto ya no se persigue
+const REGRESO_MAX_POR_VUELTA = 15;
+
+async function getClientasParaRegresar() {
+  const { rows } = await query(`
+    SELECT t.*, u.nombre AS user_nombre, u.nombre_negocio
+      FROM turnos t
+      JOIN usuarios u ON u.id = t.user_id
+     WHERE t.estado != 'cancelado'
+       AND t.recordatorio_regreso_enviado = FALSE
+       AND t.telefono IS NOT NULL
+       AND u.activo = TRUE
+       AND t.fecha <= CURRENT_DATE - $1::int
+       AND t.fecha >= CURRENT_DATE - $2::int
+       -- Solo si es su ÚLTIMO turno: si ya volvió a agendar, no se le escribe
+       AND NOT EXISTS (
+         SELECT 1 FROM turnos t2
+          WHERE t2.user_id  = t.user_id
+            AND t2.telefono = t.telefono
+            AND t2.estado  != 'cancelado'
+            AND t2.fecha    > t.fecha
+       )
+     ORDER BY t.fecha ASC
+     LIMIT $3::int
+  `, [REGRESO_DIAS_AVISO, REGRESO_DIAS_LIMITE, REGRESO_MAX_POR_VUELTA]);
+  return rows;
+}
+
+async function marcarRegresoEnviado(id) {
+  await query(
+    `UPDATE turnos SET recordatorio_regreso_enviado = TRUE WHERE id = $1`,
+    [id]
+  );
+}
+
+/** Hora local de Uruguay, para no escribirle a nadie de madrugada. */
+function horaUruguay() {
+  return Number(new Intl.DateTimeFormat('es-UY', {
+    timeZone: 'America/Montevideo', hour: 'numeric', hour12: false,
+  }).format(new Date()));
+}
+
+function mensajeRegreso(turno) {
+  const nombre   = (turno.nombre || '').split(' ')[0] || 'Hola';
+  const servicio = turno.servicio_nombre ? ` de *${turno.servicio_nombre}*` : '';
+
+  let msg = `🌸 ¡Hola ${nombre}!\n\n`;
+  msg += `Ya pasaron 3 semanas de tu última sesión${servicio}.\n\n`;
+  msg += `Para que el tratamiento siga haciendo efecto conviene no cortar el ritmo: `;
+  msg += `la próxima sería la semana que viene.\n\n`;
+  msg += `¿Coordinamos? Respondeme este mensaje y te reservo un lugar 💗`;
+  return msg;
+}
+
+async function enviarWhatsAppRegreso(turno) {
+  const instance = `user_${turno.user_id}`;
+  const estadoRes = await evolution.estadoInstancia(instance);
+
+  if (!estadoRes.ok || estadoRes.estado !== 'open') {
+    // Sin WhatsApp conectado no se marca como enviado: queda para cuando lo conecte.
+    return { ok: false, error: 'wa_desconectado' };
+  }
+
+  const resultado = await evolution.enviarMensaje(instance, turno.telefono, mensajeRegreso(turno));
+  if (!resultado.ok) return { ok: false, error: resultado.error };
+
+  return { ok: true };
+}
+
 // ─── HELPERS ─────────────────────────────────────────────────
 function formatearFecha(fechaInput) {
   if (!fechaInput) return '';
@@ -286,6 +359,44 @@ async function procesarRecordatorios() {
   } catch (err) {
     console.error('[CRON] Error al obtener turnos 2h:', err.message);
   }
+
+  // ── Regreso a las 3 semanas (recompra) ──
+  // Solo en horario razonable: a nadie le gusta un mensaje comercial
+  // a las 3 de la mañana.
+  const hora = horaUruguay();
+  if (hora < 9 || hora >= 20) {
+    console.log(`[CRON] Regreso: fuera de horario (${hora}h en Uruguay), se posterga`);
+    return;
+  }
+
+  try {
+    const clientas = await getClientasParaRegresar();
+    if (clientas.length) {
+      console.log(`[CRON] Regreso: ${clientas.length} clienta(s) para contactar`);
+    }
+
+    for (const turno of clientas) {
+      try {
+        const r = await enviarWhatsAppRegreso(turno);
+        if (r.ok) {
+          await marcarRegresoEnviado(turno.id);
+          console.log(`[CRON] ✅ Regreso enviado a ${turno.nombre}`);
+        } else if (r.error === 'wa_desconectado') {
+          // No se marca: se reintenta cuando la operadora conecte WhatsApp.
+          console.log(`[CRON] Regreso: usuario ${turno.user_id} sin WhatsApp, se pospone`);
+        } else {
+          // Falló el envío en sí; se marca para no reintentar en bucle.
+          await marcarRegresoEnviado(turno.id);
+          console.error(`[CRON] ❌ Regreso a ${turno.nombre}:`, r.error);
+        }
+      } catch (err) {
+        console.error(`[CRON] ❌ Regreso para turno ${turno.id}:`, err.message);
+      }
+      await new Promise(r => setTimeout(r, 1200)); // no atropellar a Evolution
+    }
+  } catch (err) {
+    console.error('[CRON] Error al buscar clientas para regreso:', err.message);
+  }
 }
 
 // ─── CRON ─────────────────────────────────────────────────────
@@ -496,11 +607,14 @@ async function enviarCancelacionTurno(turno) {
   }
 }
 
-module.exports = { 
-  procesarRecordatorios, 
+module.exports = {
+  procesarRecordatorios,
   testRecordatorioManual,
   enviarConfirmacionTurno,
   enviarConfirmacionSenia,
   enviarModificacionTurno,
   enviarCancelacionTurno,
+  // Expuestos para poder probarlos sin tocar la base
+  mensajeRegreso,
+  horaUruguay,
 };
