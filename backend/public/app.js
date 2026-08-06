@@ -220,6 +220,7 @@ function renderTabActual() {
     case 'cumples':    renderCumples();    break;
     case 'sucursales': renderSucursalesOperadora(); break;
     case 'clientes':   renderClientes();   break;
+    case 'cuponeras':  renderCuponeras();  break;
   }
 }
 
@@ -2154,6 +2155,298 @@ function mostrarCargando(estado) {
 /**
  * Muestra error dentro de un formulario
  */
+// ═══════════════════════════════════════════════════════════
+//  CUPONERAS — paquetes de sesiones prepagas
+//  La clienta paga varias sesiones adelantadas y las va usando.
+//  Las usadas se cuentan por filas de historial, no con un
+//  contador suelto: así se puede deshacer y nunca se desfasa.
+// ═══════════════════════════════════════════════════════════
+let cuponeras = [];
+let cuponerasBindeado = false;
+let cuponeraAbierta = null;
+
+async function renderCuponeras() {
+  if (!cuponerasBindeado) {
+    document.getElementById('btn-nueva-cuponera')?.addEventListener('click', abrirFormCuponera);
+    document.getElementById('form-cuponera')?.addEventListener('submit', handleSubmitCuponera);
+    document.getElementById('cuponeras-ver-cerradas')?.addEventListener('change', cargarYRenderizarCuponeras);
+    document.getElementById('buscar-cuponera')?.addEventListener('input', pintarCuponeras);
+    ['cup-precio', 'cup-sesiones'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', mostrarPrecioPorSesion);
+      document.getElementById(id)?.addEventListener('change', mostrarPrecioPorSesion);
+    });
+    cuponerasBindeado = true;
+  }
+  await cargarYRenderizarCuponeras();
+}
+
+async function cargarYRenderizarCuponeras() {
+  const cont = document.getElementById('lista-cuponeras');
+  if (!cont) return;
+  cont.innerHTML = '<div class="pub-cargando">Cargando cuponeras...</div>';
+
+  try {
+    const verCerradas = document.getElementById('cuponeras-ver-cerradas')?.checked;
+    cuponeras = await CuponerasAPI.getAll(verCerradas);
+    pintarCuponeras();
+  } catch (err) {
+    cont.innerHTML = `<p class="cuponera-vacio">No se pudieron cargar: ${escaparHTML(err.message)}</p>`;
+  }
+}
+
+function pintarCuponeras() {
+  const cont = document.getElementById('lista-cuponeras');
+  if (!cont) return;
+
+  const filtro = (getVal('buscar-cuponera') || '').toLowerCase().trim();
+  const lista = filtro
+    ? cuponeras.filter(c =>
+        (c.cliente_nombre || '').toLowerCase().includes(filtro) ||
+        (c.cliente_telefono || '').includes(filtro))
+    : cuponeras;
+
+  if (!lista.length) {
+    cont.innerHTML = filtro
+      ? `<p class="cuponera-vacio">Sin resultados para "${escaparHTML(filtro)}"</p>`
+      : `<div class="empty-state">
+           <span class="empty-icono">🎟️</span>
+           <p class="empty-titulo">Sin cuponeras todavía</p>
+           <p class="empty-sub">Creá una cuando una clienta pague varias sesiones por adelantado</p>
+         </div>`;
+    return;
+  }
+
+  cont.innerHTML = lista.map(tarjetaCuponera).join('');
+
+  cont.querySelectorAll('[data-usar]').forEach(b =>
+    b.addEventListener('click', () => usarSesion(b.dataset.usar)));
+  cont.querySelectorAll('[data-ver]').forEach(b =>
+    b.addEventListener('click', () => verUsosCuponera(b.dataset.ver)));
+  cont.querySelectorAll('[data-cerrar]').forEach(b =>
+    b.addEventListener('click', () => cerrarCuponera(b.dataset.cerrar)));
+}
+
+function tarjetaCuponera(c) {
+  const usadas    = Number(c.usadas) || 0;
+  const total     = Number(c.total_sesiones) || 0;
+  const restantes = Number(c.restantes) || 0;
+  const progreso  = total ? Math.round(usadas / total * 100) : 0;
+
+  // Un punto por sesión: se lee de un vistazo cuántas quedan
+  const puntos = Array.from({ length: total }, (_, i) =>
+    `<span class="cup-punto ${i < usadas ? 'usada' : ''}"></span>`).join('');
+
+  const ultimo = c.ultimo_uso
+    ? `Última: ${formatearFecha(c.ultimo_uso.toString().split('T')[0])}`
+    : 'Todavía no usó ninguna';
+
+  return `
+    <div class="cuponera-card ${c.activa ? '' : 'cerrada'}">
+      <div class="cuponera-top">
+        <div>
+          <p class="cuponera-nombre">${escaparHTML(c.cliente_nombre)}</p>
+          <p class="cuponera-sub">📞 ${escaparHTML(formatearTelefonoDisplay(c.cliente_telefono))}</p>
+          ${c.servicio_nombre ? `<p class="cuponera-sub">✂️ ${escaparHTML(c.servicio_nombre)}</p>` : ''}
+        </div>
+        <div class="cuponera-contador">
+          <span class="cuponera-restantes">${restantes}</span>
+          <span class="cuponera-de">de ${total}</span>
+        </div>
+      </div>
+
+      <div class="cuponera-puntos">${puntos}</div>
+      <div class="cuponera-barra"><div class="cuponera-barra-fill" style="width:${progreso}%"></div></div>
+
+      <p class="cuponera-sub">${ultimo}${Number(c.precio_total) > 0 ? ` · Pagó $${Number(c.precio_total).toLocaleString('es-UY')}` : ''}</p>
+
+      <div class="cuponera-acciones">
+        ${c.activa && restantes > 0
+          ? `<button class="btn-cup-usar" data-usar="${c.id}">✔️ Usar una sesión</button>`
+          : `<span class="cuponera-badge">${restantes <= 0 ? '🏁 Completa' : '🔒 Cerrada'}</span>`}
+        <button class="btn-cup-ver" data-ver="${c.id}">📋 Historial</button>
+        ${c.activa ? `<button class="btn-cup-cerrar" data-cerrar="${c.id}" title="Cerrar sin terminarla">🔒</button>` : ''}
+      </div>
+    </div>`;
+}
+
+async function usarSesion(id) {
+  const c = cuponeras.find(x => String(x.id) === String(id));
+  if (!c) return;
+
+  if (!confirm(`¿Registrar una sesión usada de ${c.cliente_nombre}?\n\nLe quedarían ${Number(c.restantes) - 1} de ${c.total_sesiones}.`)) return;
+
+  try {
+    const data = await CuponerasAPI.usar(id);
+    if (!data?.ok) { mostrarToast(data?.error || 'Error', 'error'); return; }
+    mostrarToast(data.mensaje || 'Sesión registrada', 'exito');
+    await cargarYRenderizarCuponeras();
+  } catch (err) {
+    mostrarToast(detalleError(err, 'No se pudo registrar la sesión'), 'error');
+  }
+}
+
+async function verUsosCuponera(id) {
+  cuponeraAbierta = id;
+  const modal = document.getElementById('modal-cuponera-usos');
+  const lista = document.getElementById('cup-usos-lista');
+  document.getElementById('cup-usos-error')?.classList.add('oculto');
+  lista.innerHTML = '<div class="pub-cargando">Cargando...</div>';
+  modal?.classList.remove('oculto');
+
+  try {
+    const data = await CuponerasAPI.usos(id);
+    const c = data.cuponera;
+
+    document.getElementById('cup-usos-titulo').textContent = `🎟️ ${c.cliente_nombre}`;
+    document.getElementById('cup-usos-resumen').innerHTML =
+      `Usó <strong>${c.usadas}</strong> de <strong>${c.total_sesiones}</strong> sesiones` +
+      (c.servicio_nombre ? ` · ${escaparHTML(c.servicio_nombre)}` : '');
+
+    if (!data.usos.length) {
+      lista.innerHTML = '<p class="cuponera-vacio">Todavía no usó ninguna sesión.</p>';
+      return;
+    }
+
+    lista.innerHTML = data.usos.map((u, i) => `
+      <div class="cuponera-uso">
+        <div>
+          <strong>Sesión ${data.usos.length - i}</strong>
+          <small>${formatearFecha(u.fecha.toString().split('T')[0])}</small>
+          ${u.nota ? `<small>${escaparHTML(u.nota)}</small>` : ''}
+        </div>
+        <button class="btn-cup-deshacer" data-uso="${u.id}" title="Deshacer esta sesión">↩️</button>
+      </div>`).join('');
+
+    lista.querySelectorAll('[data-uso]').forEach(b =>
+      b.addEventListener('click', () => deshacerUso(id, b.dataset.uso)));
+
+  } catch (err) {
+    lista.innerHTML = '';
+    mostrarErrorForm('cup-usos-error', detalleError(err, 'No se pudo cargar el historial'));
+  }
+}
+
+async function deshacerUso(cuponeraId, usoId) {
+  if (!confirm('¿Deshacer esta sesión? Le vuelve a quedar disponible.')) return;
+  try {
+    const data = await CuponerasAPI.deshacerUso(cuponeraId, usoId);
+    if (!data?.ok) { mostrarToast(data?.error || 'Error', 'error'); return; }
+    mostrarToast('Sesión deshecha', 'exito');
+    await verUsosCuponera(cuponeraId);
+    await cargarYRenderizarCuponeras();
+  } catch (err) {
+    mostrarErrorForm('cup-usos-error', detalleError(err, 'No se pudo deshacer'));
+  }
+}
+
+async function cerrarCuponera(id) {
+  const c = cuponeras.find(x => String(x.id) === String(id));
+  if (!c) return;
+  if (!confirm(`¿Cerrar la cuponera de ${c.cliente_nombre}?\n\nLe quedan ${c.restantes} sesiones sin usar.`)) return;
+
+  try {
+    const data = await CuponerasAPI.cerrar(id);
+    if (!data?.ok) { mostrarToast(data?.error || 'Error', 'error'); return; }
+    mostrarToast('Cuponera cerrada', 'exito');
+    await cargarYRenderizarCuponeras();
+  } catch (err) {
+    mostrarToast(detalleError(err, 'No se pudo cerrar'), 'error');
+  }
+}
+
+async function abrirFormCuponera() {
+  const modal = document.getElementById('modal-cuponera');
+  document.getElementById('form-cuponera')?.reset();
+  document.getElementById('form-cuponera-error')?.classList.add('oculto');
+  document.getElementById('cup-precio-sesion').textContent = '';
+
+  // Sesiones: 1 a 12, con 5 y 10 que son las que más se venden
+  const selSesiones = document.getElementById('cup-sesiones');
+  if (selSesiones) {
+    selSesiones.innerHTML = Array.from({ length: 12 }, (_, i) => i + 1)
+      .map(n => `<option value="${n}" ${n === 5 ? 'selected' : ''}>${n} sesion${n === 1 ? '' : 'es'}${n === 5 || n === 10 ? ' ⭐' : ''}</option>`)
+      .join('');
+  }
+
+  // Servicios, para poder elegir de cuál es la cuponera
+  if (!servicios.length) {
+    try { servicios = await ServiciosAPI.getAll(); } catch { servicios = []; }
+  }
+  const selServ = document.getElementById('cup-servicio');
+  if (selServ) {
+    selServ.innerHTML = '<option value="">— Sin servicio específico —</option>' +
+      servicios.map(s => `<option value="${s.id}">${escaparHTML(s.nombre)}</option>`).join('');
+  }
+
+  // Clientas ya conocidas, para no tipear el nombre entero
+  const datalist = document.getElementById('cuponera-clientas');
+  if (datalist && clientes.length) {
+    datalist.innerHTML = clientes
+      .map(c => `<option value="${escaparHTML(c.nombre)}"></option>`).join('');
+  }
+
+  modal?.classList.remove('oculto');
+  document.getElementById('cup-cliente-nombre')?.focus();
+}
+
+/** "6 sesiones a $1.000 cada una", para que el precio se entienda. */
+function mostrarPrecioPorSesion() {
+  const el = document.getElementById('cup-precio-sesion');
+  if (!el) return;
+  const total    = parseFloat(getVal('cup-precio')) || 0;
+  const sesiones = parseInt(getVal('cup-sesiones')) || 0;
+  el.textContent = (total > 0 && sesiones > 0)
+    ? `${sesiones} sesiones a $${Math.round(total / sesiones).toLocaleString('es-UY')} cada una.`
+    : '';
+}
+
+async function handleSubmitCuponera(e) {
+  e.preventDefault();
+
+  const nombre   = getVal('cup-cliente-nombre').trim();
+  const telefono = getVal('cup-cliente-telefono').trim();
+  const sesiones = parseInt(getVal('cup-sesiones'));
+
+  if (!nombre || nombre.length < 2) {
+    mostrarErrorForm('form-cuponera-error', 'Escribí el nombre de la clienta');
+    return;
+  }
+  if (!telefono) {
+    mostrarErrorForm('form-cuponera-error', 'Escribí el teléfono de la clienta');
+    return;
+  }
+  if (!sesiones || sesiones < 1 || sesiones > 12) {
+    mostrarErrorForm('form-cuponera-error', 'Elegí entre 1 y 12 sesiones');
+    return;
+  }
+
+  const servicioId = getVal('cup-servicio');
+  const servicio   = servicios.find(s => String(s.id) === String(servicioId));
+
+  setBtnLoading('btn-guardar-cuponera', true);
+  try {
+    const data = await CuponerasAPI.crear({
+      cliente_nombre:   nombre,
+      cliente_telefono: telefono,
+      servicio_id:      servicioId || null,
+      servicio_nombre:  servicio?.nombre || null,
+      total_sesiones:   sesiones,
+      precio_total:     parseFloat(getVal('cup-precio')) || 0,
+      notas:            getVal('cup-notas') || null,
+    });
+
+    if (!data?.ok) { mostrarErrorForm('form-cuponera-error', data?.error || 'Error al crear'); return; }
+
+    cerrarModales();
+    mostrarToast('🎟️ Cuponera creada', 'exito');
+    await cargarYRenderizarCuponeras();
+  } catch (err) {
+    mostrarErrorForm('form-cuponera-error', detalleError(err, 'Error al crear la cuponera'));
+  } finally {
+    setBtnLoading('btn-guardar-cuponera', false);
+  }
+}
+
 function mostrarErrorForm(id, mensaje) {
   const el = document.getElementById(id);
   if (!el) return;

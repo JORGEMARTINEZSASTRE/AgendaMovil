@@ -482,6 +482,35 @@ const ClientesAPI = {
   },
 };
 
+// ─── CUPONERAS API ────────────────────────────────────────
+const CuponerasAPI = {
+  async getAll(incluirCerradas = false) {
+    const data = await fetchAPI(`/cuponeras${incluirCerradas ? '?cerradas=1' : ''}`);
+    return data?.cuponeras ?? [];
+  },
+  async crear(payload) {
+    return await fetchAPI('/cuponeras', {
+      method: 'POST',
+      body:   JSON.stringify(payload),
+    });
+  },
+  async usos(id) {
+    return await fetchAPI(`/cuponeras/${id}/usos`);
+  },
+  async usar(id, datos = {}) {
+    return await fetchAPI(`/cuponeras/${id}/usar`, {
+      method: 'POST',
+      body:   JSON.stringify(datos),
+    });
+  },
+  async deshacerUso(id, usoId) {
+    return await fetchAPI(`/cuponeras/${id}/usos/${usoId}`, { method: 'DELETE' });
+  },
+  async cerrar(id) {
+    return await fetchAPI(`/cuponeras/${id}/cerrar`, { method: 'POST' });
+  },
+};
+
 // ─── PROFESIONALES API ────────────────────────────────────
 const ProfesionalesAPI = {
   async getAll() {

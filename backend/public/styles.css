@@ -2208,6 +2208,162 @@ body {
   margin: 0;
 }
 
+/* Cuponeras */
+.lista-cuponeras {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.cuponera-vacio {
+  text-align: center;
+  color: var(--gris);
+  font-size: 13px;
+  padding: 24px 0;
+  margin: 0;
+}
+.cuponera-card {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 14px;
+}
+.cuponera-card.cerrada { opacity: .62; }
+.cuponera-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.cuponera-nombre {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--texto);
+}
+.cuponera-sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--gris);
+}
+.cuponera-contador {
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.cuponera-restantes {
+  display: block;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--rosa-vino);
+  font-family: 'Cormorant Garamond', serif;
+}
+.cuponera-de {
+  font-size: 11px;
+  color: var(--gris);
+}
+.cuponera-puntos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 12px 0 8px;
+}
+.cup-punto {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--rosa-polvo);
+  background: transparent;
+}
+.cup-punto.usada {
+  background: var(--rosa-vino);
+  border-color: var(--rosa-vino);
+}
+.cuponera-barra {
+  height: 5px;
+  border-radius: 100px;
+  background: var(--crema2);
+  overflow: hidden;
+}
+.cuponera-barra-fill {
+  height: 100%;
+  background: var(--rosa-vino);
+  transition: width .3s;
+}
+.cuponera-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.btn-cup-usar,
+.btn-cup-ver,
+.btn-cup-cerrar,
+.btn-cup-deshacer {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-cup-usar {
+  border: none;
+  background: var(--rosa-vino);
+  color: #fff;
+  flex: 1;
+}
+.btn-cup-usar:hover { opacity: .88; }
+.btn-cup-ver,
+.btn-cup-cerrar,
+.btn-cup-deshacer {
+  border: 1.5px solid var(--borde);
+  background: var(--crema);
+  color: var(--texto);
+}
+.btn-cup-ver:hover,
+.btn-cup-cerrar:hover,
+.btn-cup-deshacer:hover { background: var(--crema2); }
+.cuponera-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gris);
+  padding: 7px 0;
+  flex: 1;
+}
+.cuponera-resumen {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: var(--crema);
+  border: 1px solid var(--borde);
+  margin-bottom: 12px;
+}
+.cuponera-usos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.cuponera-uso {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radio-sm);
+  background: var(--crema);
+  border: 1px solid var(--borde);
+  font-size: 13px;
+}
+.cuponera-uso small {
+  display: block;
+  font-size: 11px;
+  color: var(--gris);
+}
+
 /* Limpiar clientas inactivas */
 .modal-acciones {
   display: flex;

@@ -556,6 +556,144 @@ const Servicios = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  CUPONERAS — paquetes de sesiones prepagas
+//  Las sesiones usadas se cuentan por filas en cuponera_usos,
+//  nunca con un contador: así no se puede desincronizar.
+// ═══════════════════════════════════════════════════════════
+const MAX_SESIONES_CUPONERA = 12;
+
+const Cuponeras = {
+  MAX: MAX_SESIONES_CUPONERA,
+
+  async listar(userId, { incluirCerradas = false } = {}) {
+    const { rows } = await query(
+      `SELECT c.*,
+              COALESCE(u.usadas, 0)                        AS usadas,
+              c.total_sesiones - COALESCE(u.usadas, 0)     AS restantes,
+              u.ultimo_uso
+         FROM cuponeras c
+         LEFT JOIN (
+           SELECT cuponera_id, COUNT(*)::int AS usadas, MAX(fecha) AS ultimo_uso
+             FROM cuponera_usos
+            GROUP BY cuponera_id
+         ) u ON u.cuponera_id = c.id
+        WHERE c.user_id = $1
+          ${incluirCerradas ? '' : 'AND c.activa = TRUE'}
+        ORDER BY c.activa DESC, c.creada_en DESC`,
+      [userId]
+    );
+    return rows;
+  },
+
+  async buscarPorId(id, userId) {
+    const { rows } = await query(
+      `SELECT c.*,
+              COALESCE(u.usadas, 0)                    AS usadas,
+              c.total_sesiones - COALESCE(u.usadas, 0) AS restantes
+         FROM cuponeras c
+         LEFT JOIN (
+           SELECT cuponera_id, COUNT(*)::int AS usadas
+             FROM cuponera_usos GROUP BY cuponera_id
+         ) u ON u.cuponera_id = c.id
+        WHERE c.id = $1 AND c.user_id = $2`,
+      [id, userId]
+    );
+    return rows[0] || null;
+  },
+
+  async crear(userId, datos) {
+    const {
+      clienteNombre, clienteTelefono, servicioId, servicioNombre,
+      totalSesiones, precioTotal, notas,
+    } = datos;
+
+    const { rows } = await query(
+      `INSERT INTO cuponeras
+         (user_id, cliente_nombre, cliente_telefono,
+          servicio_id, servicio_nombre, total_sesiones, precio_total, notas)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [
+        userId, clienteNombre, clienteTelefono,
+        servicioId || null, servicioNombre || null,
+        totalSesiones, precioTotal || 0, notas || null,
+      ]
+    );
+    return rows[0];
+  },
+
+  /** Historial de sesiones consumidas, de la más nueva a la más vieja. */
+  async usos(cuponeraId) {
+    const { rows } = await query(
+      `SELECT id, fecha, nota, turno_id, creado_en
+         FROM cuponera_usos
+        WHERE cuponera_id = $1
+        ORDER BY fecha DESC, creado_en DESC`,
+      [cuponeraId]
+    );
+    return rows;
+  },
+
+  /**
+   * Registra una sesión usada. Devuelve null si ya no quedan, para que
+   * la ruta pueda avisar en vez de dejar la cuponera en negativo.
+   * La cuponera se cierra sola cuando se consume la última.
+   */
+  async registrarUso(cuponeraId, userId, { fecha, nota, turnoId } = {}) {
+    const cuponera = await this.buscarPorId(cuponeraId, userId);
+    if (!cuponera) return { error: 'no_encontrada' };
+    if (!cuponera.activa) return { error: 'cerrada' };
+    if (cuponera.restantes <= 0) return { error: 'sin_sesiones' };
+
+    const { rows } = await query(
+      `INSERT INTO cuponera_usos (cuponera_id, turno_id, fecha, nota)
+       VALUES ($1,$2,COALESCE($3::date, CURRENT_DATE),$4)
+       RETURNING *`,
+      [cuponeraId, turnoId || null, fecha || null, nota || null]
+    );
+
+    // ¿Era la última? Se cierra sola.
+    if (cuponera.restantes === 1) {
+      await query(
+        `UPDATE cuponeras SET activa = FALSE, cerrada_en = NOW() WHERE id = $1`,
+        [cuponeraId]
+      );
+    }
+
+    return { uso: rows[0] };
+  },
+
+  /** Deshace una sesión cargada por error y reabre la cuponera si hacía falta. */
+  async borrarUso(usoId, cuponeraId, userId) {
+    const cuponera = await this.buscarPorId(cuponeraId, userId);
+    if (!cuponera) return false;
+
+    const { rowCount } = await query(
+      `DELETE FROM cuponera_usos WHERE id = $1 AND cuponera_id = $2`,
+      [usoId, cuponeraId]
+    );
+    if (!rowCount) return false;
+
+    await query(
+      `UPDATE cuponeras SET activa = TRUE, cerrada_en = NULL WHERE id = $1`,
+      [cuponeraId]
+    );
+    return true;
+  },
+
+  async cerrar(id, userId) {
+    const { rows } = await query(
+      `UPDATE cuponeras
+          SET activa = FALSE, cerrada_en = NOW()
+        WHERE id = $1 AND user_id = $2
+        RETURNING *`,
+      [id, userId]
+    );
+    return rows[0] || null;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  FOTOS DE SERVICIOS (vitrina)
 //  servicios.foto_url sigue siendo la portada; acá viven todas.
 // ═══════════════════════════════════════════════════════════
@@ -1196,6 +1334,7 @@ module.exports = {
   Turnos,
   Servicios,
   ServicioFotos,
+  Cuponeras,
   Configuracion,
   Invitaciones,
   LoginIntentos,

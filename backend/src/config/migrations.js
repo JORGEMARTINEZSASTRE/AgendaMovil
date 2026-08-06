@@ -230,6 +230,54 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Seña por porcentaje y eximición OK');
 
+    // ── 12. Cuponeras: paquetes de sesiones prepagas ──────────────────
+    // La clienta paga varias sesiones por adelantado y las va usando.
+    //
+    // Los datos de la clienta van copiados (nombre y teléfono) porque las
+    // clientas que salen de turnos no son filas de ninguna tabla: son un
+    // agrupamiento. El nombre del servicio también se copia, para que
+    // borrar un servicio no deje la cuponera sin identificar.
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.cuponeras (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id          UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+        cliente_nombre   VARCHAR(255) NOT NULL,
+        cliente_telefono VARCHAR(50)  NOT NULL,
+        servicio_id      UUID REFERENCES public.servicios(id) ON DELETE SET NULL,
+        servicio_nombre  VARCHAR(255),
+        total_sesiones   SMALLINT NOT NULL,
+        precio_total     NUMERIC(10,2) DEFAULT 0,
+        notas            TEXT,
+        activa           BOOLEAN DEFAULT TRUE,
+        creada_en        TIMESTAMPTZ DEFAULT NOW(),
+        cerrada_en       TIMESTAMPTZ,
+        CONSTRAINT cuponeras_total_check CHECK (total_sesiones BETWEEN 1 AND 12)
+      )
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_cuponeras_user
+        ON public.cuponeras (user_id, activa)
+    `);
+
+    // Cada sesión consumida es una fila. Así queda el historial de cuándo
+    // se usó cada una, se puede deshacer una carga equivocada, y el
+    // contador nunca se desincroniza: las usadas son las filas que hay.
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.cuponera_usos (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        cuponera_id UUID NOT NULL REFERENCES public.cuponeras(id) ON DELETE CASCADE,
+        turno_id    UUID REFERENCES public.turnos(id) ON DELETE SET NULL,
+        fecha       DATE NOT NULL DEFAULT CURRENT_DATE,
+        nota        TEXT,
+        creado_en   TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_cuponera_usos_cuponera
+        ON public.cuponera_usos (cuponera_id, fecha)
+    `);
+    console.log('[MIGRATIONS] ✓ Tablas de cuponeras OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

@@ -297,6 +297,9 @@
     <button class="tab-btn" data-tab="clientes">
       👥 <span>Clientes</span>
     </button>
+    <button class="tab-btn" data-tab="cuponeras">
+      🎟️ <span>Cuponeras</span>
+    </button>
   </nav>
 
   <!-- ─── CONTENIDO PRINCIPAL ─────────────────── -->
@@ -434,6 +437,31 @@
 
       <div id="lista-clientes" class="lista-clientes">
         <!-- Cards de clientes se renderizan aquí -->
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: CUPONERAS ═══════════════════ -->
+    <section class="tab-panel" data-panel="cuponeras">
+
+      <div class="busqueda-servicios-wrap">
+        <input
+          type="text"
+          id="buscar-cuponera"
+          class="input-busqueda-servicio"
+          placeholder="🔍 Buscar por nombre o teléfono..."
+          autocomplete="off"
+        >
+        <button type="button" id="btn-nueva-cuponera" class="btn-agregar-cliente-inline">➕ Nueva cuponera</button>
+      </div>
+
+      <label class="sucursal-check-item" style="margin:0 16px 10px">
+        <input type="checkbox" id="cuponeras-ver-cerradas">
+        Mostrar también las terminadas
+      </label>
+
+      <div id="lista-cuponeras" class="lista-cuponeras">
+        <!-- Se renderiza con JS -->
       </div>
 
     </section>
@@ -787,6 +815,82 @@
       <button type="button" id="btn-buscar-inactivos" class="btn-primario">Buscar</button>
       <button type="button" id="btn-borrar-inactivos" class="btn-peligro oculto" disabled>Borrar seleccionadas</button>
     </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL: NUEVA CUPONERA
+════════════════════════════════════════════════ -->
+<div id="modal-cuponera" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">🎟️ Nueva cuponera</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <form id="form-cuponera" class="form-modal" novalidate>
+      <div id="form-cuponera-error" class="form-error oculto"></div>
+
+      <div class="campo">
+        <label for="cup-cliente-nombre">👤 Nombre de la clienta *</label>
+        <input type="text" id="cup-cliente-nombre" list="cuponera-clientas"
+               maxlength="255" placeholder="Ej: Ana Pérez" autocomplete="off" required>
+        <datalist id="cuponera-clientas"></datalist>
+      </div>
+
+      <div class="campo">
+        <label for="cup-cliente-telefono">📞 Teléfono *</label>
+        <input type="tel" id="cup-cliente-telefono" maxlength="50"
+               placeholder="Ej: 099 123 456" autocomplete="off" required>
+      </div>
+
+      <div class="campo">
+        <label for="cup-servicio">✂️ Servicio</label>
+        <select id="cup-servicio"></select>
+      </div>
+
+      <div class="campo">
+        <label for="cup-sesiones">🎟️ Cantidad de sesiones *</label>
+        <select id="cup-sesiones"></select>
+      </div>
+
+      <div class="campo">
+        <label for="cup-precio">💰 Total que pagó ($)</label>
+        <input type="number" id="cup-precio" min="0" step="50" placeholder="Ej: 6000">
+        <small id="cup-precio-sesion" class="form-hint"></small>
+      </div>
+
+      <div class="campo">
+        <label for="cup-notas">📝 Notas (opcional)</label>
+        <textarea id="cup-notas" rows="2" maxlength="500"
+                  placeholder="Ej: pagó en efectivo, promoción de verano..."></textarea>
+      </div>
+
+      <button type="submit" id="btn-guardar-cuponera" class="btn-primario">
+        Crear cuponera
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL: HISTORIAL DE LA CUPONERA
+════════════════════════════════════════════════ -->
+<div id="modal-cuponera-usos" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 id="cup-usos-titulo" class="modal-titulo">Sesiones</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div id="cup-usos-resumen" class="cuponera-resumen"></div>
+    <div id="cup-usos-error" class="form-error oculto"></div>
+
+    <div id="cup-usos-lista" class="cuponera-usos-lista"></div>
 
   </div>
 </div>
