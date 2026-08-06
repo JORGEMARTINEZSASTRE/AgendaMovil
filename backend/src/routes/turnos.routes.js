@@ -136,6 +136,49 @@ router.delete('/:id',
 );
 
 
+// POST /api/turnos/:id/eximir-senia — liberar el turno sin cobrar la seña
+//
+// Distinto de confirmar-senia: acá la plata NO entró. Se confirma el turno
+// pero queda registrado como eximido, para que los números no cuenten como
+// cobrada una seña que nunca se pagó.
+router.post('/:id/eximir-senia',
+  [param('id').isUUID()],
+  validar,
+  async (req, res) => {
+    try {
+      const { query } = require('../config/db');
+
+      const { rows } = await query(
+        `UPDATE turnos
+            SET senia_eximida = TRUE,
+                estado_pago   = 'no_aplica',
+                estado        = 'activo',
+                editado_en    = NOW()
+          WHERE id = $1 AND user_id = $2
+            AND senia_requerida = TRUE
+            AND senia_pagada    = FALSE
+            AND senia_eximida   = FALSE
+          RETURNING *`,
+        [req.params.id, req.user.id]
+      );
+
+      if (!rows.length) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Turno no encontrado, o la seña ya fue pagada o eximida',
+        });
+      }
+
+      console.log(`[TURNOS/eximir-senia] user=${req.user.id} turno=${req.params.id}`);
+      return res.json({ ok: true, mensaje: 'Seña liberada', turno: rows[0] });
+
+    } catch (err) {
+      console.error('[TURNOS/eximir-senia]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al liberar la seña' });
+    }
+  }
+);
+
 // POST /api/turnos/:id/confirmar-senia — marcar seña como pagada y notificar
 router.post('/:id/confirmar-senia',
   [param('id').isUUID()],

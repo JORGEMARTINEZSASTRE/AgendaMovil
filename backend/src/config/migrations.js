@@ -209,6 +209,27 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Columna recordatorio_regreso_enviado OK (arranque limpio)');
 
+    // ── 11. Seña por porcentaje y seña eximida ────────────────────────
+    // senia_tipo: 'monto' (fijo, como hasta ahora) o 'porcentaje' del precio.
+    // Se deja 'monto' por defecto para que los servicios que ya existen
+    // sigan comportándose igual.
+    await query(`
+      ALTER TABLE public.servicios
+        ADD COLUMN IF NOT EXISTS senia_tipo       VARCHAR(12) DEFAULT 'monto',
+        ADD COLUMN IF NOT EXISTS senia_porcentaje NUMERIC(5,2) DEFAULT 0
+    `);
+
+    // senia_eximida: la operadora le perdonó la seña a esta clienta.
+    // Va en columna propia y no como estado_pago='eximido' para no tener
+    // que borrar y recrear la restricción CHECK de estado_pago.
+    // Queda distinguible de 'pagada': la plata no entró y los números
+    // no deben contarla como cobrada.
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS senia_eximida BOOLEAN DEFAULT FALSE
+    `);
+    console.log('[MIGRATIONS] ✓ Seña por porcentaje y eximición OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

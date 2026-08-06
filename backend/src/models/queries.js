@@ -424,7 +424,10 @@ const Servicios = {
     const { rows } = await query(
       `SELECT id, user_id, nombre, zona, duracion,
               color, descripcion, activo, creado_en,
-              requiere_senia, monto_senia, precio,
+              requiere_senia, monto_senia,
+              COALESCE(senia_tipo, 'monto') AS senia_tipo,
+              COALESCE(senia_porcentaje, 0) AS senia_porcentaje,
+              precio,
               COALESCE(categoria, 'General') as categoria,
               foto_url, sucursal_ids
        FROM servicios
@@ -455,6 +458,8 @@ const Servicios = {
       categoria,
       requiereSenia,
       montoSenia,
+      seniaTipo,
+      seniaPorcentaje,
       precio,
       sucursalIds,
     } = datos;
@@ -463,8 +468,9 @@ const Servicios = {
       `INSERT INTO servicios
          (user_id, nombre, precio, zona, duracion,
           color, descripcion, categoria,
-          requiere_senia, monto_senia, sucursal_ids)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          requiere_senia, monto_senia, senia_tipo, senia_porcentaje,
+          sucursal_ids)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         userId,
@@ -477,6 +483,8 @@ const Servicios = {
         categoria?.trim() || 'General',
         requiereSenia || false,
         montoSenia    || 0,
+        seniaTipo === 'porcentaje' ? 'porcentaje' : 'monto',
+        seniaPorcentaje || 0,
         sucursalIds   || [],
       ]
     );
@@ -493,25 +501,29 @@ const Servicios = {
       categoria,
       requiereSenia,
       montoSenia,
+      seniaTipo,
+      seniaPorcentaje,
       precio,
       sucursalIds,
     } = datos;
 
     const { rows } = await query(
       `UPDATE servicios SET
-         nombre         = $1,
-         zona           = $2,
-         duracion       = $3,
-         color          = $4,
-         descripcion    = $5,
-         categoria      = $6,
-         requiere_senia = $7,
-         monto_senia    = $8,
-         precio         = $9,
-         sucursal_ids   = $10,
-         editado_en     = NOW()
-       WHERE id = $11
-         AND user_id = $12
+         nombre           = $1,
+         zona             = $2,
+         duracion         = $3,
+         color            = $4,
+         descripcion      = $5,
+         categoria        = $6,
+         requiere_senia   = $7,
+         monto_senia      = $8,
+         senia_tipo       = $9,
+         senia_porcentaje = $10,
+         precio           = $11,
+         sucursal_ids     = $12,
+         editado_en       = NOW()
+       WHERE id = $13
+         AND user_id = $14
        RETURNING *`,
       [
         nombre,
@@ -522,6 +534,8 @@ const Servicios = {
         categoria?.trim() || 'General',
         requiereSenia || false,
         montoSenia    || 0,
+        seniaTipo === 'porcentaje' ? 'porcentaje' : 'monto',
+        seniaPorcentaje || 0,
         precio        || 0,
         sucursalIds   || [],
         id,

@@ -1092,14 +1092,35 @@
           </label>
         </div>
         <div id="serv-senia-monto-wrap" class="campo oculto">
-          <label for="serv-monto-senia">Monto de la seña ($)</label>
-          <input
-            type="number"
-            id="serv-monto-senia"
-            min="0"
-            step="50"
-            placeholder="Ej: 500"
-          >
+          <label for="serv-senia-tipo">¿Cómo se calcula la seña?</label>
+          <select id="serv-senia-tipo">
+            <option value="monto">Monto fijo en pesos</option>
+            <option value="porcentaje">Porcentaje del precio</option>
+          </select>
+
+          <div id="serv-senia-fijo" class="campo">
+            <label for="serv-monto-senia">Monto de la seña ($)</label>
+            <input
+              type="number"
+              id="serv-monto-senia"
+              min="0"
+              step="50"
+              placeholder="Ej: 500"
+            >
+          </div>
+
+          <div id="serv-senia-pct" class="campo oculto">
+            <label for="serv-senia-porcentaje">Porcentaje de la seña (%)</label>
+            <input
+              type="number"
+              id="serv-senia-porcentaje"
+              min="1"
+              max="100"
+              step="5"
+              placeholder="Ej: 30"
+            >
+            <small id="serv-senia-calculo" class="form-hint"></small>
+          </div>
         </div>
       </div>
 

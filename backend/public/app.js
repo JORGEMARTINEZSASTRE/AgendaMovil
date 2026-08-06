@@ -535,9 +535,14 @@ function cardTurno(t) {
           <div class="turno-senia-wrap">
             ${t.senia_pagada
               ? `<span class="turno-senia-badge pagada">✅ Seña pagada — $${t.monto_senia}</span>`
+              : t.senia_eximida
+              ? `<span class="turno-senia-badge eximida">🤝 Seña liberada — no se cobró</span>`
               : `<span class="turno-senia-badge pendiente">⚠️ Seña pendiente — $${t.monto_senia}</span>
-                 <button class="btn-confirmar-senia" data-id="${t.id}" title="Marcar seña como pagada">
+                 <button class="btn-confirmar-senia" data-id="${t.id}" title="La clienta pagó la seña">
                    Confirmar seña ✅
+                 </button>
+                 <button class="btn-eximir-senia" data-id="${t.id}" title="Confirmar el turno sin cobrar la seña">
+                   Liberar 🤝
                  </button>`
             }
           </div>` : ''}
@@ -578,6 +583,10 @@ contenedor.querySelectorAll('.btn-cancelar-turno').forEach(btn => {
 
   contenedor.querySelectorAll('.btn-confirmar-senia').forEach(btn => {
     btn.addEventListener('click', () => confirmarPagoSenia(btn.dataset.id));
+  });
+
+  contenedor.querySelectorAll('.btn-eximir-senia').forEach(btn => {
+    btn.addEventListener('click', () => liberarSenia(btn.dataset.id));
   });
 }
 
@@ -1070,6 +1079,31 @@ async function confirmarPagoSenia(id) {
   }
 }
 
+/**
+ * Libera el turno sin cobrar la seña.
+ * A diferencia de confirmarPagoSenia, acá la plata no entró: queda
+ * registrado como eximida para no ensuciar los números de ingresos.
+ */
+async function liberarSenia(id) {
+  const turno = turnos.find(t => String(t.id) === String(id));
+  if (!turno) return;
+
+  if (!confirm(
+    `¿Liberar el turno de ${turno.nombre} sin cobrarle la seña de $${turno.monto_senia}?\n\n` +
+    `El turno queda confirmado y se registra como seña liberada, no como pagada.`
+  )) return;
+
+  try {
+    const data = await TurnosAPI.eximirSenia(id);
+    if (!data?.ok) { mostrarToast(data?.error || 'Error al liberar', 'error'); return; }
+    turnos = turnos.map(t => String(t.id) === String(id) ? data.turno : t);
+    mostrarToast('🤝 Seña liberada', 'exito');
+    renderTabActual();
+  } catch(err) {
+    mostrarToast(err.message || 'Error al liberar la seña', 'error');
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 //  CALENDARIO
 // ═══════════════════════════════════════════════════════════
@@ -1352,9 +1386,21 @@ function bindFormServicio() {
   if (toggleSenia && montoWrap) {
     toggleSenia.addEventListener('change', () => {
       montoWrap.classList.toggle('oculto', !toggleSenia.checked);
-      if (!toggleSenia.checked) setVal('serv-monto-senia', '');
+      if (!toggleSenia.checked) {
+        setVal('serv-monto-senia', '');
+        setVal('serv-senia-porcentaje', '');
+      }
     });
   }
+
+  // Monto fijo o porcentaje del precio
+  const tipoSenia = document.getElementById('serv-senia-tipo');
+  if (tipoSenia) {
+    tipoSenia.addEventListener('change', aplicarTipoSenia);
+  }
+  ['serv-senia-porcentaje', 'serv-precio'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', mostrarCalculoSenia);
+  });
 
   // Galería de fotos
   const fotosInput = document.getElementById('serv-fotos-input');
@@ -1364,6 +1410,32 @@ function bindFormServicio() {
       fotosInput.value = ''; // permitir volver a elegir el mismo archivo
     });
   }
+}
+
+/** Muestra el campo que corresponde según cómo se cobre la seña. */
+function aplicarTipoSenia() {
+  const esPorcentaje = getVal('serv-senia-tipo') === 'porcentaje';
+  document.getElementById('serv-senia-fijo')?.classList.toggle('oculto', esPorcentaje);
+  document.getElementById('serv-senia-pct')?.classList.toggle('oculto', !esPorcentaje);
+  mostrarCalculoSenia();
+}
+
+/** "30% de $1500 = $450", para que no haya que hacer la cuenta a mano. */
+function mostrarCalculoSenia() {
+  const el = document.getElementById('serv-senia-calculo');
+  if (!el) return;
+
+  const precio     = parseFloat(getVal('serv-precio')) || 0;
+  const porcentaje = parseFloat(getVal('serv-senia-porcentaje')) || 0;
+
+  if (!porcentaje) { el.textContent = ''; return; }
+  if (!precio) {
+    el.textContent = 'Cargá el precio del servicio para ver cuánto sería la seña.';
+    return;
+  }
+
+  const monto = Math.round(precio * porcentaje / 100);
+  el.textContent = `${porcentaje}% de $${precio.toLocaleString('es-UY')} = $${monto.toLocaleString('es-UY')} de seña.`;
 }
 
 // ── Galería de fotos del servicio ──────────────────────────
@@ -1490,7 +1562,10 @@ async function subirFotosPendientes(servId) {
     if (toggleSenia) toggleSenia.checked = !!serv.requiere_senia;
     if (montoWrap)   montoWrap.classList.toggle('oculto', !serv.requiere_senia);
 
-    setVal('serv-monto-senia', serv.monto_senia || '');
+    setVal('serv-senia-tipo',       serv.senia_tipo || 'monto');
+    setVal('serv-monto-senia',      serv.monto_senia || '');
+    setVal('serv-senia-porcentaje', Number(serv.senia_porcentaje) || '');
+    aplicarTipoSenia();
 
     // Traer la galería del servicio
     cargarFotosServicio(serv.id);
@@ -1499,7 +1574,10 @@ async function subirFotosPendientes(servId) {
     setVal('serv-categoria', '');
     if (toggleSenia) toggleSenia.checked = false;
     if (montoWrap)   montoWrap.classList.add('oculto');
+    setVal('serv-senia-tipo', 'monto');
     setVal('serv-monto-senia', '');
+    setVal('serv-senia-porcentaje', '');
+    aplicarTipoSenia();
   }
 
   modal?.classList.remove('oculto');
@@ -1582,11 +1660,26 @@ async function handleSubmitServicio(e) {
   }
 
   const requiereSenia = document.getElementById('serv-requiere-senia')?.checked || false;
-  const montoSenia    = requiereSenia ? (parseFloat(getVal('serv-monto-senia')) || 0) : 0;
+  const seniaTipo     = getVal('serv-senia-tipo') === 'porcentaje' ? 'porcentaje' : 'monto';
+  const montoSenia    = requiereSenia && seniaTipo === 'monto'
+    ? (parseFloat(getVal('serv-monto-senia')) || 0) : 0;
+  const seniaPorcentaje = requiereSenia && seniaTipo === 'porcentaje'
+    ? (parseFloat(getVal('serv-senia-porcentaje')) || 0) : 0;
 
-  if (requiereSenia && montoSenia <= 0) {
+  if (requiereSenia && seniaTipo === 'monto' && montoSenia <= 0) {
     mostrarErrorForm('form-servicio-error', 'Ingresá un monto válido para la seña');
     return;
+  }
+
+  if (requiereSenia && seniaTipo === 'porcentaje') {
+    if (seniaPorcentaje <= 0 || seniaPorcentaje > 100) {
+      mostrarErrorForm('form-servicio-error', 'El porcentaje de la seña debe estar entre 1 y 100');
+      return;
+    }
+    if (precio <= 0) {
+      mostrarErrorForm('form-servicio-error', 'Para cobrar la seña por porcentaje necesitás cargar el precio del servicio');
+      return;
+    }
   }
 
 const payload = {
@@ -1596,8 +1689,10 @@ const payload = {
   duracion,
   color,
   descripcion,
-  requiere_senia: requiereSenia,
-  monto_senia:    montoSenia,
+  requiere_senia:   requiereSenia,
+  monto_senia:      montoSenia,
+  senia_tipo:       seniaTipo,
+  senia_porcentaje: seniaPorcentaje,
   precio:           precio,
   sucursal_ids: [...document.querySelectorAll('input[name="serv-sucursal"]:checked')].map(c => c.value),
 };

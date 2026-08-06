@@ -51,6 +51,14 @@ body('zona')
     .optional()
     .isLength({ max: 500 }).withMessage('Descripción muy larga')
     .trim(),
+
+  body('senia_tipo')
+    .optional()
+    .isIn(['monto', 'porcentaje']).withMessage('Tipo de seña inválido'),
+
+  body('senia_porcentaje')
+    .optional({ nullable: true, checkFalsy: true })
+    .isFloat({ min: 1, max: 100 }).withMessage('El porcentaje de seña debe estar entre 1 y 100'),
 ];
 
 const validarId = [

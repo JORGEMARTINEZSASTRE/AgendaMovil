@@ -221,6 +221,13 @@ const TurnosAPI = {
       method: 'POST',
     });
   },
+
+  /** Libera el turno sin cobrar la seña: queda como eximida, no como pagada. */
+  async eximirSenia(id) {
+    return await fetchAPI(`/turnos/${id}/eximir-senia`, {
+      method: 'POST',
+    });
+  },
 };
 
 // ═══════════════════════════════════════════════════════════

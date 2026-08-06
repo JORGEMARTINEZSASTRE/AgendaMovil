@@ -12,6 +12,7 @@ const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
 const { normalizarTelefono } = require('../utils/telefono');
 const { ServicioFotos } = require('../models/queries');
+const { calcularSenia } = require('../utils/senia');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
 const pool = new Pool({
@@ -374,7 +375,8 @@ router.get('/:userId/servicios', async (req, res) => {
     const { sucursal_id } = req.query;
 
     let queryStr = `SELECT id, nombre, zona, duracion, color, categoria,
-              requiere_senia, monto_senia, precio, descripcion, foto_url
+              requiere_senia, monto_senia, senia_tipo, senia_porcentaje,
+              precio, descripcion, foto_url
        FROM servicios WHERE user_id = $1 AND activo = true`;
     const params = [req.params.userId];
 
@@ -402,7 +404,13 @@ router.get('/:userId/servicios', async (req, res) => {
     } catch (errFotos) {
       console.error('[PUBLICA/servicios] galería no disponible:', errFotos.message);
     }
-    const servicios = rows.map(s => ({ ...s, fotos: fotosPorServicio[s.id] || [] }));
+    // monto_senia sale ya resuelto: si el servicio la cobra por porcentaje,
+    // acá se convierte a pesos. El frontend no necesita saber la diferencia.
+    const servicios = rows.map(s => ({
+      ...s,
+      monto_senia: calcularSenia(s),
+      fotos: fotosPorServicio[s.id] || [],
+    }));
 
     return res.json({ ok: true, servicios });
   } catch(err) {
@@ -510,13 +518,16 @@ router.post('/:userId/turno', [
 
     if (servicio_ids && servicio_ids.length > 0 && !esFavorita) {
       const { rows: sRows } = await pool.query(
-        `SELECT requiere_senia, monto_senia FROM servicios WHERE id = ANY($1) AND user_id = $2 AND activo = true`,
+        `SELECT requiere_senia, monto_senia, senia_tipo, senia_porcentaje, precio
+           FROM servicios WHERE id = ANY($1) AND user_id = $2 AND activo = true`,
         [servicio_ids, userId]
       );
+      // Si eligió varios servicios se pide la seña más alta de todas.
       for (const s of sRows) {
-        if (s.requiere_senia && s.monto_senia > 0) {
+        const monto = calcularSenia(s);
+        if (monto > 0) {
           seniaRequerida = true;
-          if (s.monto_senia > montoSenia) montoSenia = s.monto_senia;
+          if (monto > montoSenia) montoSenia = monto;
         }
       }
       if (seniaRequerida) {

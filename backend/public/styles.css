@@ -1061,6 +1061,25 @@ body {
   background: rgba(45,122,79,.1);
   color: #2D7A4F;
 }
+.turno-senia-badge.eximida {
+  background: rgba(168,85,104,.10);
+  color: var(--rosa-vino);
+}
+.btn-eximir-senia {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1.5px solid rgba(168,85,104,.35);
+  background: rgba(168,85,104,.07);
+  color: var(--rosa-vino);
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all .15s;
+}
+.btn-eximir-senia:hover {
+  background: rgba(168,85,104,.16);
+}
 .btn-confirmar-senia {
   font-size: 11px;
   font-weight: 700;
