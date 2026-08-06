@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#A85568">
+  <title>Mis servicios</title>
+
+  <!-- OG: el servidor los reemplaza con los datos del negocio -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Mis servicios">
+  <meta property="og:description" content="Mirá los servicios y reservá tu turno.">
+
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vitrina.css">
+</head>
+<body class="vit-body">
+
+<header class="vit-header">
+  <img id="vit-logo" class="vit-logo oculto" src="" alt="">
+  <p class="vit-marca">AGENDAMOVIL PRO</p>
+  <h1 id="vit-negocio" class="vit-negocio">Cargando...</h1>
+  <p id="vit-sub" class="vit-sub"></p>
+</header>
+
+<main class="vit-main">
+
+  <div id="vit-error" class="vit-error oculto">
+    <span>⚠️</span>
+    <p id="vit-error-msg">No se pudo cargar la vitrina.</p>
+  </div>
+
+  <div id="vit-cargando" class="vit-cargando">Cargando servicios...</div>
+
+  <div id="vit-catalogo" class="vit-catalogo"></div>
+
+</main>
+
+<footer class="vit-footer">
+  <p>Hecho con 🌸 en AgendaMóvil PRO</p>
+</footer>
+
+<a id="vit-cta" class="vit-cta oculto" href="#">📅 Reservar mi turno</a>
+
+<script>
+'use strict';
+
+const API_URL = '/api';
+let userId  = null;
+let negocio = null;
+
+function escaparHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function mostrarError(msg) {
+  document.getElementById('vit-cargando').classList.add('oculto');
+  document.getElementById('vit-error-msg').textContent = msg;
+  document.getElementById('vit-error').classList.remove('oculto');
+}
+
+function precioTexto(p) {
+  const n = parseFloat(p);
+  if (!n || n <= 0) return null;
+  return '$' + n.toLocaleString('es-UY');
+}
+
+function linkAgenda(servicioId) {
+  const base = `agenda-publica.html?u=${encodeURIComponent(userId)}`;
+  return servicioId ? `${base}&servicio=${encodeURIComponent(servicioId)}` : base;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  userId = new URLSearchParams(location.search).get('u');
+  if (!userId) {
+    mostrarError('Link incompleto. Pedile el link correcto a tu profesional.');
+    return;
+  }
+
+  document.getElementById('vit-cta').href = linkAgenda(null);
+
+  await cargarNegocio();
+  await cargarServicios();
+});
+
+async function cargarNegocio() {
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/info`);
+    const data = await resp.json();
+    if (!data.ok) { mostrarError('Esta vitrina no está disponible.'); return; }
+
+    negocio = data.info;
+    const nombre = negocio.nombre_negocio || negocio.nombre;
+
+    document.getElementById('vit-negocio').textContent = nombre;
+    document.title = nombre;
+
+    if (negocio.logo_url) {
+      const logo = document.getElementById('vit-logo');
+      logo.src = negocio.logo_url;
+      logo.alt = nombre;
+      logo.classList.remove('oculto');
+    }
+  } catch {
+    mostrarError('No se pudo conectar. Probá de nuevo en un rato.');
+  }
+}
+
+async function cargarServicios() {
+  const cargando = document.getElementById('vit-cargando');
+  try {
+    const resp = await fetch(`${API_URL}/publica/${userId}/servicios`);
+    const data = await resp.json();
+    cargando.classList.add('oculto');
+
+    if (!data.ok) { mostrarError('No se pudieron cargar los servicios.'); return; }
+
+    const servicios = data.servicios || [];
+    if (!servicios.length) {
+      document.getElementById('vit-catalogo').innerHTML =
+        '<p class="vit-vacio">Todavía no hay servicios para mostrar.</p>';
+      return;
+    }
+
+    document.getElementById('vit-sub').textContent =
+      `${servicios.length} servicio${servicios.length === 1 ? '' : 's'} disponible${servicios.length === 1 ? '' : 's'}`;
+
+    renderCatalogo(servicios);
+    document.getElementById('vit-cta').classList.remove('oculto');
+
+  } catch {
+    cargando.classList.add('oculto');
+    mostrarError('No se pudo conectar. Probá de nuevo en un rato.');
+  }
+}
+
+function renderCatalogo(servicios) {
+  const porCategoria = {};
+  for (const s of servicios) {
+    const cat = s.categoria || 'General';
+    (porCategoria[cat] ||= []).push(s);
+  }
+
+  const html = Object.keys(porCategoria).sort().map(cat => `
+    <section class="vit-categoria">
+      <h2 class="vit-categoria-titulo">${escaparHTML(cat)}</h2>
+      <div class="vit-servicios">
+        ${porCategoria[cat].map(tarjetaServicio).join('')}
+      </div>
+    </section>
+  `).join('');
+
+  document.getElementById('vit-catalogo').innerHTML = html;
+}
+
+function tarjetaServicio(s) {
+  // La galería trae todas las fotos; foto_url es la portada. Si por lo
+  // que sea no vino el array, se usa la portada sola.
+  const fotos = (s.fotos && s.fotos.length)
+    ? s.fotos.map(f => f.url)
+    : (s.foto_url ? [s.foto_url] : []);
+
+  const galeria = fotos.length ? `
+    <div class="vit-fotos">
+      ${fotos.map(url => `
+        <div class="vit-foto">
+          <img src="${escaparHTML(url)}" alt="${escaparHTML(s.nombre)}" loading="lazy">
+        </div>`).join('')}
+      ${fotos.length > 1 ? `<span class="vit-fotos-contador">1 / ${fotos.length}</span>` : ''}
+    </div>` : '';
+
+  const precio = precioTexto(s.precio);
+
+  return `
+    <article class="vit-card">
+      ${galeria}
+      <div class="vit-card-cuerpo">
+        <h3 class="vit-card-nombre">${escaparHTML(s.nombre)}</h3>
+        ${s.zona ? `<p class="vit-card-zona">📍 ${escaparHTML(s.zona)}</p>` : ''}
+        <p class="vit-card-meta">
+          <span>⏱ ${s.duracion} min</span>
+          ${precio ? `<span class="vit-card-precio">${precio}</span>` : ''}
+        </p>
+        ${s.descripcion ? `<p class="vit-card-desc">${escaparHTML(s.descripcion)}</p>` : ''}
+        ${s.requiere_senia ? `<p class="vit-card-senia">💰 Requiere seña de $${escaparHTML(s.monto_senia)}</p>` : ''}
+        <a class="vit-card-btn" href="${linkAgenda(s.id)}">Agendar este servicio</a>
+      </div>
+    </article>`;
+}
+
+// Contador de la galería mientras se desliza
+document.addEventListener('scroll', (e) => {
+  const cont = e.target;
+  if (!cont.classList || !cont.classList.contains('vit-fotos')) return;
+  const contador = cont.querySelector('.vit-fotos-contador');
+  if (!contador) return;
+  const total = cont.querySelectorAll('.vit-foto').length;
+  const actual = Math.round(cont.scrollLeft / cont.clientWidth) + 1;
+  contador.textContent = `${Math.min(actual, total)} / ${total}`;
+}, true);
+</script>
+
+</body>
+</html>

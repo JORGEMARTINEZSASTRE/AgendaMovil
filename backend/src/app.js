@@ -85,6 +85,56 @@ console.log('[STATIC] path:', frontendPath);
 console.log('[STATIC] existe?', fs.existsSync(frontendPath));
 console.log('[STATIC] archivos:', fs.existsSync(frontendPath) ? fs.readdirSync(frontendPath) : 'N/A');
 
+// ─── VITRINA PÚBLICA ─────────────────────────────
+// Va ANTES de express.static para poder inyectar los metadatos Open
+// Graph de cada negocio: así, al compartir el link por WhatsApp o
+// Instagram, se ve el logo y el nombre de la operadora en vez de un
+// texto genérico. Un HTML estático no puede hacer eso.
+//
+// Si algo falla, se sirve el archivo tal cual: la vitrina se ve igual,
+// solo pierde la previsualización linda. Nunca deja de funcionar.
+app.get(['/vitrina', '/vitrina.html'], async (req, res) => {
+  const archivo = path.join(frontendPath, 'vitrina.html');
+
+  const escaparAtributo = (s) => String(s || '')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  try {
+    const userId = String(req.query.u || '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      return res.sendFile(archivo);
+    }
+
+    const { query } = require('./config/db');
+    const { rows } = await query(
+      `SELECT nombre, nombre_negocio, logo_url
+         FROM usuarios
+        WHERE id = $1 AND activo = true AND rol = 'cliente'`,
+      [userId]
+    );
+    if (!rows.length) return res.sendFile(archivo);
+
+    const negocio     = rows[0];
+    const nombre      = escaparAtributo(negocio.nombre_negocio || negocio.nombre);
+    const descripcion = escaparAtributo(`Mirá los servicios de ${negocio.nombre_negocio || negocio.nombre} y reservá tu turno.`);
+    const urlAbsoluta = escaparAtributo(`${req.protocol}://${req.get('host')}/vitrina.html?u=${userId}`);
+
+    let html = fs.readFileSync(archivo, 'utf8')
+      .replace('<title>Mis servicios</title>', `<title>${nombre}</title>`)
+      .replace('content="Mis servicios"', `content="${nombre}"`)
+      .replace('content="Mirá los servicios y reservá tu turno."', `content="${descripcion}"`)
+      .replace('<meta property="og:type" content="website">',
+        `<meta property="og:type" content="website">\n  <meta property="og:url" content="${urlAbsoluta}">` +
+        (negocio.logo_url ? `\n  <meta property="og:image" content="${escaparAtributo(negocio.logo_url)}">` : ''));
+
+    return res.type('html').send(html);
+  } catch (err) {
+    console.error('[VITRINA] no se pudo personalizar:', err.message);
+    return res.sendFile(archivo);
+  }
+});
+
 app.use(express.static(frontendPath));
 app.use(express.static(frontendPath));
 

@@ -284,7 +284,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPaso2();
     bindForm();
   }
+
+  preseleccionarServicio();
 });
+
+/**
+ * Si la clienta llegó desde la vitrina con ?servicio=ID, deja ese
+ * servicio ya elegido. Se dispara el click de la tarjeta para reusar
+ * el mismo manejador de siempre y no duplicar la lógica de selección.
+ */
+function preseleccionarServicio() {
+  const id = new URLSearchParams(location.search).get('servicio');
+  if (!id) return;
+
+  const card = document.querySelector(`.pub-servicio-card[data-id="${CSS.escape(id)}"]`);
+  if (!card || card.classList.contains('seleccionado')) return;
+
+  card.click();
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 async function cargarInfo() {
   try {
