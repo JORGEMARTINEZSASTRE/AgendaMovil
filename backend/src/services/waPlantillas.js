@@ -48,13 +48,13 @@ const plantillas = {
     `¡Hola ${t.nombre}! 🌸 Confirmamos tu turno:\n\n` +
     `📅 ${formatearFecha(t.fecha)}\n` +
     `🕐 ${soloHora(t.hora)} hs\n` +
-    (t.servicio_nombre ? `✂️ ${t.servicio_nombre}\n` : '') +
+    (t.servicio_nombre ? `✨ ${t.servicio_nombre}\n` : '') +
     `\nTe espero en ${estetica.nombre_negocio || estetica.nombre} 💕`,
 
   senia_pendiente: (t, estetica) =>
     `¡Hola ${t.nombre}! 🌸 Gracias por reservar tu turno:\n\n` +
     `📅 ${formatearFecha(t.fecha)} a las ${soloHora(t.hora)}\n` +
-    (t.servicio_nombre ? `✂️ ${t.servicio_nombre}\n` : '') +
+    (t.servicio_nombre ? `✨ ${t.servicio_nombre}\n` : '') +
     `\n⚠️ Para *confirmar* necesito la seña de *$${t.monto_senia}*.\n` +
     `Avisame cuando la transfieras y te confirmo el turno 💕`,
 
@@ -67,7 +67,7 @@ const plantillas = {
     `¡Hola ${t.nombre}! 🌸 Te recuerdo tu turno:\n\n` +
     `📅 *Mañana* ${formatearFecha(t.fecha)}\n` +
     `🕐 ${soloHora(t.hora)} hs\n` +
-    (t.servicio_nombre ? `✂️ ${t.servicio_nombre}\n` : '') +
+    (t.servicio_nombre ? `✨ ${t.servicio_nombre}\n` : '') +
     `\nSi no podés venir, avisame con tiempo 💕`,
 
   recordatorio_2h_clienta: (t) =>
@@ -77,7 +77,7 @@ const plantillas = {
     let msg = `Hola ${t.nombre}! Te reprogramé el turno 🌸\n\n`;
     if (cambios.fecha)     msg += `📅 Nueva fecha: ${formatearFecha(t.fecha)}\n`;
     if (cambios.hora)      msg += `🕐 Nueva hora: ${soloHora(t.hora)}\n`;
-    if (cambios.servicio)  msg += `✂️ ${t.servicio_nombre}\n`;
+    if (cambios.servicio)  msg += `✨ ${t.servicio_nombre}\n`;
     msg += `\n¿Te queda bien? Avisame 💕`;
     return msg;
   },
@@ -100,7 +100,7 @@ const plantillas = {
     `👤 ${t.nombre}\n` +
     `📞 ${t.telefono}\n` +
     `📅 ${formatearFecha(t.fecha)} a las ${soloHora(t.hora)}\n` +
-    (t.servicio_nombre ? `✂️ ${t.servicio_nombre}\n` : '') +
+    (t.servicio_nombre ? `✨ ${t.servicio_nombre}\n` : '') +
     (t.senia_requerida ? `\n⚠️ Pendiente de seña ($${t.monto_senia})` : ''),
 
   // ─── Para el ADMIN (vos) ──────────────────────────────────

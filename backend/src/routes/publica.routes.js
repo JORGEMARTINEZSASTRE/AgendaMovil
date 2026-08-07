@@ -140,7 +140,7 @@ async function enviarMailNuevaTurnoEstetica({ emailEstetica, nombreEstetica, nom
       <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">📞 Teléfono</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${telefonoClienta}</td></tr>
       <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">📅 Fecha</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${fechaStr}</td></tr>
       <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">🕐 Hora</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${horaStr} hs</td></tr>
-      ${servicio ? `<tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">✂️ Servicio</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${servicio}</td></tr>` : ''}
+      ${servicio ? `<tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">✨ Servicio</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${servicio}</td></tr>` : ''}
     </table>
     ${montoSenia ? `<div style="background:rgba(168,85,104,.08);border:1.5px solid rgba(168,85,104,.2);border-radius:10px;padding:12px 16px;margin:12px 0;">
       <p style="margin:0;color:#A85568;font-weight:700;font-size:14px;">⚠️ Turno pendiente de seña</p>
@@ -179,7 +179,7 @@ async function enviarMailSeniaPendienteClienta({ emailClienta, nombreClienta, no
     <table style="width:100%;background:#fff;border-radius:10px;padding:16px;margin:12px 0;border-collapse:collapse;">
       <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">📅 Fecha</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${fechaStr}</td></tr>
       <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">🕐 Hora</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${horaStr} hs</td></tr>
-      ${servicio ? `<tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">✂️ Servicio</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${servicio}</td></tr>` : ''}
+      ${servicio ? `<tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">✨ Servicio</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${servicio}</td></tr>` : ''}
     </table>
     <div style="background:rgba(168,85,104,.08);border:1.5px solid rgba(168,85,104,.2);border-radius:10px;padding:14px 16px;margin:12px 0;">
       <p style="margin:0 0 8px;color:#A85568;font-weight:700;font-size:14px;">⚠️ Tu turno no está confirmado todavía</p>
@@ -222,7 +222,7 @@ async function enviarWAReservaConfirmada({ userId, telefono, nombre, fecha, hora
     msg += `Tu turno quedó agendado:\n\n`;
     msg += `📅 *${fechaStr}*\n`;
     msg += `🕐 *${horaStr} hs*\n`;
-    if (servicio) msg += `✂️ *${servicio}*\n`;
+    if (servicio) msg += `✨ *${servicio}*\n`;
     if (duracion) msg += `⏱ *${duracion} minutos*\n`;
     msg += `\n¡Te esperamos! 🌸\n`;
     msg += `Si necesitás cancelar o reprogramar, avisanos con tiempo.`;
@@ -260,7 +260,7 @@ async function enviarWAReservaPendienteSenia({ userId, telefono, nombre, fecha, 
     msg += `Tu solicitud de turno fue recibida:\n\n`;
     msg += `📅 *${fechaStr}*\n`;
     msg += `🕐 *${horaStr} hs*\n`;
-    if (servicio) msg += `✂️ *${servicio}*\n`;
+    if (servicio) msg += `✨ *${servicio}*\n`;
     msg += `\n⚠️ *Tu turno aún NO está confirmado*\n\n`;
     msg += `Para confirmarlo, necesitás abonar la seña de *$${montoSenia}*.\n\n`;
     msg += `Respondé este mensaje para coordinar el pago. 💰\n\n`;

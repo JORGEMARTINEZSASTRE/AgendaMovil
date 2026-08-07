@@ -526,7 +526,7 @@ function cardTurno(t) {
         <p class="turno-tel">📞 ${escaparHTML(formatearTelefonoDisplay(t.telefono))}</p>
         ${t.servicio_nombre ? `
           <p class="turno-servicio" style="color:${c.borde}">
-            ✂️ ${escaparHTML(t.servicio_nombre)}
+            ✨ ${escaparHTML(t.servicio_nombre)}
             ${t.servicio_zona ? `· ${escaparHTML(t.servicio_zona)}` : ''}
           </p>` : ''}
         ${t.sucursal_nombre ? `<p class="turno-duracion">🏪 ${escaparHTML(t.sucursal_nombre)}</p>` : ''}
@@ -1285,7 +1285,7 @@ function renderServicios() {
   if (serviciosFiltrados.length === 0) {
     contenedor.innerHTML = `
       <div class="empty-state">
-        <span class="empty-icono">${textoBusqueda ? '🔍' : '✂️'}</span>
+        <span class="empty-icono">${textoBusqueda ? '🔍' : '✨'}</span>
         <p class="empty-titulo">${textoBusqueda ? 'Sin resultados' : 'Sin servicios'}</p>
         <p class="empty-sub">${textoBusqueda ? 'Probá con otra búsqueda' : 'Creá tu primer servicio'}</p>
       </div>`;
@@ -2260,7 +2260,7 @@ function tarjetaCuponera(c) {
         <div>
           <p class="cuponera-nombre">${escaparHTML(c.cliente_nombre)}</p>
           <p class="cuponera-sub">📞 ${escaparHTML(formatearTelefonoDisplay(c.cliente_telefono))}</p>
-          ${c.servicio_nombre ? `<p class="cuponera-sub">✂️ ${escaparHTML(c.servicio_nombre)}</p>` : ''}
+          ${c.servicio_nombre ? `<p class="cuponera-sub">✨ ${escaparHTML(c.servicio_nombre)}</p>` : ''}
         </div>
         <div class="cuponera-contador">
           <span class="cuponera-restantes">${restantes}</span>

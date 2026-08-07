@@ -83,7 +83,7 @@ function htmlBienvenida({ nombre, nombreNegocio, email, plan, trialFin }) {
                 ${[
                   ['📋', 'Gestionar tus turnos del día'],
                   ['📅', 'Ver tu calendario mensual'],
-                  ['✂️', 'Crear tus servicios con colores y duración'],
+                  ['✨', 'Crear tus servicios con colores y duración'],
                   ['💬', 'Enviar confirmaciones por WhatsApp'],
                   ['🎂', 'Recordar cumpleaños de tus clientas'],
                 ].map(([icon, texto]) => `

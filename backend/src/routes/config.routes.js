@@ -57,7 +57,7 @@ router.get('/', async (req, res) => {
 Te confirmamos tu turno:
 
 📅 *{fecha}* a las *{hora}*
-✂️ Servicio: *{servicio}*
+✨ Servicio: *{servicio}*
 📍 Zona: *{zona}*
 ⏱ Duración: *{duracion} min*
 

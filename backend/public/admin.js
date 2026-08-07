@@ -717,7 +717,7 @@ async function cargarActividad() {
           <div class="actividad-datos">
             <span title="Último turno agendado">🕐 ${desde}</span>
             <span title="Turnos en los últimos 7 y 30 días">📅 ${u.turnos_7d} / ${u.turnos_30d}</span>
-            <span title="Servicios cargados">✂️ ${u.servicios}</span>
+            <span title="Servicios cargados">✨ ${u.servicios}</span>
             <span class="actividad-plan">${u.plan === 'premium' ? '💎 Premium' : '🕐 Trial'}</span>
           </div>
         </div>`;

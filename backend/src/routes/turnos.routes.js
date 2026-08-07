@@ -230,7 +230,7 @@ router.post('/:id/confirmar-senia',
           <table style="width:100%;background:#fff;border-radius:10px;padding:16px;margin:12px 0;border-collapse:collapse;">
             <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">📅 Fecha</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${fechaStr}</td></tr>
             <tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">🕐 Hora</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${horaStr} hs</td></tr>
-            ${turno.servicio_nombre ? `<tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">✂️ Servicio</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${turno.servicio_nombre}</td></tr>` : ''}
+            ${turno.servicio_nombre ? `<tr><td style="padding:6px 0;color:#6B5A60;font-size:14px;">✨ Servicio</td><td style="padding:6px 0;font-weight:700;color:#4A3840;">${turno.servicio_nombre}</td></tr>` : ''}
           </table>
           <p style="color:#2D7A4F;font-weight:700;font-size:14px;">✅ Seña de $${turno.monto_senia} acreditada</p>
           <p style="color:#9A8F92;font-size:12px;margin-top:16px;">© 2025 DEPIMÓVIL PRO</p>
