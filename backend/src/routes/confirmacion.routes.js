@@ -31,7 +31,9 @@ router.get('/:token', validarToken, validar, async (req, res) => {
               t.servicio_nombre, t.servicio_zona, t.estado,
               t.confirmacion_estado,
               u.nombre_negocio, u.nombre AS user_nombre,
-              s.nombre AS sucursal_nombre, s.direccion AS sucursal_direccion
+              -- sucursales no tiene columna de dirección: solo nombre, tipo,
+              -- horarios, max_turnos_hora y activo. No inventar campos acá.
+              s.nombre AS sucursal_nombre
          FROM turnos t
          JOIN usuarios u ON u.id = t.user_id
          LEFT JOIN sucursales s ON s.id = t.sucursal_id
@@ -54,7 +56,6 @@ router.get('/:token', validarToken, validar, async (req, res) => {
         servicio:        t.servicio_nombre,
         zona:            t.servicio_zona,
         sucursal:        t.sucursal_nombre,
-        direccion:       t.sucursal_direccion,
         negocio:         t.nombre_negocio || t.user_nombre,
         estado:          t.estado,
         confirmacion:    t.confirmacion_estado,
