@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#A85568">
+<meta name="robots" content="noindex">
+<title>Confirmá tu turno</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --crema:#FDF8F3; --crema2:#F7EEE5; --blush:#F2D4CC;
+    --vino:#A85568; --dorado:#C9A96E;
+    --marron:#4A2E2A; --texto:#3D2020; --gris:#8B6F6A;
+    --verde:#1F9D55; --rojo:#E05555;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--blush);
+    font-family:'Nunito',system-ui,sans-serif;
+    color:var(--texto);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+  }
+  .card{
+    background:var(--crema);
+    border-radius:22px;
+    max-width:420px;width:100%;
+    padding:28px 24px;
+    box-shadow:0 12px 40px rgba(168,85,104,.18);
+    text-align:center;
+  }
+  .negocio{
+    font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--vino);margin-bottom:18px;
+  }
+  h1{font-size:24px;font-weight:900;color:var(--marron);line-height:1.25}
+  .sub{margin-top:8px;font-size:15px;color:var(--gris);font-weight:600}
+
+  .datos{
+    background:#fff;border:1px solid var(--blush);border-radius:16px;
+    padding:18px 16px;margin:20px 0;text-align:left;
+  }
+  .dato{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;margin-bottom:10px}
+  .dato:last-child{margin-bottom:0}
+  .dato span:first-child{flex-shrink:0}
+  .dato small{display:block;font-weight:600;color:var(--gris);font-size:13px;margin-top:1px}
+
+  .botones{display:flex;flex-direction:column;gap:10px}
+  button{
+    width:100%;padding:16px;border:0;border-radius:14px;
+    font-family:inherit;font-size:17px;font-weight:800;cursor:pointer;
+  }
+  .si{background:var(--verde);color:#fff}
+  .no{background:#fff;color:var(--vino);border:2px solid var(--blush)}
+  button:disabled{opacity:.55;cursor:default}
+
+  .estado{padding:8px 0}
+  .estado .icono{font-size:52px;line-height:1}
+  .estado h2{margin-top:12px;font-size:21px;font-weight:900;color:var(--marron)}
+  .estado p{margin-top:8px;font-size:15px;line-height:1.5;color:var(--gris);font-weight:600}
+  .oculto{display:none}
+  .cargando{padding:30px 0;color:var(--gris);font-weight:700}
+  .error{color:var(--rojo);font-weight:700}
+  .pie{margin-top:18px;font-size:12px;color:var(--gris);font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="cargando" class="cargando">Cargando tu turno...</div>
+
+  <div id="contenido" class="oculto">
+    <p class="negocio" id="negocio"></p>
+    <h1 id="saludo"></h1>
+    <p class="sub">Tenés turno mañana. ¿Nos confirmás?</p>
+
+    <div class="datos">
+      <div class="dato"><span>📅</span><span id="fecha"></span></div>
+      <div class="dato"><span>🕐</span><span id="hora"></span></div>
+      <div class="dato oculto" id="filaServicio"><span>✨</span><span id="servicio"></span></div>
+      <div class="dato oculto" id="filaLugar"><span>🏪</span><span id="lugar"></span></div>
+    </div>
+
+    <div class="botones">
+      <button class="si" id="btnSi">✅ Ahí voy</button>
+      <button class="no" id="btnNo">No voy a poder</button>
+    </div>
+    <p class="pie">Si no podés venir, avisar es lo mejor que podés hacer:<br>le damos el lugar a otra clienta 💕</p>
+  </div>
+
+  <div id="resultado" class="estado oculto">
+    <div class="icono" id="resIcono"></div>
+    <h2 id="resTitulo"></h2>
+    <p id="resTexto"></p>
+  </div>
+
+  <div id="fallo" class="estado oculto">
+    <div class="icono">😕</div>
+    <h2>No pudimos abrir tu turno</h2>
+    <p class="error" id="falloTexto"></p>
+  </div>
+</div>
+
+<script>
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio',
+               'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var DIAS  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+  function fechaLinda(f) {
+    var s = String(f || '').slice(0, 10).split('-');
+    if (s.length !== 3) return '';
+    // Se arma con la fecha local y no con new Date(iso), que interpreta
+    // UTC y en Uruguay muestra el día anterior.
+    var d = new Date(+s[0], +s[1] - 1, +s[2]);
+    return DIAS[d.getDay()] + ' ' + (+s[2]) + ' de ' + MESES[+s[1] - 1];
+  }
+
+  function mostrarFallo(msg) {
+    $('cargando').classList.add('oculto');
+    $('contenido').classList.add('oculto');
+    $('falloTexto').textContent = msg;
+    $('fallo').classList.remove('oculto');
+  }
+
+  function mostrarResultado(confirmacion) {
+    $('cargando').classList.add('oculto');
+    $('contenido').classList.add('oculto');
+    if (confirmacion === 'confirmado') {
+      $('resIcono').textContent  = '✅';
+      $('resTitulo').textContent = '¡Listo, te esperamos!';
+      $('resTexto').textContent  = 'Tu turno quedó confirmado. Nos vemos mañana 💕';
+    } else {
+      $('resIcono').textContent  = '🌸';
+      $('resTitulo').textContent = 'Gracias por avisar';
+      $('resTexto').textContent  = 'Cancelamos tu turno y le damos el lugar a otra clienta. Cuando quieras volvés a sacar uno.';
+    }
+    $('resultado').classList.remove('oculto');
+  }
+
+  async function cargar() {
+    if (!token) { mostrarFallo('El link está incompleto.'); return; }
+    try {
+      var r = await fetch('/api/confirmar/' + encodeURIComponent(token));
+      var d = await r.json();
+      if (!r.ok || !d.ok) { mostrarFallo(d.error || 'Este link no es válido.'); return; }
+
+      var t = d.turno;
+
+      if (t.estado === 'cancelado') {
+        mostrarFallo('Este turno ya está cancelado.'); return;
+      }
+      if (t.confirmacion === 'confirmado' || t.confirmacion === 'rechazado') {
+        mostrarResultado(t.confirmacion); return;
+      }
+
+      $('negocio').textContent = t.negocio || '';
+      $('saludo').textContent  = '¡Hola ' + (t.nombre || '').split(' ')[0] + '!';
+      $('fecha').textContent   = fechaLinda(t.fecha);
+      $('hora').textContent    = String(t.hora || '').slice(0, 5) + ' hs';
+
+      if (t.servicio) {
+        $('servicio').textContent = t.servicio + (t.zona ? ' · ' + t.zona : '');
+        $('filaServicio').classList.remove('oculto');
+      }
+      if (t.sucursal) {
+        $('lugar').innerHTML = t.sucursal +
+          (t.direccion ? '<small>' + t.direccion + '</small>' : '');
+        $('filaLugar').classList.remove('oculto');
+      }
+
+      $('cargando').classList.add('oculto');
+      $('contenido').classList.remove('oculto');
+    } catch (e) {
+      mostrarFallo('No hay conexión. Probá de nuevo en un momento.');
+    }
+  }
+
+  async function responder(respuesta) {
+    $('btnSi').disabled = true;
+    $('btnNo').disabled = true;
+    try {
+      var r = await fetch('/api/confirmar/' + encodeURIComponent(token), {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ respuesta: respuesta }),
+      });
+      var d = await r.json();
+      if (!r.ok || !d.ok) {
+        $('btnSi').disabled = false;
+        $('btnNo').disabled = false;
+        mostrarFallo(d.error || 'No se pudo guardar tu respuesta.');
+        return;
+      }
+      mostrarResultado(d.confirmacion || (respuesta === 'si' ? 'confirmado' : 'rechazado'));
+    } catch (e) {
+      $('btnSi').disabled = false;
+      $('btnNo').disabled = false;
+      mostrarFallo('No hay conexión. Probá de nuevo.');
+    }
+  }
+
+  $('btnSi').addEventListener('click', function () { responder('si'); });
+  $('btnNo').addEventListener('click', function () {
+    if (confirm('¿Seguro que no vas a poder venir? Se cancela tu turno.')) responder('no');
+  });
+
+  cargar();
+</script>
+</body>
+</html>

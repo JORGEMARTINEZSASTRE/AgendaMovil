@@ -60,6 +60,7 @@ app.use('/api/clientes', clientesRoutes);
 app.use('/api/profesionales', profesionalesRoutes);
 app.use('/api/cuponeras',     require('./routes/cuponeras.routes'));
 app.use('/api/caja',          require('./routes/caja.routes'));
+app.use('/api/confirmar',     require('./routes/confirmacion.routes'));
 
 
 

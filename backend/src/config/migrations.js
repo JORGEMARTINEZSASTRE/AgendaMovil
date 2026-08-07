@@ -364,6 +364,25 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Tabla socios OK');
 
+    // ── Confirmación del turno con un toque ────────────────────────────
+    // El recordatorio de 24h lleva un link con dos botones. La clienta
+    // toca y la app se entera al instante: no hace falta leer WhatsApp.
+    //
+    // El token es lo único que protege ese link, así que es un UUID
+    // aleatorio por turno y no el id del turno.
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS confirmacion_token  UUID,
+        ADD COLUMN IF NOT EXISTS confirmacion_estado VARCHAR(20) DEFAULT 'sin_pedir',
+        ADD COLUMN IF NOT EXISTS confirmacion_en     TIMESTAMPTZ
+    `);
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_turnos_confirmacion_token
+        ON public.turnos (confirmacion_token)
+        WHERE confirmacion_token IS NOT NULL
+    `);
+    console.log('[MIGRATIONS] ✓ Confirmación de turnos OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

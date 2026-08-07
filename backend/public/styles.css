@@ -3275,3 +3275,12 @@ body {
   text-align:center; font-size:13px; font-weight:700;
   margin:12px 0 4px; min-height:18px;
 }
+
+/* ── Estado de confirmación en la tarjeta del turno ────── */
+.turno-confirma {
+  display:inline-block; margin-top:8px;
+  border-radius:999px; padding:5px 12px;
+  font-size:12px; font-weight:700;
+}
+.turno-confirma.ok        { background:#E4F5EA; color:#1F7A43 }
+.turno-confirma.esperando { background:#FFF3DC; color:#8A6A1F }

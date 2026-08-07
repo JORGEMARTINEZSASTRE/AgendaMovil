@@ -548,6 +548,11 @@ function cardTurno(t) {
                  </button>`
             }
           </div>` : ''}
+        ${t.confirmacion_estado === 'confirmado'
+          ? `<span class="turno-confirma ok">✅ Confirmó que viene</span>`
+          : t.confirmacion_estado === 'pendiente'
+          ? `<span class="turno-confirma esperando">⏳ Le preguntamos, todavía no contestó</span>`
+          : ''}
         ${t.estado !== 'cancelado' ? `
           <div class="turno-cobro-wrap">
             ${t.cobrado

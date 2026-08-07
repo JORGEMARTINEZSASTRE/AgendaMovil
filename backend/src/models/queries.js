@@ -155,6 +155,7 @@ const Turnos = {
              t.profesional_id,
              t.profesional_nombre,
              t.senia_requerida, t.senia_pagada, t.monto_senia, t.estado_pago,
+             t.confirmacion_estado,
              s.nombre AS sucursal_nombre,
              s.tipo   AS sucursal_tipo,
              -- Si ya hay un movimiento de caja para este turno, está cobrado.

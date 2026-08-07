@@ -5,6 +5,12 @@ const nodemailer = require('nodemailer');
 const { query }  = require('./src/config/db');
 const evolution = require('./src/services/evolution.service');
 
+// Dominio propio para los links que le llegan a la clienta. Va por env
+// para no romper si algún día cambia el dominio, pero con el valor real
+// por defecto: en Railway las variables se cargan a mano y si esto queda
+// vacío el link del recordatorio sale roto.
+const APP_URL = (process.env.APP_URL || 'https://agendamovil.pro').replace(/\/+$/, '');
+
 // ─── MAILER ──────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   host:   process.env.MAIL_HOST,
@@ -23,6 +29,20 @@ ALTER TABLE turnos
 
 // ─── QUERIES ─────────────────────────────────────────────────
 async function getTurnosPendientes24h() {
+  // Se le crea el token de confirmación en el mismo paso: así el link
+  // existe recién cuando se va a mandar el recordatorio y no queda un
+  // link vivo por cada turno futuro de la agenda.
+  await query(`
+    UPDATE turnos
+       SET confirmacion_token  = COALESCE(confirmacion_token, gen_random_uuid()),
+           confirmacion_estado = CASE WHEN confirmacion_estado = 'sin_pedir'
+                                      THEN 'pendiente' ELSE confirmacion_estado END
+     WHERE estado != 'cancelado'
+       AND recordatorio_24h_enviado = FALSE
+       AND (fecha + hora) BETWEEN (NOW() + INTERVAL '23 hours 50 minutes')
+                              AND (NOW() + INTERVAL '24 hours 10 minutes')
+  `);
+
   const { rows } = await query(`
     SELECT t.*, u.email AS user_email, u.nombre AS user_nombre, u.nombre_negocio,
            s.nombre AS sucursal_nombre
@@ -219,7 +239,7 @@ async function enviarEmailRecordatorio(turno, tipo) {
               ${turno.servicio_nombre ? `
               <tr>
                 <td style="padding:6px 0;color:#4A3840;font-size:15px;">
-                  ✂️ <strong>${turno.servicio_nombre}${turno.servicio_zona ? ' · ' + turno.servicio_zona : ''}</strong>
+                  ✨ <strong>${turno.servicio_nombre}${turno.servicio_zona ? ' · ' + turno.servicio_zona : ''}</strong>
                 </td>
               </tr>` : ''}
               <tr>
@@ -269,12 +289,22 @@ function mensajeWhatsApp(turno, tipo) {
     msg += `🏪 *${turno.sucursal_nombre}*\n`;
   }
   if (turno.servicio_nombre) {
-    msg += `✂️ *${turno.servicio_nombre}`;
+    msg += `✨ *${turno.servicio_nombre}`;
     if (turno.servicio_zona) msg += ` · ${turno.servicio_zona}`;
     msg += `*\n`;
   }
   msg += `⏱ *${turno.duracion} minutos*\n\n`;
-  msg += `Si necesitás cancelar, avisanos con tiempo. ¡Gracias! 🌸`;
+
+  // En el de 24 horas se le pide confirmar con un toque. En el de 2 horas
+  // no: a esa altura ya no hay tiempo de ofrecerle el lugar a otra, y
+  // pedir confirmación cuando ya no se puede hacer nada solo molesta.
+  if (tipo === '24h' && turno.confirmacion_token) {
+    msg += `¿Nos confirmás que venís? Es un toque 👇\n`;
+    msg += `${APP_URL}/confirmar.html?t=${turno.confirmacion_token}\n\n`;
+    msg += `Si no podés venir, avisanos desde ahí y le damos el lugar a otra clienta. ¡Gracias! 🌸`;
+  } else {
+    msg += `Si necesitás cancelar, avisanos con tiempo. ¡Gracias! 🌸`;
+  }
   return msg;
 }
 
@@ -448,7 +478,7 @@ function mensajeConfirmacion(turno) {
     msg += `🏪 *${turno.sucursal_nombre}*\n`;
   }
   if (turno.servicio_nombre) {
-    msg += `✂️ *${turno.servicio_nombre}`;
+    msg += `✨ *${turno.servicio_nombre}`;
     if (turno.servicio_zona) msg += ` · ${turno.servicio_zona}`;
     msg += `*\n`;
   }
@@ -511,7 +541,7 @@ async function enviarConfirmacionSenia(turno) {
     msg += `📅 *${fecha}*\n`;
     msg += `🕐 *${hora} hs*\n`;
     if (turno.sucursal_nombre) msg += `🏪 *${turno.sucursal_nombre}*\n`;
-    if (turno.servicio_nombre) msg += `✂️ *${turno.servicio_nombre}*\n`;
+    if (turno.servicio_nombre) msg += `✨ *${turno.servicio_nombre}*\n`;
     msg += `⏱ *${turno.duracion} minutos*\n\n`;
     msg += `¡Te esperamos! 🌸`;
 
@@ -551,7 +581,7 @@ async function enviarModificacionTurno(turno) {
     msg += `📅 *${fecha}*\n`;
     msg += `🕐 *${hora} hs*\n`;
     if (turno.sucursal_nombre) msg += `🏪 *${turno.sucursal_nombre}*\n`;
-    if (turno.servicio_nombre) msg += `✂️ *${turno.servicio_nombre}*\n`;
+    if (turno.servicio_nombre) msg += `✨ *${turno.servicio_nombre}*\n`;
     msg += `⏱ *${turno.duracion} minutos*\n\n`;
     msg += `Si tenés alguna duda, respondé este mensaje. 🌸`;
 
@@ -591,7 +621,7 @@ async function enviarCancelacionTurno(turno) {
     msg += `📅 ~${fecha}~\n`;
     msg += `🕐 ~${hora} hs~\n`;
     if (turno.sucursal_nombre) msg += `🏪 ~${turno.sucursal_nombre}~\n`;
-    if (turno.servicio_nombre) msg += `✂️ ~${turno.servicio_nombre}~\n`;
+    if (turno.servicio_nombre) msg += `✨ ~${turno.servicio_nombre}~\n`;
     msg += `\nSi querés reprogramar, contactanos. ¡Gracias! 🌸`;
 
     const resultado = await evolution.enviarMensaje(instance, turno.telefono, msg);
