@@ -1,0 +1,17 @@
+{
+  "name": "AgendaMóvil PRO",
+  "short_name": "AgendaMóvil",
+  "description": "Tu agenda de turnos: reservas, recordatorios por WhatsApp, señas y fichas de tus clientas.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "es",
+  "background_color": "#FDF8F3",
+  "theme_color": "#A85568",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
