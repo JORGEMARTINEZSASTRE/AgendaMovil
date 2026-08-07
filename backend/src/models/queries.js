@@ -624,7 +624,7 @@ const Cuponeras = {
   async crear(userId, datos) {
     const {
       clienteNombre, clienteTelefono, servicioId, servicioNombre,
-      totalSesiones, precioTotal, notas,
+      totalSesiones, precioTotal, notas, medioPago,
     } = datos;
 
     const { rows } = await query(
@@ -639,7 +639,31 @@ const Cuponeras = {
         totalSesiones, precioTotal || 0, notas || null,
       ]
     );
-    return rows[0];
+    const cuponera = rows[0];
+
+    // La plata de la cuponera entra toda hoy, el día que la compró. Las
+    // sesiones que use después van en $0, si no se contaría dos veces.
+    // Si falla, la cuponera igual queda creada: mejor una cuponera sin
+    // el movimiento (que se puede cargar a mano) que perder la venta.
+    if (parseFloat(precioTotal) > 0) {
+      try {
+        await Caja.crear(userId, {
+          tipo:          'ingreso',
+          categoria:     'Cuponera',
+          concepto:      servicioNombre
+            ? `Cuponera de ${totalSesiones} · ${servicioNombre}`
+            : `Cuponera de ${totalSesiones} sesiones`,
+          monto:         parseFloat(precioTotal),
+          medioPago:     medioPago || 'efectivo',
+          cuponeraId:    cuponera.id,
+          clienteNombre: clienteNombre,
+        });
+      } catch (err) {
+        console.error('[Cuponeras/crear] No se pudo registrar el ingreso:', err.message);
+      }
+    }
+
+    return cuponera;
   },
 
   /** Historial de sesiones consumidas, de la más nueva a la más vieja. */
@@ -1355,8 +1379,12 @@ const ClientesManual = {
 // estética chica no necesita libro de auditoría y sí necesita poder
 // corregir un cero de más sin llamar a nadie.
 const CATEGORIAS_INGRESO = ['Turno', 'Seña', 'Cuponera', 'Producto', 'Otro'];
+// "Retiro" es la plata que la operadora (o los socios) sacan de la caja.
+// Sin esta categoría el saldo acumulado crecería para siempre, aunque la
+// plata ya no esté.
 const CATEGORIAS_GASTO   = ['Insumos', 'Alquiler de jornada', 'Transporte',
-                            'Publicidad', 'Materiales', 'Sueldos', 'Otro'];
+                            'Publicidad', 'Materiales', 'Sueldos',
+                            'Retiro', 'Otro'];
 const MEDIOS_PAGO        = ['efectivo', 'transferencia', 'tarjeta', 'billetera', 'cuponera'];
 
 const Caja = {
@@ -1450,16 +1478,57 @@ const Caja = {
       params
     );
 
-    const ingresos = parseFloat(tot[0].ingresos);
-    const gastos   = parseFloat(tot[0].gastos);
+    // Lo que sobró de todos los meses anteriores. Se calcula sumando, no
+    // se guarda en ninguna tabla: así nunca se puede desincronizar si se
+    // borra o se corrige un movimiento viejo.
+    const { rows: prev } = await query(
+      `SELECT COALESCE(
+                SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE -monto END), 0
+              ) AS saldo
+         FROM movimientos
+        WHERE user_id = $1 AND fecha < $2`,
+      [userId, desde]
+    );
+
+    const ingresos      = parseFloat(tot[0].ingresos);
+    const gastos        = parseFloat(tot[0].gastos);
+    const ganancia      = ingresos - gastos;
+    const saldoAnterior = parseFloat(prev[0].saldo);
+
+    const reparto = await Caja.repartoSocios(userId, ganancia);
+
     return {
       ingresos,
       gastos,
-      ganancia: ingresos - gastos,
+      ganancia,
+      saldoAnterior,
+      enCaja: saldoAnterior + ganancia,
       porMedio,
       porCategoria,
       porProfesional,
+      reparto,
     };
+  },
+
+  // Si la operadora no cargó socios activos, devuelve null y la app ni
+  // muestra el bloque. No es una función que se pueda "desactivar a
+  // medias": o hay socios o no los hay.
+  async repartoSocios(userId, ganancia) {
+    const { rows } = await query(
+      `SELECT id, nombre, porcentaje
+         FROM socios
+        WHERE user_id = $1 AND activo = TRUE
+        ORDER BY porcentaje DESC, nombre`,
+      [userId]
+    );
+    if (!rows.length) return null;
+
+    return rows.map(s => ({
+      id:         s.id,
+      nombre:     s.nombre,
+      porcentaje: parseFloat(s.porcentaje),
+      monto:      Math.round(ganancia * parseFloat(s.porcentaje)) / 100,
+    }));
   },
 
   // Cobrar un turno. La seña que ya entró se descuenta acá para no contar
@@ -1499,13 +1568,82 @@ const Caja = {
       clienteNombre:     turno.nombre,
     });
 
+    // Si pagó con cuponera, se le descuenta una sesión. Si falla, el
+    // cobro igual queda: la sesión se puede descontar a mano desde la
+    // pestaña Cuponeras, pero la plata no se puede perder.
+    let sesionDescontada = null;
+    if (medioPago === 'cuponera') {
+      try {
+        const cup = await Caja.cuponeraActivaDe(userId, turno.telefono, turno.servicio_id);
+        if (cup) {
+          const r = await Cuponeras.registrarUso(cup.id, userId, { turnoId });
+          if (!r.error) sesionDescontada = { cuponeraId: cup.id };
+        }
+      } catch (err) {
+        console.error('[Caja/cobrarTurno] No se pudo descontar la sesión:', err.message);
+      }
+    }
+
     await query(
       `UPDATE turnos SET estado_pago = 'pagado', editado_en = NOW()
         WHERE id = $1 AND user_id = $2`,
       [turnoId, userId]
     );
 
-    return { movimiento, turno };
+    return { movimiento, turno, sesionDescontada };
+  },
+
+  async listarSocios(userId) {
+    const { rows } = await query(
+      `SELECT id, nombre, porcentaje, activo
+         FROM socios
+        WHERE user_id = $1
+        ORDER BY porcentaje DESC, nombre`,
+      [userId]
+    );
+    return rows.map(s => ({ ...s, porcentaje: parseFloat(s.porcentaje) }));
+  },
+
+  // Se reemplaza la lista entera. Mandar un array vacío es la forma de
+  // apagar el reparto: sin socios, la app no muestra el bloque.
+  async guardarSocios(userId, socios) {
+    const cliente = await getClient();
+    try {
+      await cliente.query('BEGIN');
+      await cliente.query('DELETE FROM socios WHERE user_id = $1', [userId]);
+
+      for (const s of socios) {
+        await cliente.query(
+          `INSERT INTO socios (user_id, nombre, porcentaje, activo)
+           VALUES ($1, $2, $3, TRUE)`,
+          [userId, String(s.nombre).trim().slice(0, 100), parseFloat(s.porcentaje)]
+        );
+      }
+      await cliente.query('COMMIT');
+    } catch (err) {
+      await cliente.query('ROLLBACK');
+      throw err;
+    } finally {
+      cliente.release();
+    }
+    return Caja.listarSocios(userId);
+  },
+
+  // Cuponera activa de esa clienta con sesiones disponibles. Se busca por
+  // teléfono porque las clientas no son filas de una tabla: son turnos
+  // agrupados. Si la cuponera es de un servicio puntual, se prioriza la
+  // del mismo servicio del turno.
+  async cuponeraActivaDe(userId, telefono, servicioId) {
+    if (!telefono) return null;
+    const { rows } = await query(
+      `SELECT c.id, c.servicio_id, c.total_sesiones,
+              (SELECT COUNT(*) FROM cuponera_usos u WHERE u.cuponera_id = c.id) AS usadas
+         FROM cuponeras c
+        WHERE c.user_id = $1 AND c.activa = TRUE AND c.cliente_telefono = $2
+        ORDER BY (c.servicio_id IS NOT DISTINCT FROM $3) DESC, c.creada_en ASC`,
+      [userId, telefono, servicioId || null]
+    );
+    return rows.find(c => parseInt(c.usadas) < parseInt(c.total_sesiones)) || null;
   },
 
   // Cuánto le falta cobrar a este turno: el precio del servicio menos la
@@ -1515,6 +1653,7 @@ const Caja = {
     const { rows } = await query(
       `SELECT t.monto_senia, t.senia_pagada, t.senia_eximida,
               t.servicio_nombre, t.nombre AS cliente,
+              t.telefono, t.servicio_id,
               COALESCE(s.precio, 0) AS precio
          FROM turnos t
          LEFT JOIN servicios s ON s.id = t.servicio_id
@@ -1526,14 +1665,21 @@ const Caja = {
     const t       = rows[0];
     const precio  = parseFloat(t.precio) || 0;
     const senia   = t.senia_pagada ? (parseFloat(t.monto_senia) || 0) : 0;
-    const sugerido = Math.max(precio - senia, 0);
+
+    // Si tiene cuponera con sesiones, ese turno ya está pago: se sugiere
+    // $0 y el medio "cuponera", que además descuenta la sesión al cobrar.
+    const cup = await Caja.cuponeraActivaDe(userId, t.telefono, t.servicio_id);
+    const conCuponera = !!cup;
+    const sugerido = conCuponera ? 0 : Math.max(precio - senia, 0);
 
     return {
       precio,
-      senia_cobrada:  senia,
+      senia_cobrada:   senia,
       sugerido,
+      con_cuponera:    conCuponera,
+      cuponera_restantes: cup ? parseInt(cup.total_sesiones) - parseInt(cup.usadas) : 0,
       servicio_nombre: t.servicio_nombre,
-      cliente:        t.cliente,
+      cliente:         t.cliente,
     };
   },
 };

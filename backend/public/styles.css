@@ -3230,3 +3230,48 @@ body {
   background:var(--crema2); border-radius:var(--radio-sm);
   padding:11px 13px; font-size:15px; color:var(--texto); margin-bottom:14px;
 }
+
+/* ── Caja: saldo que arrastra de un mes al otro ─────────── */
+.caja-arrastre {
+  display:flex; justify-content:space-between; align-items:center;
+  margin:8px 16px 0; padding:9px 14px;
+  background:var(--crema2); border-radius:var(--radio-sm);
+  font-size:13px; color:var(--gris); font-weight:600;
+}
+.caja-arrastre b { font-size:15px; color:var(--marron) }
+
+.caja-encaja {
+  display:flex; justify-content:space-between; align-items:center;
+  margin:10px 16px 0; padding:14px 16px;
+  background:var(--marron); color:#fff;
+  border-radius:var(--radio-sm);
+  font-size:15px; font-weight:700;
+}
+.caja-encaja b { font-size:22px; font-weight:800; color:var(--champan) }
+.caja-encaja b.en-rojo { color:#FFB4A8 !important }
+
+/* ── Socios ─────────────────────────────────────────────── */
+.caja-btn-socios {
+  width:100%; padding:12px; border-radius:var(--radio-sm);
+  background:var(--panel); border:1px dashed var(--borde);
+  color:var(--rosa-vino); font-size:14px; font-weight:700; cursor:pointer;
+}
+.socios-ayuda {
+  font-size:13px; line-height:1.5; color:var(--gris);
+  background:var(--crema2); border-radius:var(--radio-sm);
+  padding:11px 13px; margin-bottom:14px;
+}
+.socios-lista { display:flex; flex-direction:column; gap:8px }
+.socio-fila { display:flex; gap:8px; align-items:center }
+.socio-fila .socio-nombre { flex:1; min-width:0 }
+.socio-fila .socio-pct    { width:84px; flex-shrink:0 }
+.socio-quitar {
+  flex-shrink:0; width:38px; height:38px; border-radius:var(--radio-sm);
+  background:transparent; border:1px solid var(--borde);
+  font-size:15px; cursor:pointer;
+}
+.socios-agregar { width:100%; margin-top:10px }
+.socios-suma {
+  text-align:center; font-size:13px; font-weight:700;
+  margin:12px 0 4px; min-height:18px;
+}

@@ -322,6 +322,48 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Tabla movimientos (caja) OK');
 
+    // ── Caja: cobros en $0 ─────────────────────────────────────────────
+    // Cuando la clienta viene con cuponera, la plata ya entró el día que
+    // la compró. El cobro de ese turno tiene que poder ser $0, si no la
+    // caja contaría la misma plata dos veces.
+    await query(`
+      ALTER TABLE public.movimientos
+        DROP CONSTRAINT IF EXISTS movimientos_monto_check
+    `);
+    await query(`
+      ALTER TABLE public.movimientos
+        ADD CONSTRAINT movimientos_monto_check CHECK (monto >= 0)
+    `);
+
+    // La venta de una cuponera genera un ingreso solo. Este índice evita
+    // que se duplique si la operadora guarda dos veces.
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_movimientos_cuponera_unico
+        ON public.movimientos (cuponera_id)
+        WHERE cuponera_id IS NOT NULL AND categoria = 'Cuponera'
+    `);
+    console.log('[MIGRATIONS] ✓ Caja: cobros en $0 y venta de cuponera OK');
+
+    // ── Socios ─────────────────────────────────────────────────────────
+    // Opcional: si no hay filas activas, la app ni muestra el reparto.
+    // El porcentaje se guarda por socio y tiene que sumar 100 entre todos.
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.socios (
+        id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id    UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+        nombre     VARCHAR(100) NOT NULL,
+        porcentaje NUMERIC(5,2) NOT NULL,
+        activo     BOOLEAN DEFAULT TRUE,
+        creado_en  TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT socios_porcentaje_check CHECK (porcentaje > 0 AND porcentaje <= 100)
+      )
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_socios_user
+        ON public.socios (user_id, activo)
+    `);
+    console.log('[MIGRATIONS] ✓ Tabla socios OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

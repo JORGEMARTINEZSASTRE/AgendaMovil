@@ -2446,6 +2446,7 @@ async function handleSubmitCuponera(e) {
       servicio_nombre:  servicio?.nombre || null,
       total_sesiones:   sesiones,
       precio_total:     parseFloat(getVal('cup-precio')) || 0,
+      medio_pago:       getVal('cup-medio') || 'efectivo',
       notas:            getVal('cup-notas') || null,
     });
 
@@ -3875,7 +3876,14 @@ function bindCaja() {
   document.getElementById('form-movimiento')?.addEventListener('submit', guardarMovimiento);
   document.getElementById('form-cobro')?.addEventListener('submit', guardarCobro);
 
-  document.querySelectorAll('#modal-movimiento .btn-cerrar-modal, #modal-cobro .btn-cerrar-modal')
+  document.getElementById('btn-caja-socios')?.addEventListener('click', abrirModalSocios);
+  document.getElementById('form-socios')?.addEventListener('submit', guardarSocios);
+  document.getElementById('btn-agregar-socio')?.addEventListener('click', () => {
+    socios.push({ nombre: '', porcentaje: 0 });
+    pintarFilasSocios();
+  });
+
+  document.querySelectorAll('#modal-movimiento .btn-cerrar-modal, #modal-cobro .btn-cerrar-modal, #modal-socios .btn-cerrar-modal')
     .forEach(b => b.addEventListener('click', cerrarModales));
 
   cajaBindeado = true;
@@ -3906,8 +3914,17 @@ async function renderCaja() {
     gan.textContent = plata(res.ganancia);
     gan.classList.toggle('en-rojo', res.ganancia < 0);
 
+    const ant = document.getElementById('caja-saldo-anterior');
+    ant.textContent = plata(res.saldoAnterior);
+    ant.classList.toggle('en-rojo', res.saldoAnterior < 0);
+
+    const enCaja = document.getElementById('caja-en-caja');
+    enCaja.textContent = plata(res.enCaja);
+    enCaja.classList.toggle('en-rojo', res.enCaja < 0);
+
     pintarDesgloseMedios(res.porMedio);
     pintarDesgloseCategorias(res.porCategoria);
+    pintarReparto(res.reparto, res.ganancia);
     pintarMovimientos(movs.movimientos || []);
 
   } catch (err) {
@@ -4074,15 +4091,28 @@ async function abrirModalCobro(turnoId) {
     detalle.innerHTML = '<b>' + escaparHTML(s.cliente || '') + '</b>' +
       (s.servicio_nombre ? ' · ' + escaparHTML(s.servicio_nombre) : '');
 
-    input.value = s.sugerido > 0 ? s.sugerido : '';
+    const medio = document.getElementById('cobro-medio');
 
-    if (s.senia_cobrada > 0) {
-      hint.textContent = 'El servicio son ' + plata(s.precio) + ' y ya pagó ' +
-        plata(s.senia_cobrada) + ' de seña. Falta ' + plata(s.sugerido) + '.';
-    } else if (s.precio > 0) {
-      hint.textContent = 'Precio del servicio: ' + plata(s.precio) + '. Podés cambiarlo.';
+    if (s.con_cuponera) {
+      // Ya pagó el día que compró la cuponera: hoy no entra plata.
+      input.value   = 0;
+      medio.value   = 'cuponera';
+      hint.innerHTML = '🎟️ Esta clienta tiene <b>cuponera con ' + s.cuponera_restantes +
+        ' ' + (s.cuponera_restantes === 1 ? 'sesión' : 'sesiones') + '</b>. ' +
+        'Ya pagó cuando la compró, así que va en $0 y se le descuenta una sesión. ' +
+        'Si le cobrás algo aparte, escribilo.';
     } else {
-      hint.textContent = 'Este servicio no tiene precio cargado. Escribí cuánto cobraste.';
+      input.value = s.sugerido > 0 ? s.sugerido : '';
+      medio.value = 'efectivo';
+
+      if (s.senia_cobrada > 0) {
+        hint.textContent = 'El servicio son ' + plata(s.precio) + ' y ya pagó ' +
+          plata(s.senia_cobrada) + ' de seña. Falta ' + plata(s.sugerido) + '.';
+      } else if (s.precio > 0) {
+        hint.textContent = 'Precio del servicio: ' + plata(s.precio) + '. Podés cambiarlo.';
+      } else {
+        hint.textContent = 'Este servicio no tiene precio cargado. Escribí cuánto cobraste.';
+      }
     }
     input.focus();
 
@@ -4100,20 +4130,25 @@ async function guardarCobro(e) {
 
   const error = document.getElementById('form-cobro-error');
   const btn   = document.getElementById('btn-guardar-cobro');
-  const monto = parseFloat(document.getElementById('cobro-monto').value);
+  const medio = document.getElementById('cobro-medio').value;
+  const bruto = document.getElementById('cobro-monto').value;
+  const monto = parseFloat(bruto);
 
-  if (!monto || monto <= 0) {
-    error.textContent = 'Poné cuánto cobraste.';
+  // Con cuponera el cobro puede ser $0: la plata entró cuando la compró.
+  if (bruto === '' || isNaN(monto) || monto < 0) {
+    error.textContent = 'Poné cuánto cobraste (puede ser 0 si vino con cuponera).';
+    error.classList.remove('oculto');
+    return;
+  }
+  if (monto === 0 && medio !== 'cuponera') {
+    error.textContent = 'Un cobro en $0 solo tiene sentido si pagó con cuponera.';
     error.classList.remove('oculto');
     return;
   }
 
   btn.disabled = true;
   try {
-    await CajaAPI.cobrar(cobroTurnoId, {
-      monto:      monto,
-      medio_pago: document.getElementById('cobro-medio').value,
-    });
+    await CajaAPI.cobrar(cobroTurnoId, { monto: monto, medio_pago: medio });
     cerrarModales();
     mostrarToast('Cobro registrado 💵', 'exito');
     cobroTurnoId = null;
@@ -4121,6 +4156,131 @@ async function guardarCobro(e) {
     renderTabActual();
   } catch (err) {
     error.textContent = err.message || 'No se pudo registrar el cobro';
+    error.classList.remove('oculto');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── Socios ───────────────────────────────────────────────
+// Si la operadora no carga ninguno, todo este bloque queda invisible.
+let socios = [];
+
+function pintarReparto(reparto, ganancia) {
+  const bloque = document.getElementById('caja-bloque-socios');
+  const cont   = document.getElementById('caja-reparto');
+  if (!bloque || !cont) return;
+
+  if (!reparto || !reparto.length) {
+    bloque.style.display = 'none';
+    return;
+  }
+  bloque.style.display = '';
+
+  if (ganancia <= 0) {
+    cont.innerHTML = '<p class="caja-vacio">Este mes todavía no hay ganancia para repartir.</p>';
+    return;
+  }
+
+  cont.innerHTML = reparto.map(s =>
+    '<div class="caja-desglose-fila">' +
+      '<span>' + escaparHTML(s.nombre) + ' <small>(' + s.porcentaje + '%)</small></span>' +
+      '<b>' + plata(s.monto) + '</b>' +
+    '</div>'
+  ).join('');
+}
+
+async function abrirModalSocios() {
+  const modal = document.getElementById('modal-socios');
+  if (!modal) return;
+
+  document.getElementById('form-socios-error').classList.add('oculto');
+  modal.classList.remove('oculto');
+
+  try {
+    const r = await CajaAPI.socios();
+    socios = (r.socios || []).map(s => ({ nombre: s.nombre, porcentaje: s.porcentaje }));
+  } catch {
+    socios = [];
+  }
+  pintarFilasSocios();
+}
+
+function pintarFilasSocios() {
+  const cont = document.getElementById('socios-lista');
+  if (!cont) return;
+
+  if (!socios.length) {
+    cont.innerHTML = '<p class="caja-vacio">Sin socios. Trabajás sola.</p>';
+  } else {
+    cont.innerHTML = socios.map((s, i) =>
+      '<div class="socio-fila">' +
+        '<input type="text" class="socio-nombre" data-i="' + i + '" maxlength="100" ' +
+               'placeholder="Nombre" value="' + escaparHTML(s.nombre) + '">' +
+        '<input type="number" class="socio-pct" data-i="' + i + '" min="1" max="100" ' +
+               'step="0.01" placeholder="%" value="' + s.porcentaje + '">' +
+        '<button type="button" class="socio-quitar" data-i="' + i + '">🗑</button>' +
+      '</div>'
+    ).join('');
+
+    cont.querySelectorAll('.socio-nombre').forEach(inp => {
+      inp.addEventListener('input', () => { socios[inp.dataset.i].nombre = inp.value; });
+    });
+    cont.querySelectorAll('.socio-pct').forEach(inp => {
+      inp.addEventListener('input', () => {
+        socios[inp.dataset.i].porcentaje = parseFloat(inp.value) || 0;
+        pintarSumaSocios();
+      });
+    });
+    cont.querySelectorAll('.socio-quitar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        socios.splice(parseInt(btn.dataset.i), 1);
+        pintarFilasSocios();
+      });
+    });
+  }
+  pintarSumaSocios();
+}
+
+function pintarSumaSocios() {
+  const el = document.getElementById('socios-suma');
+  if (!el) return;
+
+  if (!socios.length) { el.textContent = ''; el.className = 'socios-suma'; return; }
+
+  const suma = socios.reduce((a, s) => a + (parseFloat(s.porcentaje) || 0), 0);
+  const ok   = Math.abs(suma - 100) <= 0.01;
+  el.textContent = 'Suman ' + suma.toFixed(2) + '%' + (ok ? ' ✅' : ' — tienen que sumar 100');
+  el.className = 'socios-suma ' + (ok ? 'en-verde' : 'en-rojo');
+}
+
+async function guardarSocios(e) {
+  e.preventDefault();
+
+  const error = document.getElementById('form-socios-error');
+  const btn   = document.getElementById('btn-guardar-socios');
+
+  const limpios = socios
+    .filter(s => (s.nombre || '').trim() && parseFloat(s.porcentaje) > 0)
+    .map(s => ({ nombre: s.nombre.trim(), porcentaje: parseFloat(s.porcentaje) }));
+
+  if (limpios.length) {
+    const suma = limpios.reduce((a, s) => a + s.porcentaje, 0);
+    if (Math.abs(suma - 100) > 0.01) {
+      error.textContent = 'Los porcentajes tienen que sumar 100. Ahora suman ' + suma.toFixed(2) + '.';
+      error.classList.remove('oculto');
+      return;
+    }
+  }
+
+  btn.disabled = true;
+  try {
+    const r = await CajaAPI.guardarSocios(limpios);
+    cerrarModales();
+    mostrarToast(r.mensaje || 'Socios guardados', 'exito');
+    renderCaja();
+  } catch (err) {
+    error.textContent = err.message || 'No se pudo guardar';
     error.classList.remove('oculto');
   } finally {
     btn.disabled = false;

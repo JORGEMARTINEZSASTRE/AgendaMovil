@@ -538,6 +538,15 @@ const CajaAPI = {
       body:   JSON.stringify(payload),
     });
   },
+  async socios() {
+    return await fetchAPI('/caja/socios');
+  },
+  async guardarSocios(socios) {
+    return await fetchAPI('/caja/socios', {
+      method: 'PUT',
+      body:   JSON.stringify({ socios }),
+    });
+  },
 };
 
 // ─── PROFESIONALES API ────────────────────────────────────

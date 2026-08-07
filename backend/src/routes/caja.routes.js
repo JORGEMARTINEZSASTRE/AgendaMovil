@@ -138,7 +138,9 @@ router.get('/turnos/:id/sugerencia',
 router.post('/turnos/:id/cobrar',
   [
     param('id').isUUID().withMessage('ID inválido'),
-    body('monto').isFloat({ gt: 0 }).withMessage('El monto tiene que ser mayor a cero'),
+    // Se permite 0: es el caso de la clienta que viene con cuponera, que
+    // ya pagó el día que la compró.
+    body('monto').isFloat({ min: 0 }).withMessage('El monto no puede ser negativo'),
     body('medio_pago').optional().isIn(Caja.MEDIOS_PAGO).withMessage('Medio de pago inválido'),
     body('fecha').optional({ nullable: true, checkFalsy: true })
       .matches(FECHA).withMessage('Fecha inválida'),
@@ -167,6 +169,58 @@ router.post('/turnos/:id/cobrar',
     } catch (err) {
       console.error('[CAJA/cobrar]', err.message);
       return res.status(500).json({ ok: false, error: 'Error al registrar el cobro' });
+    }
+  }
+);
+
+// ─── SOCIOS ───────────────────────────────────────────────────────────
+// Si no hay socios cargados, la app no muestra nada de esto.
+
+// GET /api/caja/socios
+router.get('/socios', async (req, res) => {
+  try {
+    const socios = await Caja.listarSocios(req.user.id);
+    return res.json({ ok: true, socios, activo: socios.some(s => s.activo) });
+  } catch (err) {
+    console.error('[CAJA/socios]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al obtener los socios' });
+  }
+});
+
+// PUT /api/caja/socios — se guarda la lista entera de una
+router.put('/socios',
+  [
+    body('socios').isArray({ max: 10 }).withMessage('Máximo 10 socios'),
+    body('socios.*.nombre').notEmpty().isLength({ max: 100 }).trim()
+      .withMessage('Cada socio necesita un nombre'),
+    body('socios.*.porcentaje').isFloat({ gt: 0, max: 100 })
+      .withMessage('El porcentaje va entre 0 y 100'),
+  ],
+  validar,
+  async (req, res) => {
+    try {
+      const socios = req.body.socios || [];
+
+      if (socios.length) {
+        const suma = socios.reduce((a, s) => a + parseFloat(s.porcentaje), 0);
+        // Tolerancia de un centésimo: 33,33 + 33,33 + 33,34 tiene que pasar.
+        if (Math.abs(suma - 100) > 0.01) {
+          return res.status(400).json({
+            ok: false,
+            error: `Los porcentajes tienen que sumar 100. Ahora suman ${suma.toFixed(2)}.`,
+          });
+        }
+      }
+
+      const guardados = await Caja.guardarSocios(req.user.id, socios);
+      return res.json({
+        ok: true,
+        mensaje: socios.length ? 'Socios guardados' : 'Reparto entre socios desactivado',
+        socios: guardados,
+      });
+    } catch (err) {
+      console.error('[CAJA/guardar-socios]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al guardar los socios' });
     }
   }
 );

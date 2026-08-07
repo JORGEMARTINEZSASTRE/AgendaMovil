@@ -51,6 +51,10 @@ router.post('/',
     body('servicio_id')
       .optional({ nullable: true, checkFalsy: true })
       .isUUID().withMessage('Servicio inválido'),
+    body('medio_pago')
+      .optional()
+      .isIn(['efectivo', 'transferencia', 'tarjeta', 'billetera'])
+      .withMessage('Medio de pago inválido'),
     body('notas')
       .optional({ nullable: true })
       .isLength({ max: 500 }).withMessage('Las notas son muy largas')
@@ -61,7 +65,7 @@ router.post('/',
     try {
       const {
         cliente_nombre, cliente_telefono, servicio_id,
-        servicio_nombre, total_sesiones, precio_total, notas,
+        servicio_nombre, total_sesiones, precio_total, notas, medio_pago,
       } = req.body;
 
       const cuponera = await Cuponeras.crear(req.user.id, {
@@ -72,6 +76,7 @@ router.post('/',
         totalSesiones:   parseInt(total_sesiones),
         precioTotal:     parseFloat(precio_total) || 0,
         notas:           notas || null,
+        medioPago:       medio_pago || 'efectivo',
       });
 
       return res.status(201).json({ ok: true, mensaje: 'Cuponera creada', cuponera });

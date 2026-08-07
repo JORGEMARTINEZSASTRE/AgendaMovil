@@ -483,6 +483,11 @@
         <button type="button" id="caja-mes-sig" class="caja-mes-btn">›</button>
       </div>
 
+      <div class="caja-arrastre">
+        <span>Viene del mes pasado</span>
+        <b id="caja-saldo-anterior">$ 0</b>
+      </div>
+
       <div class="caja-totales">
         <div class="caja-total caja-total-in">
           <p class="caja-total-lbl">Entró</p>
@@ -493,9 +498,14 @@
           <p class="caja-total-num" id="caja-gastos">$ 0</p>
         </div>
         <div class="caja-total caja-total-gan">
-          <p class="caja-total-lbl">Te queda</p>
+          <p class="caja-total-lbl">Ganó el mes</p>
           <p class="caja-total-num" id="caja-ganancia">$ 0</p>
         </div>
+      </div>
+
+      <div class="caja-encaja">
+        <span>💰 Queda en caja</span>
+        <b id="caja-en-caja">$ 0</b>
       </div>
 
       <div class="caja-acciones">
@@ -513,9 +523,20 @@
         <div id="caja-por-categoria" class="caja-desglose"></div>
       </div>
 
+      <div class="caja-bloque" id="caja-bloque-socios" style="display:none">
+        <p class="caja-bloque-tit">🤝 Reparto entre socios</p>
+        <div id="caja-reparto" class="caja-desglose"></div>
+      </div>
+
       <div class="caja-bloque">
         <p class="caja-bloque-tit">🧾 Movimientos</p>
         <div id="caja-movimientos" class="caja-lista"></div>
+      </div>
+
+      <div class="caja-bloque">
+        <button type="button" id="btn-caja-socios" class="caja-btn-socios">
+          🤝 Configurar socios
+        </button>
       </div>
 
     </section>
@@ -914,6 +935,19 @@
         <label for="cup-precio">💰 Total que pagó ($)</label>
         <input type="number" id="cup-precio" min="0" step="50" placeholder="Ej: 6000">
         <small id="cup-precio-sesion" class="form-hint"></small>
+      </div>
+
+      <div class="campo">
+        <label for="cup-medio">💳 ¿Cómo te pagó?</label>
+        <select id="cup-medio">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta">Débito o crédito</option>
+          <option value="billetera">Mercado Pago / billetera</option>
+        </select>
+        <small class="form-hint">
+          El total entra hoy en la caja. Las sesiones que use después van en $0.
+        </small>
       </div>
 
       <div class="campo">
@@ -1582,6 +1616,42 @@
       </div>
 
       <button type="submit" id="btn-guardar-movimiento" class="btn-primario">
+        Guardar
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL: SOCIOS
+════════════════════════════════════════════════ -->
+<div id="modal-socios" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">🤝 Socios</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <form id="form-socios" class="form-modal" novalidate>
+      <div id="form-socios-error" class="form-error oculto"></div>
+
+      <p class="socios-ayuda">
+        ¿Compartís las ganancias con alguien? Cargá a cada socio con su
+        porcentaje y la caja te muestra cuánto le toca a cada uno.
+        <b>Si trabajás sola, dejá esto vacío y no se muestra.</b>
+      </p>
+
+      <div id="socios-lista" class="socios-lista"></div>
+
+      <button type="button" id="btn-agregar-socio" class="btn-secundario socios-agregar">
+        ➕ Agregar socio
+      </button>
+
+      <p id="socios-suma" class="socios-suma"></p>
+
+      <button type="submit" id="btn-guardar-socios" class="btn-primario">
         Guardar
       </button>
     </form>
