@@ -221,6 +221,7 @@ function renderTabActual() {
     case 'sucursales': renderSucursalesOperadora(); break;
     case 'clientes':   renderClientes();   break;
     case 'cuponeras':  renderCuponeras();  break;
+    case 'caja':       renderCaja();       break;
   }
 }
 
@@ -547,6 +548,15 @@ function cardTurno(t) {
                  </button>`
             }
           </div>` : ''}
+        ${t.estado !== 'cancelado' ? `
+          <div class="turno-cobro-wrap">
+            ${t.cobrado
+              ? `<span class="turno-cobro-badge cobrado">💵 Cobrado</span>`
+              : `<button class="btn-cobrar-turno" data-id="${t.id}" title="Registrar el cobro en la caja">
+                   💵 Cobrar
+                 </button>`
+            }
+          </div>` : ''}
       </div>
     </div>`;
 }
@@ -588,6 +598,10 @@ contenedor.querySelectorAll('.btn-cancelar-turno').forEach(btn => {
 
   contenedor.querySelectorAll('.btn-eximir-senia').forEach(btn => {
     btn.addEventListener('click', () => liberarSenia(btn.dataset.id));
+  });
+
+  contenedor.querySelectorAll('.btn-cobrar-turno').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalCobro(btn.dataset.id));
   });
 }
 
@@ -3804,3 +3818,311 @@ async function quitarBloqueo(bloqueoId) {
     mostrarToast('Error al eliminar bloqueo', 'error');
   }
 }
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  CAJA â€” ingresos, gastos y cobros
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const MEDIOS_LABEL = {
+  efectivo:      'ðŸ’µ Efectivo',
+  transferencia: 'ðŸ¦ Transferencia',
+  tarjeta:       'ðŸ’³ DÃ©bito/crÃ©dito',
+  billetera:     'ðŸ“± Billetera',
+  cuponera:      'ðŸŽŸï¸ Cuponera',
+};
+
+const CAT_INGRESO = ['Turno', 'SeÃ±a', 'Cuponera', 'Producto', 'Otro'];
+const CAT_GASTO   = ['Insumos', 'Alquiler de jornada', 'Transporte',
+                     'Publicidad', 'Materiales', 'Sueldos', 'Otro'];
+
+let cajaMes      = new Date();   // mes que se estÃ¡ mirando
+let cajaBindeado = false;
+let cobroTurnoId = null;
+
+function plata(n) {
+  const v = Math.round(parseFloat(n) || 0);
+  return '$ ' + v.toLocaleString('es-UY');
+}
+
+// Primer y Ãºltimo dÃ­a del mes que se estÃ¡ mirando, en YYYY-MM-DD.
+// Se arma a mano y no con toISOString(), que pasa a UTC y en Uruguay
+// atrasa un dÃ­a: el 1 de marzo terminarÃ­a mostrando febrero.
+function rangoCajaMes() {
+  const a = cajaMes.getFullYear();
+  const m = cajaMes.getMonth();
+  const dd = (n) => String(n).padStart(2, '0');
+  const ultimo = new Date(a, m + 1, 0).getDate();
+  return {
+    desde: a + '-' + dd(m + 1) + '-01',
+    hasta: a + '-' + dd(m + 1) + '-' + dd(ultimo),
+  };
+}
+
+function bindCaja() {
+  if (cajaBindeado) return;
+
+  document.getElementById('caja-mes-ant')?.addEventListener('click', () => {
+    cajaMes = new Date(cajaMes.getFullYear(), cajaMes.getMonth() - 1, 1);
+    renderCaja();
+  });
+  document.getElementById('caja-mes-sig')?.addEventListener('click', () => {
+    cajaMes = new Date(cajaMes.getFullYear(), cajaMes.getMonth() + 1, 1);
+    renderCaja();
+  });
+
+  document.getElementById('btn-caja-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso'));
+  document.getElementById('btn-caja-gasto')?.addEventListener('click',   () => abrirModalMovimiento('gasto'));
+
+  document.getElementById('form-movimiento')?.addEventListener('submit', guardarMovimiento);
+  document.getElementById('form-cobro')?.addEventListener('submit', guardarCobro);
+
+  document.querySelectorAll('#modal-movimiento .btn-cerrar-modal, #modal-cobro .btn-cerrar-modal')
+    .forEach(b => b.addEventListener('click', cerrarModales));
+
+  cajaBindeado = true;
+}
+
+async function renderCaja() {
+  bindCaja();
+
+  const { desde, hasta } = rangoCajaMes();
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const lbl = document.getElementById('caja-mes-label');
+  if (lbl) lbl.textContent = meses[cajaMes.getMonth()] + ' ' + cajaMes.getFullYear();
+
+  const lista = document.getElementById('caja-movimientos');
+  if (lista) lista.innerHTML = '<div class="pub-cargando">Cargando...</div>';
+
+  try {
+    const [res, movs] = await Promise.all([
+      CajaAPI.resumen(desde, hasta),
+      CajaAPI.movimientos(desde, hasta),
+    ]);
+
+    document.getElementById('caja-ingresos').textContent = plata(res.ingresos);
+    document.getElementById('caja-gastos').textContent   = plata(res.gastos);
+
+    const gan = document.getElementById('caja-ganancia');
+    gan.textContent = plata(res.ganancia);
+    gan.classList.toggle('en-rojo', res.ganancia < 0);
+
+    pintarDesgloseMedios(res.porMedio);
+    pintarDesgloseCategorias(res.porCategoria);
+    pintarMovimientos(movs.movimientos || []);
+
+  } catch (err) {
+    if (lista) lista.innerHTML = '<p class="caja-vacio">No se pudo cargar la caja: ' + escaparHTML(err.message) + '</p>';
+  }
+}
+
+function pintarDesgloseMedios(filas) {
+  const cont = document.getElementById('caja-por-medio');
+  if (!cont) return;
+
+  const conPlata = (filas || []).filter(f => parseFloat(f.ingresos) > 0);
+  if (!conPlata.length) {
+    cont.innerHTML = '<p class="caja-vacio">TodavÃ­a no entrÃ³ nada este mes.</p>';
+    return;
+  }
+
+  cont.innerHTML = conPlata.map(f =>
+    '<div class="caja-desglose-fila">' +
+      '<span>' + (MEDIOS_LABEL[f.medio_pago] || escaparHTML(f.medio_pago)) + '</span>' +
+      '<b>' + plata(f.ingresos) + '</b>' +
+    '</div>'
+  ).join('');
+}
+
+function pintarDesgloseCategorias(filas) {
+  const cont = document.getElementById('caja-por-categoria');
+  if (!cont) return;
+
+  const gastos = (filas || []).filter(f => f.tipo === 'gasto');
+  if (!gastos.length) {
+    cont.innerHTML = '<p class="caja-vacio">No cargaste gastos este mes.</p>';
+    return;
+  }
+
+  cont.innerHTML = gastos.map(f =>
+    '<div class="caja-desglose-fila">' +
+      '<span>' + escaparHTML(f.categoria) + ' <small>(' + f.cantidad + ')</small></span>' +
+      '<b class="en-rojo">' + plata(f.total) + '</b>' +
+    '</div>'
+  ).join('');
+}
+
+function pintarMovimientos(movs) {
+  const cont = document.getElementById('caja-movimientos');
+  if (!cont) return;
+
+  if (!movs.length) {
+    cont.innerHTML = '<p class="caja-vacio">Sin movimientos en este mes.</p>';
+    return;
+  }
+
+  cont.innerHTML = movs.map(m => {
+    const esIngreso = m.tipo === 'ingreso';
+    const detalle   = m.cliente_nombre || m.concepto || m.categoria;
+    const fechaCorta = (m.fecha || '').toString().slice(0, 10).split('-').reverse().join('/');
+    return '' +
+      '<div class="caja-mov ' + (esIngreso ? 'mov-in' : 'mov-out') + '">' +
+        '<div class="caja-mov-info">' +
+          '<p class="caja-mov-tit">' + escaparHTML(detalle) + '</p>' +
+          '<p class="caja-mov-sub">' + escaparHTML(m.categoria) + ' Â· ' +
+            (MEDIOS_LABEL[m.medio_pago] || '') + ' Â· ' + fechaCorta + '</p>' +
+        '</div>' +
+        '<div class="caja-mov-der">' +
+          '<b class="' + (esIngreso ? 'en-verde' : 'en-rojo') + '">' +
+            (esIngreso ? '+' : 'âˆ’') + ' ' + plata(m.monto) + '</b>' +
+          '<button class="btn-icon btn-borrar-mov" data-id="' + m.id + '" title="Borrar">ðŸ—‘</button>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+
+  cont.querySelectorAll('.btn-borrar-mov').forEach(b => {
+    b.addEventListener('click', () => borrarMovimiento(b.dataset.id));
+  });
+}
+
+async function borrarMovimiento(id) {
+  if (!confirm('Â¿Borrar este movimiento? La plata deja de contar en el mes.')) return;
+  try {
+    await CajaAPI.borrar(id);
+    mostrarToast('Movimiento borrado', 'exito');
+    renderCaja();
+  } catch (err) {
+    mostrarToast(err.message || 'No se pudo borrar', 'error');
+  }
+}
+
+// â”€â”€â”€ Alta manual de ingreso o gasto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function abrirModalMovimiento(tipo) {
+  const modal = document.getElementById('modal-movimiento');
+  if (!modal) return;
+
+  document.getElementById('modal-movimiento-titulo').textContent =
+    tipo === 'ingreso' ? 'âž• Nuevo ingreso' : 'âž– Nuevo gasto';
+
+  const sel  = document.getElementById('mov-categoria');
+  const cats = tipo === 'ingreso' ? CAT_INGRESO : CAT_GASTO;
+  sel.innerHTML = cats.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+
+  document.getElementById('form-movimiento').dataset.tipo = tipo;
+  document.getElementById('mov-monto').value    = '';
+  document.getElementById('mov-concepto').value = '';
+  document.getElementById('mov-fecha').value    = hoy();
+  document.getElementById('form-movimiento-error').classList.add('oculto');
+
+  modal.classList.remove('oculto');
+  document.getElementById('mov-monto').focus();
+}
+
+async function guardarMovimiento(e) {
+  e.preventDefault();
+
+  const form  = document.getElementById('form-movimiento');
+  const error = document.getElementById('form-movimiento-error');
+  const btn   = document.getElementById('btn-guardar-movimiento');
+  const monto = parseFloat(document.getElementById('mov-monto').value);
+
+  if (!monto || monto <= 0) {
+    error.textContent = 'PonÃ© un monto mayor a cero.';
+    error.classList.remove('oculto');
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    await CajaAPI.crear({
+      tipo:       form.dataset.tipo,
+      categoria:  document.getElementById('mov-categoria').value,
+      concepto:   document.getElementById('mov-concepto').value.trim() || null,
+      monto:      monto,
+      medio_pago: document.getElementById('mov-medio').value,
+      fecha:      document.getElementById('mov-fecha').value || null,
+    });
+    cerrarModales();
+    mostrarToast('Movimiento registrado âœ…', 'exito');
+    renderCaja();
+  } catch (err) {
+    error.textContent = err.message || 'No se pudo guardar';
+    error.classList.remove('oculto');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// â”€â”€â”€ Cobrar un turno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+async function abrirModalCobro(turnoId) {
+  const modal = document.getElementById('modal-cobro');
+  if (!modal) return;
+
+  cobroTurnoId = turnoId;
+  const detalle = document.getElementById('cobro-detalle');
+  const hint    = document.getElementById('cobro-hint');
+  const input   = document.getElementById('cobro-monto');
+
+  detalle.textContent = 'Cargando...';
+  hint.textContent    = '';
+  input.value         = '';
+  document.getElementById('form-cobro-error').classList.add('oculto');
+  modal.classList.remove('oculto');
+
+  try {
+    const s = await CajaAPI.sugerencia(turnoId);
+
+    detalle.innerHTML = '<b>' + escaparHTML(s.cliente || '') + '</b>' +
+      (s.servicio_nombre ? ' Â· ' + escaparHTML(s.servicio_nombre) : '');
+
+    input.value = s.sugerido > 0 ? s.sugerido : '';
+
+    if (s.senia_cobrada > 0) {
+      hint.textContent = 'El servicio son ' + plata(s.precio) + ' y ya pagÃ³ ' +
+        plata(s.senia_cobrada) + ' de seÃ±a. Falta ' + plata(s.sugerido) + '.';
+    } else if (s.precio > 0) {
+      hint.textContent = 'Precio del servicio: ' + plata(s.precio) + '. PodÃ©s cambiarlo.';
+    } else {
+      hint.textContent = 'Este servicio no tiene precio cargado. EscribÃ­ cuÃ¡nto cobraste.';
+    }
+    input.focus();
+
+  } catch (err) {
+    detalle.textContent = '';
+    const box = document.getElementById('form-cobro-error');
+    box.textContent = err.message || 'Error';
+    box.classList.remove('oculto');
+  }
+}
+
+async function guardarCobro(e) {
+  e.preventDefault();
+  if (!cobroTurnoId) return;
+
+  const error = document.getElementById('form-cobro-error');
+  const btn   = document.getElementById('btn-guardar-cobro');
+  const monto = parseFloat(document.getElementById('cobro-monto').value);
+
+  if (!monto || monto <= 0) {
+    error.textContent = 'PonÃ© cuÃ¡nto cobraste.';
+    error.classList.remove('oculto');
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    await CajaAPI.cobrar(cobroTurnoId, {
+      monto:      monto,
+      medio_pago: document.getElementById('cobro-medio').value,
+    });
+    cerrarModales();
+    mostrarToast('Cobro registrado ðŸ’µ', 'exito');
+    cobroTurnoId = null;
+    await cargarTurnos();
+    renderTabActual();
+  } catch (err) {
+    error.textContent = err.message || 'No se pudo registrar el cobro';
+    error.classList.remove('oculto');
+  } finally {
+    btn.disabled = false;
+  }
+}
+

@@ -3127,3 +3127,107 @@ body {
   color: var(--text-muted, #888);
   margin: 2px 0 6px;
 }
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CAJA â€” ingresos, gastos y cobros
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.en-rojo  { color:var(--rojo)  !important }
+.en-verde { color:#1F9D55      !important }
+.pub-cargando { padding:18px; text-align:center; color:var(--gris); font-size:14px }
+
+/* NavegaciÃ³n de mes */
+.caja-mes-nav {
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  padding:14px 16px 4px;
+}
+.caja-mes-btn {
+  width:38px; height:38px; border-radius:50%;
+  border:1px solid var(--borde); background:var(--panel);
+  color:var(--rosa-vino); font-size:22px; line-height:1; cursor:pointer;
+}
+.caja-mes-btn:active { background:var(--crema2) }
+.caja-mes-label {
+  font-weight:800; font-size:17px; color:var(--marron);
+  text-transform:capitalize; min-width:150px; text-align:center;
+}
+
+/* Los tres nÃºmeros de arriba */
+.caja-totales {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  padding:10px 16px 4px;
+}
+.caja-total {
+  background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--radio-sm); padding:12px 8px; text-align:center;
+}
+.caja-total-lbl {
+  font-size:11px; color:var(--gris); font-weight:700;
+  text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px;
+}
+.caja-total-num { font-size:17px; font-weight:800; color:var(--marron) }
+.caja-total-in  { border-left:3px solid #1F9D55 }
+.caja-total-out { border-left:3px solid var(--rojo) }
+.caja-total-gan { border-left:3px solid var(--dorado) }
+
+/* Botones de alta */
+.caja-acciones { display:flex; gap:8px; padding:12px 16px }
+.caja-btn-in, .caja-btn-out {
+  flex:1; padding:12px; border-radius:var(--radio-sm);
+  font-size:15px; font-weight:700; cursor:pointer; border:0; color:#fff;
+}
+.caja-btn-in  { background:#1F9D55 }
+.caja-btn-out { background:var(--rosa-vino) }
+
+/* Bloques de desglose */
+.caja-bloque { padding:8px 16px 4px }
+.caja-bloque-tit {
+  font-size:13px; font-weight:800; color:var(--gris);
+  text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;
+}
+.caja-desglose {
+  background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--radio-sm); overflow:hidden;
+}
+.caja-desglose-fila {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:11px 14px; font-size:14px; color:var(--texto);
+  border-bottom:1px solid var(--crema2);
+}
+.caja-desglose-fila:last-child { border-bottom:0 }
+.caja-desglose-fila small { color:var(--gris) }
+.caja-vacio { padding:14px; color:var(--gris); font-size:14px; text-align:center }
+
+/* Lista de movimientos */
+.caja-lista { display:flex; flex-direction:column; gap:8px; padding-bottom:20px }
+.caja-mov {
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  background:var(--panel); border:1px solid var(--borde);
+  border-radius:var(--radio-sm); padding:11px 12px;
+}
+.caja-mov.mov-in  { border-left:4px solid #1F9D55 }
+.caja-mov.mov-out { border-left:4px solid var(--rojo) }
+.caja-mov-info { min-width:0 }
+.caja-mov-tit {
+  font-weight:700; font-size:15px; color:var(--texto);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.caja-mov-sub { font-size:12px; color:var(--gris); margin-top:2px }
+.caja-mov-der { display:flex; align-items:center; gap:8px; flex-shrink:0 }
+.caja-mov-der b { font-size:15px; white-space:nowrap }
+
+/* Cobro dentro de la tarjeta del turno */
+.turno-cobro-wrap { margin-top:8px }
+.btn-cobrar-turno {
+  background:#1F9D55; color:#fff; border:0;
+  border-radius:999px; padding:7px 14px;
+  font-size:13px; font-weight:700; cursor:pointer;
+}
+.turno-cobro-badge.cobrado {
+  display:inline-block; background:#E4F5EA; color:#1F7A43;
+  border-radius:999px; padding:5px 12px; font-size:12px; font-weight:700;
+}
+.cobro-detalle {
+  background:var(--crema2); border-radius:var(--radio-sm);
+  padding:11px 13px; font-size:15px; color:var(--texto); margin-bottom:14px;
+}
+

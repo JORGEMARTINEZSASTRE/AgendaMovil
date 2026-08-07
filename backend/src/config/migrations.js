@@ -278,6 +278,50 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Tablas de cuponeras OK');
 
+    // ── Caja: movimientos de plata ─────────────────────────────────────
+    // Una fila por cada peso que entra o sale. Es la única fuente de verdad
+    // de cuánto facturó: el precio del servicio cambia con el tiempo, así
+    // que el monto se copia acá y no se recalcula nunca desde el servicio.
+    //
+    // turno_id vincula el cobro con el turno, pero es ON DELETE SET NULL:
+    // borrar un turno viejo no puede borrar la plata que entró ese día.
+    await query(`
+      CREATE TABLE IF NOT EXISTS public.movimientos (
+        id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id            UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+        tipo               VARCHAR(10)  NOT NULL,
+        categoria          VARCHAR(60)  NOT NULL,
+        concepto           VARCHAR(200),
+        monto              NUMERIC(10,2) NOT NULL,
+        medio_pago         VARCHAR(20)  NOT NULL DEFAULT 'efectivo',
+        fecha              DATE         NOT NULL DEFAULT CURRENT_DATE,
+        turno_id           UUID REFERENCES public.turnos(id) ON DELETE SET NULL,
+        cuponera_id        UUID REFERENCES public.cuponeras(id) ON DELETE SET NULL,
+        sucursal_id        UUID,
+        profesional_id     UUID REFERENCES public.profesionales(id) ON DELETE SET NULL,
+        profesional_nombre VARCHAR(100),
+        cliente_nombre     VARCHAR(255),
+        creado_en          TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT movimientos_tipo_check  CHECK (tipo IN ('ingreso','gasto')),
+        CONSTRAINT movimientos_monto_check CHECK (monto > 0),
+        CONSTRAINT movimientos_medio_check CHECK (medio_pago IN
+          ('efectivo','transferencia','tarjeta','billetera','cuponera'))
+      )
+    `);
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_movimientos_user_fecha
+        ON public.movimientos (user_id, fecha DESC)
+    `);
+    // Un turno no se puede cobrar dos veces. Si toca "cobrado" de nuevo por
+    // error, el INSERT falla en vez de duplicar la facturación del día.
+    // La seña del mismo turno es otra categoría, así que no choca.
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_movimientos_turno_unico
+        ON public.movimientos (turno_id)
+        WHERE turno_id IS NOT NULL AND categoria = 'Turno'
+    `);
+    console.log('[MIGRATIONS] ✓ Tabla movimientos (caja) OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

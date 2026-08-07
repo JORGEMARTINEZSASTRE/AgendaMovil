@@ -156,7 +156,14 @@ const Turnos = {
              t.profesional_nombre,
              t.senia_requerida, t.senia_pagada, t.monto_senia, t.estado_pago,
              s.nombre AS sucursal_nombre,
-             s.tipo   AS sucursal_tipo
+             s.tipo   AS sucursal_tipo,
+             -- Si ya hay un movimiento de caja para este turno, está cobrado.
+             -- No se puede usar estado_pago: eso se pone en 'pagado' al
+             -- confirmar la seña, que es otra cosa.
+             EXISTS (
+               SELECT 1 FROM movimientos m
+                WHERE m.turno_id = t.id AND m.categoria = 'Turno'
+             ) AS cobrado
       FROM turnos t
       LEFT JOIN sucursales s ON s.id = t.sucursal_id
       WHERE t.user_id = $1
@@ -180,8 +187,21 @@ const Turnos = {
 
     sql += ` ORDER BY fecha ASC, hora ASC`;
 
-    const { rows } = await query(sql, params);
-    return rows;
+    try {
+      const { rows } = await query(sql, params);
+      return rows;
+    } catch (err) {
+      // 42P01 = la tabla movimientos todavía no existe (migración no corrida).
+      // La agenda es la pantalla principal: antes de dejarla en blanco,
+      // devolvemos los turnos sin el dato de cobrado.
+      if (err.code !== '42P01') throw err;
+      console.warn('[Turnos/listar] Sin tabla movimientos, sigo sin el dato de cobrado');
+      const { rows } = await query(
+        sql.replace(/EXISTS \([\s\S]*?\) AS cobrado/, 'FALSE AS cobrado'),
+        params
+      );
+      return rows;
+    }
   },
 
   async buscarPorId(id, userId) {
@@ -1329,7 +1349,197 @@ const ClientesManual = {
   },
 };
 
+// ── Caja ─────────────────────────────────────────────────────────────
+// Todo lo que entra y sale. Un movimiento nunca se edita ni se borra
+// desde la app: se anula borrando la fila, porque la caja de una
+// estética chica no necesita libro de auditoría y sí necesita poder
+// corregir un cero de más sin llamar a nadie.
+const CATEGORIAS_INGRESO = ['Turno', 'Seña', 'Cuponera', 'Producto', 'Otro'];
+const CATEGORIAS_GASTO   = ['Insumos', 'Alquiler de jornada', 'Transporte',
+                            'Publicidad', 'Materiales', 'Sueldos', 'Otro'];
+const MEDIOS_PAGO        = ['efectivo', 'transferencia', 'tarjeta', 'billetera', 'cuponera'];
+
+const Caja = {
+  CATEGORIAS_INGRESO,
+  CATEGORIAS_GASTO,
+  MEDIOS_PAGO,
+
+  async listar(userId, { desde, hasta, tipo = null, limite = 300 }) {
+    const params = [userId, desde, hasta];
+    let filtroTipo = '';
+    if (tipo) { params.push(tipo); filtroTipo = `AND m.tipo = $${params.length}`; }
+    params.push(limite);
+
+    const { rows } = await query(
+      `SELECT m.*, t.nombre AS turno_cliente, t.servicio_nombre
+         FROM movimientos m
+         LEFT JOIN turnos t ON t.id = m.turno_id
+        WHERE m.user_id = $1
+          AND m.fecha BETWEEN $2 AND $3
+          ${filtroTipo}
+        ORDER BY m.fecha DESC, m.creado_en DESC
+        LIMIT $${params.length}`,
+      params
+    );
+    return rows;
+  },
+
+  async crear(userId, m) {
+    const { rows } = await query(
+      `INSERT INTO movimientos
+         (user_id, tipo, categoria, concepto, monto, medio_pago, fecha,
+          turno_id, cuponera_id, sucursal_id, profesional_id, profesional_nombre, cliente_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7, CURRENT_DATE),$8,$9,$10,$11,$12,$13)
+       RETURNING *`,
+      [userId, m.tipo, m.categoria, m.concepto || null, m.monto, m.medioPago || 'efectivo',
+       m.fecha || null, m.turnoId || null, m.cuponeraId || null, m.sucursalId || null,
+       m.profesionalId || null, m.profesionalNombre || null, m.clienteNombre || null]
+    );
+    return rows[0];
+  },
+
+  async eliminar(id, userId) {
+    const { rows } = await query(
+      `DELETE FROM movimientos WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [id, userId]
+    );
+    return rows.length > 0;
+  },
+
+  // Totales del período, más los dos desgloses que la operadora mira:
+  // en qué se le fue la plata, y cuánto tiene que haber en efectivo.
+  async resumen(userId, { desde, hasta }) {
+    const params = [userId, desde, hasta];
+
+    const { rows: tot } = await query(
+      `SELECT
+         COALESCE(SUM(monto) FILTER (WHERE tipo = 'ingreso'), 0) AS ingresos,
+         COALESCE(SUM(monto) FILTER (WHERE tipo = 'gasto'),   0) AS gastos
+       FROM movimientos
+       WHERE user_id = $1 AND fecha BETWEEN $2 AND $3`,
+      params
+    );
+
+    const { rows: porMedio } = await query(
+      `SELECT medio_pago,
+              COALESCE(SUM(monto) FILTER (WHERE tipo = 'ingreso'), 0) AS ingresos,
+              COALESCE(SUM(monto) FILTER (WHERE tipo = 'gasto'),   0) AS gastos
+         FROM movimientos
+        WHERE user_id = $1 AND fecha BETWEEN $2 AND $3
+        GROUP BY medio_pago
+        ORDER BY 2 DESC`,
+      params
+    );
+
+    const { rows: porCategoria } = await query(
+      `SELECT tipo, categoria, SUM(monto) AS total, COUNT(*) AS cantidad
+         FROM movimientos
+        WHERE user_id = $1 AND fecha BETWEEN $2 AND $3
+        GROUP BY tipo, categoria
+        ORDER BY total DESC`,
+      params
+    );
+
+    const { rows: porProfesional } = await query(
+      `SELECT COALESCE(profesional_nombre, 'Sin asignar') AS profesional,
+              SUM(monto) AS total, COUNT(*) AS cantidad
+         FROM movimientos
+        WHERE user_id = $1 AND fecha BETWEEN $2 AND $3 AND tipo = 'ingreso'
+        GROUP BY 1
+        ORDER BY total DESC`,
+      params
+    );
+
+    const ingresos = parseFloat(tot[0].ingresos);
+    const gastos   = parseFloat(tot[0].gastos);
+    return {
+      ingresos,
+      gastos,
+      ganancia: ingresos - gastos,
+      porMedio,
+      porCategoria,
+      porProfesional,
+    };
+  },
+
+  // Cobrar un turno. La seña que ya entró se descuenta acá para no contar
+  // la misma plata dos veces: si el servicio son 1000 y ya pagó 300 de
+  // seña, el movimiento del cobro es por 700.
+  async cobrarTurno(userId, turnoId, { monto, medioPago, fecha }) {
+    const { rows: tRows } = await query(
+      `SELECT t.*, s.precio AS servicio_precio
+         FROM turnos t
+         LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.id = $1 AND t.user_id = $2`,
+      [turnoId, userId]
+    );
+    if (!tRows.length) return { error: 'no_encontrado' };
+
+    const turno = tRows[0];
+    if (turno.estado === 'cancelado') return { error: 'cancelado' };
+
+    const { rows: yaRows } = await query(
+      `SELECT id FROM movimientos
+        WHERE turno_id = $1 AND categoria = 'Turno'`,
+      [turnoId]
+    );
+    if (yaRows.length) return { error: 'ya_cobrado' };
+
+    const movimiento = await Caja.crear(userId, {
+      tipo:              'ingreso',
+      categoria:         'Turno',
+      concepto:          turno.servicio_nombre || 'Turno',
+      monto,
+      medioPago,
+      fecha:             fecha || turno.fecha,
+      turnoId,
+      sucursalId:        turno.sucursal_id,
+      profesionalId:     turno.profesional_id,
+      profesionalNombre: turno.profesional_nombre,
+      clienteNombre:     turno.nombre,
+    });
+
+    await query(
+      `UPDATE turnos SET estado_pago = 'pagado', editado_en = NOW()
+        WHERE id = $1 AND user_id = $2`,
+      [turnoId, userId]
+    );
+
+    return { movimiento, turno };
+  },
+
+  // Cuánto le falta cobrar a este turno: el precio del servicio menos la
+  // seña que ya entró. Es sólo una sugerencia para precargar el campo;
+  // la operadora siempre puede escribir otro número.
+  async sugerirCobro(userId, turnoId) {
+    const { rows } = await query(
+      `SELECT t.monto_senia, t.senia_pagada, t.senia_eximida,
+              t.servicio_nombre, t.nombre AS cliente,
+              COALESCE(s.precio, 0) AS precio
+         FROM turnos t
+         LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.id = $1 AND t.user_id = $2`,
+      [turnoId, userId]
+    );
+    if (!rows.length) return null;
+
+    const t       = rows[0];
+    const precio  = parseFloat(t.precio) || 0;
+    const senia   = t.senia_pagada ? (parseFloat(t.monto_senia) || 0) : 0;
+    const sugerido = Math.max(precio - senia, 0);
+
+    return {
+      precio,
+      senia_cobrada:  senia,
+      sugerido,
+      servicio_nombre: t.servicio_nombre,
+      cliente:        t.cliente,
+    };
+  },
+};
+
 module.exports = {
+  Caja,
   Usuarios,
   Turnos,
   Servicios,

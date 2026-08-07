@@ -511,6 +511,35 @@ const CuponerasAPI = {
   },
 };
 
+// ─── CAJA API ─────────────────────────────────────────────
+const CajaAPI = {
+  async resumen(desde, hasta) {
+    return await fetchAPI(`/caja/resumen?desde=${desde}&hasta=${hasta}`);
+  },
+  async movimientos(desde, hasta, tipo = null) {
+    const t = tipo ? `&tipo=${tipo}` : '';
+    return await fetchAPI(`/caja/movimientos?desde=${desde}&hasta=${hasta}${t}`);
+  },
+  async crear(payload) {
+    return await fetchAPI('/caja/movimientos', {
+      method: 'POST',
+      body:   JSON.stringify(payload),
+    });
+  },
+  async borrar(id) {
+    return await fetchAPI(`/caja/movimientos/${id}`, { method: 'DELETE' });
+  },
+  async sugerencia(turnoId) {
+    return await fetchAPI(`/caja/turnos/${turnoId}/sugerencia`);
+  },
+  async cobrar(turnoId, payload) {
+    return await fetchAPI(`/caja/turnos/${turnoId}/cobrar`, {
+      method: 'POST',
+      body:   JSON.stringify(payload),
+    });
+  },
+};
+
 // ─── PROFESIONALES API ────────────────────────────────────
 const ProfesionalesAPI = {
   async getAll() {

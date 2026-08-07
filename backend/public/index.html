@@ -305,6 +305,9 @@
     <button class="tab-btn" data-tab="cuponeras">
       🎟️ <span>Cuponeras</span>
     </button>
+    <button class="tab-btn" data-tab="caja">
+      💵 <span>Caja</span>
+    </button>
   </nav>
 
   <!-- ─── CONTENIDO PRINCIPAL ─────────────────── -->
@@ -467,6 +470,52 @@
 
       <div id="lista-cuponeras" class="lista-cuponeras">
         <!-- Se renderiza con JS -->
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: CAJA ════════════════════════ -->
+    <section class="tab-panel" data-panel="caja">
+
+      <div class="caja-mes-nav">
+        <button type="button" id="caja-mes-ant" class="caja-mes-btn">‹</button>
+        <span id="caja-mes-label" class="caja-mes-label">—</span>
+        <button type="button" id="caja-mes-sig" class="caja-mes-btn">›</button>
+      </div>
+
+      <div class="caja-totales">
+        <div class="caja-total caja-total-in">
+          <p class="caja-total-lbl">Entró</p>
+          <p class="caja-total-num" id="caja-ingresos">$ 0</p>
+        </div>
+        <div class="caja-total caja-total-out">
+          <p class="caja-total-lbl">Salió</p>
+          <p class="caja-total-num" id="caja-gastos">$ 0</p>
+        </div>
+        <div class="caja-total caja-total-gan">
+          <p class="caja-total-lbl">Te queda</p>
+          <p class="caja-total-num" id="caja-ganancia">$ 0</p>
+        </div>
+      </div>
+
+      <div class="caja-acciones">
+        <button type="button" id="btn-caja-ingreso" class="caja-btn-in">➕ Ingreso</button>
+        <button type="button" id="btn-caja-gasto"   class="caja-btn-out">➖ Gasto</button>
+      </div>
+
+      <div class="caja-bloque">
+        <p class="caja-bloque-tit">💳 Cómo te pagaron</p>
+        <div id="caja-por-medio" class="caja-desglose"></div>
+      </div>
+
+      <div class="caja-bloque">
+        <p class="caja-bloque-tit">📉 En qué se te fue</p>
+        <div id="caja-por-categoria" class="caja-desglose"></div>
+      </div>
+
+      <div class="caja-bloque">
+        <p class="caja-bloque-tit">🧾 Movimientos</p>
+        <div id="caja-movimientos" class="caja-lista"></div>
       </div>
 
     </section>
@@ -1440,6 +1489,102 @@
         Cancelar
       </button>
     </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL: COBRAR UN TURNO
+════════════════════════════════════════════════ -->
+<div id="modal-cobro" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 class="modal-titulo">💵 Cobrar turno</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <form id="form-cobro" class="form-modal" novalidate>
+      <div id="form-cobro-error" class="form-error oculto"></div>
+
+      <p id="cobro-detalle" class="cobro-detalle"></p>
+
+      <div class="campo">
+        <label for="cobro-monto">💰 ¿Cuánto cobraste? *</label>
+        <input type="number" id="cobro-monto" min="1" step="10" required
+               inputmode="decimal" placeholder="0">
+        <small id="cobro-hint" class="form-hint"></small>
+      </div>
+
+      <div class="campo">
+        <label for="cobro-medio">💳 ¿Cómo te pagó? *</label>
+        <select id="cobro-medio">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta">Débito o crédito</option>
+          <option value="billetera">Mercado Pago / billetera</option>
+          <option value="cuponera">Cuponera (ya estaba paga)</option>
+        </select>
+      </div>
+
+      <button type="submit" id="btn-guardar-cobro" class="btn-primario">
+        Registrar cobro
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODAL: INGRESO O GASTO A MANO
+════════════════════════════════════════════════ -->
+<div id="modal-movimiento" class="modal-overlay oculto">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <h2 id="modal-movimiento-titulo" class="modal-titulo">➕ Nuevo ingreso</h2>
+      <button class="btn-cerrar-modal" aria-label="Cerrar">✕</button>
+    </div>
+
+    <form id="form-movimiento" class="form-modal" novalidate>
+      <div id="form-movimiento-error" class="form-error oculto"></div>
+
+      <div class="campo">
+        <label for="mov-monto">💰 Monto *</label>
+        <input type="number" id="mov-monto" min="1" step="10" required
+               inputmode="decimal" placeholder="0">
+      </div>
+
+      <div class="campo">
+        <label for="mov-categoria">🏷️ Categoría *</label>
+        <select id="mov-categoria"></select>
+      </div>
+
+      <div class="campo">
+        <label for="mov-concepto">📝 Detalle (opcional)</label>
+        <input type="text" id="mov-concepto" maxlength="200"
+               placeholder="Ej: cera, toallas, nafta">
+      </div>
+
+      <div class="campo" id="campo-mov-medio">
+        <label for="mov-medio">💳 Medio de pago</label>
+        <select id="mov-medio">
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta">Débito o crédito</option>
+          <option value="billetera">Mercado Pago / billetera</option>
+        </select>
+      </div>
+
+      <div class="campo">
+        <label for="mov-fecha">📅 Fecha</label>
+        <input type="date" id="mov-fecha">
+      </div>
+
+      <button type="submit" id="btn-guardar-movimiento" class="btn-primario">
+        Guardar
+      </button>
+    </form>
 
   </div>
 </div>
