@@ -3818,22 +3818,23 @@ async function quitarBloqueo(bloqueoId) {
     mostrarToast('Error al eliminar bloqueo', 'error');
   }
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  CAJA â€” ingresos, gastos y cobros
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// ═══════════════════════════════════════════════════════════
+//  CAJA — ingresos, gastos y cobros
+// ═══════════════════════════════════════════════════════════
 const MEDIOS_LABEL = {
-  efectivo:      'ðŸ’µ Efectivo',
-  transferencia: 'ðŸ¦ Transferencia',
-  tarjeta:       'ðŸ’³ DÃ©bito/crÃ©dito',
-  billetera:     'ðŸ“± Billetera',
-  cuponera:      'ðŸŽŸï¸ Cuponera',
+  efectivo:      '💵 Efectivo',
+  transferencia: '🏦 Transferencia',
+  tarjeta:       '💳 Débito/crédito',
+  billetera:     '📱 Billetera',
+  cuponera:      '🎟️ Cuponera',
 };
 
-const CAT_INGRESO = ['Turno', 'SeÃ±a', 'Cuponera', 'Producto', 'Otro'];
+const CAT_INGRESO = ['Turno', 'Seña', 'Cuponera', 'Producto', 'Otro'];
 const CAT_GASTO   = ['Insumos', 'Alquiler de jornada', 'Transporte',
                      'Publicidad', 'Materiales', 'Sueldos', 'Otro'];
 
-let cajaMes      = new Date();   // mes que se estÃ¡ mirando
+let cajaMes      = new Date();   // mes que se está mirando
 let cajaBindeado = false;
 let cobroTurnoId = null;
 
@@ -3842,9 +3843,9 @@ function plata(n) {
   return '$ ' + v.toLocaleString('es-UY');
 }
 
-// Primer y Ãºltimo dÃ­a del mes que se estÃ¡ mirando, en YYYY-MM-DD.
+// Primer y último día del mes que se está mirando, en YYYY-MM-DD.
 // Se arma a mano y no con toISOString(), que pasa a UTC y en Uruguay
-// atrasa un dÃ­a: el 1 de marzo terminarÃ­a mostrando febrero.
+// atrasa un día: el 1 de marzo terminaría mostrando febrero.
 function rangoCajaMes() {
   const a = cajaMes.getFullYear();
   const m = cajaMes.getMonth();
@@ -3920,7 +3921,7 @@ function pintarDesgloseMedios(filas) {
 
   const conPlata = (filas || []).filter(f => parseFloat(f.ingresos) > 0);
   if (!conPlata.length) {
-    cont.innerHTML = '<p class="caja-vacio">TodavÃ­a no entrÃ³ nada este mes.</p>';
+    cont.innerHTML = '<p class="caja-vacio">Todavía no entró nada este mes.</p>';
     return;
   }
 
@@ -3967,13 +3968,13 @@ function pintarMovimientos(movs) {
       '<div class="caja-mov ' + (esIngreso ? 'mov-in' : 'mov-out') + '">' +
         '<div class="caja-mov-info">' +
           '<p class="caja-mov-tit">' + escaparHTML(detalle) + '</p>' +
-          '<p class="caja-mov-sub">' + escaparHTML(m.categoria) + ' Â· ' +
-            (MEDIOS_LABEL[m.medio_pago] || '') + ' Â· ' + fechaCorta + '</p>' +
+          '<p class="caja-mov-sub">' + escaparHTML(m.categoria) + ' · ' +
+            (MEDIOS_LABEL[m.medio_pago] || '') + ' · ' + fechaCorta + '</p>' +
         '</div>' +
         '<div class="caja-mov-der">' +
           '<b class="' + (esIngreso ? 'en-verde' : 'en-rojo') + '">' +
-            (esIngreso ? '+' : 'âˆ’') + ' ' + plata(m.monto) + '</b>' +
-          '<button class="btn-icon btn-borrar-mov" data-id="' + m.id + '" title="Borrar">ðŸ—‘</button>' +
+            (esIngreso ? '+' : '−') + ' ' + plata(m.monto) + '</b>' +
+          '<button class="btn-icon btn-borrar-mov" data-id="' + m.id + '" title="Borrar">🗑</button>' +
         '</div>' +
       '</div>';
   }).join('');
@@ -3984,7 +3985,7 @@ function pintarMovimientos(movs) {
 }
 
 async function borrarMovimiento(id) {
-  if (!confirm('Â¿Borrar este movimiento? La plata deja de contar en el mes.')) return;
+  if (!confirm('¿Borrar este movimiento? La plata deja de contar en el mes.')) return;
   try {
     await CajaAPI.borrar(id);
     mostrarToast('Movimiento borrado', 'exito');
@@ -3994,13 +3995,13 @@ async function borrarMovimiento(id) {
   }
 }
 
-// â”€â”€â”€ Alta manual de ingreso o gasto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Alta manual de ingreso o gasto ───────────────────────
 function abrirModalMovimiento(tipo) {
   const modal = document.getElementById('modal-movimiento');
   if (!modal) return;
 
   document.getElementById('modal-movimiento-titulo').textContent =
-    tipo === 'ingreso' ? 'âž• Nuevo ingreso' : 'âž– Nuevo gasto';
+    tipo === 'ingreso' ? '➕ Nuevo ingreso' : '➖ Nuevo gasto';
 
   const sel  = document.getElementById('mov-categoria');
   const cats = tipo === 'ingreso' ? CAT_INGRESO : CAT_GASTO;
@@ -4025,7 +4026,7 @@ async function guardarMovimiento(e) {
   const monto = parseFloat(document.getElementById('mov-monto').value);
 
   if (!monto || monto <= 0) {
-    error.textContent = 'PonÃ© un monto mayor a cero.';
+    error.textContent = 'Poné un monto mayor a cero.';
     error.classList.remove('oculto');
     return;
   }
@@ -4041,7 +4042,7 @@ async function guardarMovimiento(e) {
       fecha:      document.getElementById('mov-fecha').value || null,
     });
     cerrarModales();
-    mostrarToast('Movimiento registrado âœ…', 'exito');
+    mostrarToast('Movimiento registrado ✅', 'exito');
     renderCaja();
   } catch (err) {
     error.textContent = err.message || 'No se pudo guardar';
@@ -4051,7 +4052,7 @@ async function guardarMovimiento(e) {
   }
 }
 
-// â”€â”€â”€ Cobrar un turno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Cobrar un turno ──────────────────────────────────────
 async function abrirModalCobro(turnoId) {
   const modal = document.getElementById('modal-cobro');
   if (!modal) return;
@@ -4071,17 +4072,17 @@ async function abrirModalCobro(turnoId) {
     const s = await CajaAPI.sugerencia(turnoId);
 
     detalle.innerHTML = '<b>' + escaparHTML(s.cliente || '') + '</b>' +
-      (s.servicio_nombre ? ' Â· ' + escaparHTML(s.servicio_nombre) : '');
+      (s.servicio_nombre ? ' · ' + escaparHTML(s.servicio_nombre) : '');
 
     input.value = s.sugerido > 0 ? s.sugerido : '';
 
     if (s.senia_cobrada > 0) {
-      hint.textContent = 'El servicio son ' + plata(s.precio) + ' y ya pagÃ³ ' +
-        plata(s.senia_cobrada) + ' de seÃ±a. Falta ' + plata(s.sugerido) + '.';
+      hint.textContent = 'El servicio son ' + plata(s.precio) + ' y ya pagó ' +
+        plata(s.senia_cobrada) + ' de seña. Falta ' + plata(s.sugerido) + '.';
     } else if (s.precio > 0) {
-      hint.textContent = 'Precio del servicio: ' + plata(s.precio) + '. PodÃ©s cambiarlo.';
+      hint.textContent = 'Precio del servicio: ' + plata(s.precio) + '. Podés cambiarlo.';
     } else {
-      hint.textContent = 'Este servicio no tiene precio cargado. EscribÃ­ cuÃ¡nto cobraste.';
+      hint.textContent = 'Este servicio no tiene precio cargado. Escribí cuánto cobraste.';
     }
     input.focus();
 
@@ -4102,7 +4103,7 @@ async function guardarCobro(e) {
   const monto = parseFloat(document.getElementById('cobro-monto').value);
 
   if (!monto || monto <= 0) {
-    error.textContent = 'PonÃ© cuÃ¡nto cobraste.';
+    error.textContent = 'Poné cuánto cobraste.';
     error.classList.remove('oculto');
     return;
   }
@@ -4114,7 +4115,7 @@ async function guardarCobro(e) {
       medio_pago: document.getElementById('cobro-medio').value,
     });
     cerrarModales();
-    mostrarToast('Cobro registrado ðŸ’µ', 'exito');
+    mostrarToast('Cobro registrado 💵', 'exito');
     cobroTurnoId = null;
     await cargarTurnos();
     renderTabActual();
@@ -4125,4 +4126,3 @@ async function guardarCobro(e) {
     btn.disabled = false;
   }
 }
-

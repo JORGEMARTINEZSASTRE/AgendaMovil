@@ -3128,14 +3128,14 @@ body {
   margin: 2px 0 6px;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   CAJA â€” ingresos, gastos y cobros
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════
+   CAJA — ingresos, gastos y cobros
+   ═══════════════════════════════════════ */
 .en-rojo  { color:var(--rojo)  !important }
 .en-verde { color:#1F9D55      !important }
 .pub-cargando { padding:18px; text-align:center; color:var(--gris); font-size:14px }
 
-/* NavegaciÃ³n de mes */
+/* Navegación de mes */
 .caja-mes-nav {
   display:flex; align-items:center; justify-content:center; gap:14px;
   padding:14px 16px 4px;
@@ -3151,7 +3151,7 @@ body {
   text-transform:capitalize; min-width:150px; text-align:center;
 }
 
-/* Los tres nÃºmeros de arriba */
+/* Los tres números de arriba */
 .caja-totales {
   display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
   padding:10px 16px 4px;
@@ -3230,4 +3230,3 @@ body {
   background:var(--crema2); border-radius:var(--radio-sm);
   padding:11px 13px; font-size:15px; color:var(--texto); margin-bottom:14px;
 }
-
