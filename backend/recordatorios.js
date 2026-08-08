@@ -637,8 +637,126 @@ async function enviarCancelacionTurno(turno) {
   }
 }
 
+
+// ═══════════════════════════════════════════════════════════
+//  AVISO AUTOMÁTICO DE PAGO PENDIENTE
+//
+//  Le recuerda a la clienta que quedó debiendo el servicio. Es
+//  opcional y viene apagado: si la operadora cobró en efectivo y no lo
+//  marcó en la app, esto le reclamaría a alguien que ya pagó.
+//
+//  Corre una vez por día a las 11 de la mañana. Un mensaje de cobro a
+//  las 3 de la madrugada es peor que no mandarlo.
+// ═══════════════════════════════════════════════════════════
+
+const MAX_AVISOS_COBRO = 3;
+
+async function getDeudasParaAvisar() {
+  const { rows } = await query(`
+    SELECT t.id, t.user_id, t.nombre, t.telefono, t.fecha, t.hora,
+           t.servicio_nombre, t.cobro_avisos,
+           COALESCE(s.precio, 0) AS precio,
+           CASE WHEN t.senia_pagada THEN COALESCE(t.monto_senia, 0) ELSE 0 END AS senia,
+           u.nombre_negocio, u.nombre AS user_nombre,
+           u.cobro_aviso_dias    AS dias,
+           u.cobro_aviso_repetir AS repetir
+      FROM turnos t
+      JOIN usuarios u ON u.id = t.user_id
+      LEFT JOIN servicios s ON s.id = t.servicio_id
+     WHERE u.cobro_aviso_activo = TRUE
+       AND t.estado != 'cancelado'
+       AND t.telefono IS NOT NULL AND t.telefono <> ''
+       AND t.fecha >= CURRENT_DATE - INTERVAL '6 months'
+       AND COALESCE(t.cobro_avisos, 0) < ${MAX_AVISOS_COBRO}
+       -- Solo si de verdad quedó sin cobrar
+       AND NOT EXISTS (
+         SELECT 1 FROM movimientos m
+          WHERE m.turno_id = t.id AND m.categoria = 'Turno'
+       )
+       -- Y solo si el servicio tiene precio: sin precio no se puede
+       -- reclamar un monto, y un reclamo sin monto confunde.
+       AND COALESCE(s.precio, 0) > 0
+       -- Primer aviso: pasaron los días de gracia que ella eligió.
+       AND (t.fecha + t.hora) < NOW() - (u.cobro_aviso_dias || ' days')::interval
+       -- Siguientes: solo si eligió repetir, y pasó ese intervalo.
+       AND (
+         COALESCE(t.cobro_avisos, 0) = 0
+         OR (
+           COALESCE(u.cobro_aviso_repetir, 0) > 0
+           AND t.cobro_ultimo_aviso < NOW() - (u.cobro_aviso_repetir || ' days')::interval
+         )
+       )
+     ORDER BY t.user_id, t.fecha
+     LIMIT 200
+  `);
+  return rows;
+}
+
+function mensajeCobroPendiente(d) {
+  const negocio = d.nombre_negocio || d.user_nombre || 'Tu estética';
+  const nombre  = String(d.nombre || '').split(' ')[0];
+  const fecha   = formatearFecha(d.fecha);
+  const precio  = parseFloat(d.precio) || 0;
+  const senia   = parseFloat(d.senia) || 0;
+  const debe    = Math.max(precio - senia, 0);
+
+  let msg = `🌸 *${negocio}*\n\n`;
+  msg += `Hola ${nombre}! ¿Cómo estás?\n\n`;
+  msg += `Te escribo por el turno del *${fecha}*`;
+  if (d.servicio_nombre) msg += ` (${d.servicio_nombre})`;
+  msg += `.\n\n`;
+  msg += senia > 0
+    ? `Quedó pendiente el saldo de *$${Math.round(debe)}*.\n\n`
+    : `Quedó pendiente el pago de *$${Math.round(debe)}*.\n\n`;
+  msg += `Cuando puedas me avisás 💕`;
+  return msg;
+}
+
+async function procesarAvisosCobro() {
+  try {
+    const deudas = await getDeudasParaAvisar();
+    if (!deudas.length) return;
+
+    console.log(`[COBRO] ${deudas.length} aviso(s) de pago pendiente`);
+
+    for (const d of deudas) {
+      try {
+        const instancia = `user_${d.user_id}`;
+        const estado = await evolution.estadoInstancia(instancia);
+        if (!estado.ok || estado.estado !== 'open') {
+          console.log(`[COBRO] usuario ${d.user_id} sin WhatsApp conectado, salteo`);
+          continue;
+        }
+
+        const r = await evolution.enviarMensaje(instancia, d.telefono, mensajeCobroPendiente(d));
+
+        // Se cuenta el aviso aunque falle el envío: si el número está mal,
+        // reintentarlo todos los días no lo va a arreglar.
+        await query(
+          `UPDATE turnos
+              SET cobro_avisos = COALESCE(cobro_avisos, 0) + 1,
+                  cobro_ultimo_aviso = NOW()
+            WHERE id = $1`,
+          [d.id]
+        );
+
+        console.log(`[COBRO] ${r.ok ? '✅' : '❌'} ${d.nombre} (turno ${d.id})`);
+        await new Promise(res => setTimeout(res, 4000));
+
+      } catch (err) {
+        console.error(`[COBRO] error con el turno ${d.id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('[COBRO] error general:', err.message);
+  }
+}
+
+cron.schedule('0 11 * * *', procesarAvisosCobro, { timezone: 'America/Montevideo' });
+
 module.exports = {
   procesarRecordatorios,
+  procesarAvisosCobro,
   testRecordatorioManual,
   enviarConfirmacionTurno,
   enviarConfirmacionSenia,

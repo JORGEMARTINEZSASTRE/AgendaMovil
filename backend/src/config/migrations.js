@@ -383,6 +383,23 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Confirmación de turnos OK');
 
+    // ── Aviso automático de pago pendiente ─────────────────────────────
+    // Apagado por defecto a propósito: si la operadora cobró en efectivo
+    // y no lo marcó en la app, el sistema le reclamaría a una clienta que
+    // ya pagó. Eso es peor que no avisar. Que lo prenda ella sabiendo.
+    await query(`
+      ALTER TABLE public.usuarios
+        ADD COLUMN IF NOT EXISTS cobro_aviso_activo  BOOLEAN  DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS cobro_aviso_dias    SMALLINT DEFAULT 3,
+        ADD COLUMN IF NOT EXISTS cobro_aviso_repetir SMALLINT DEFAULT 0
+    `);
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS cobro_avisos       SMALLINT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS cobro_ultimo_aviso TIMESTAMPTZ
+    `);
+    console.log('[MIGRATIONS] ✓ Aviso de pago pendiente OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

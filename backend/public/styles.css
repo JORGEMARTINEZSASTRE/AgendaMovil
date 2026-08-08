@@ -3284,3 +3284,40 @@ body {
 }
 .turno-confirma.ok        { background:#E4F5EA; color:#1F7A43 }
 .turno-confirma.esperando { background:#FFF3DC; color:#8A6A1F }
+
+/* ── Te deben ───────────────────────────────────────────── */
+.caja-deudas-resumen {
+  float:right; text-transform:none; letter-spacing:0;
+  color:var(--rojo); font-weight:800;
+}
+.caja-mov.deuda { border-left:4px solid var(--dorado) }
+.caja-mov.deuda .caja-mov-der b small { color:var(--gris); font-weight:700 }
+.btn-deuda-cobrar {
+  background:#1F9D55; color:#fff; border:0;
+  border-radius:999px; padding:7px 13px;
+  font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+}
+
+/* ── Recordatorio automático de pago ────────────────────── */
+.aviso-cobro {
+  margin-top:12px; background:var(--panel);
+  border:1px dashed var(--borde); border-radius:var(--radio-sm);
+  padding:13px 14px;
+}
+.aviso-cobro-check {
+  display:flex; align-items:center; gap:9px;
+  font-size:14px; color:var(--texto); cursor:pointer;
+}
+.aviso-cobro-check input { width:19px; height:19px; flex-shrink:0 }
+.aviso-cobro-fila {
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  margin-top:11px; font-size:14px; color:var(--texto); font-weight:600;
+}
+.aviso-cobro-fila input { width:66px; text-align:center; padding:7px }
+.aviso-cobro-fila small { color:var(--gris) }
+.aviso-cobro-nota {
+  margin-top:12px; font-size:12.5px; line-height:1.45;
+  color:var(--gris); background:var(--crema2);
+  border-radius:10px; padding:10px 12px;
+}
+#btn-aviso-cobro { width:100%; margin-top:11px }

@@ -538,6 +538,18 @@ const CajaAPI = {
       body:   JSON.stringify(payload),
     });
   },
+  async deudas() {
+    return await fetchAPI('/caja/deudas');
+  },
+  async avisos() {
+    return await fetchAPI('/caja/avisos');
+  },
+  async guardarAvisos(payload) {
+    return await fetchAPI('/caja/avisos', {
+      method: 'PUT',
+      body:   JSON.stringify(payload),
+    });
+  },
   async socios() {
     return await fetchAPI('/caja/socios');
   },

@@ -173,6 +173,59 @@ router.post('/turnos/:id/cobrar',
   }
 );
 
+// GET /api/caja/deudas — lo que le quedó por cobrar
+router.get('/deudas', async (req, res) => {
+  try {
+    const r = await Caja.deudas(req.user.id);
+    return res.json({ ok: true, ...r });
+  } catch (err) {
+    console.error('[CAJA/deudas]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al obtener las deudas' });
+  }
+});
+
+// GET /api/caja/avisos — configuración del recordatorio de pago
+router.get('/avisos', async (req, res) => {
+  try {
+    const avisos = await Caja.getAvisos(req.user.id);
+    return res.json({ ok: true, ...avisos });
+  } catch (err) {
+    console.error('[CAJA/avisos]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al obtener la configuración' });
+  }
+});
+
+// PUT /api/caja/avisos
+router.put('/avisos',
+  [
+    body('activo').isBoolean().withMessage('Valor inválido'),
+    body('dias').isInt({ min: 1, max: 30 })
+      .withMessage('Los días van entre 1 y 30'),
+    body('repetir').isInt({ min: 0, max: 30 })
+      .withMessage('La repetición va entre 0 y 30 días'),
+  ],
+  validar,
+  async (req, res) => {
+    try {
+      const avisos = await Caja.guardarAvisos(req.user.id, {
+        activo:  req.body.activo === true || req.body.activo === 'true',
+        dias:    parseInt(req.body.dias),
+        repetir: parseInt(req.body.repetir),
+      });
+      return res.json({
+        ok: true,
+        mensaje: avisos.activo
+          ? 'Listo, les voy a recordar solo'
+          : 'Recordatorio de pago apagado',
+        ...avisos,
+      });
+    } catch (err) {
+      console.error('[CAJA/guardar-avisos]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al guardar' });
+    }
+  }
+);
+
 // ─── SOCIOS ───────────────────────────────────────────────────────────
 // Si no hay socios cargados, la app no muestra nada de esto.
 

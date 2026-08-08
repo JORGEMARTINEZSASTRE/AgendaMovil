@@ -3932,6 +3932,14 @@ async function renderCaja() {
     pintarReparto(res.reparto, res.ganancia);
     pintarMovimientos(movs.movimientos || []);
 
+    // Las deudas no dependen del mes que se esté mirando: es lo que le
+    // deben hoy, venga de donde venga. Va aparte para no atarlo al rango.
+    renderDeudas();
+
+    // La configuración del recordatorio va siempre, tenga deudas o no:
+    // si sólo apareciera cuando ya le deben, no podría dejarlo listo antes.
+    cargarAvisoCobro();
+
   } catch (err) {
     if (lista) lista.innerHTML = '<p class="caja-vacio">No se pudo cargar la caja: ' + escaparHTML(err.message) + '</p>';
   }
@@ -4287,6 +4295,149 @@ async function guardarSocios(e) {
   } catch (err) {
     error.textContent = err.message || 'No se pudo guardar';
     error.classList.remove('oculto');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── Te deben ─────────────────────────────────────────────
+// Un turno que ya pasó, sin cancelar y sin cobro registrado, es una
+// deuda. No hay tabla de deudas: la deuda es la ausencia del cobro.
+async function renderDeudas() {
+  const bloque = document.getElementById('caja-bloque-deudas');
+  const cont   = document.getElementById('caja-deudas');
+  const resumen = document.getElementById('caja-deudas-resumen');
+  if (!bloque || !cont) return;
+
+  try {
+    const r = await CajaAPI.deudas();
+    const lista = r.deudas || [];
+
+    if (!lista.length) {
+      bloque.style.display = 'none';
+      return;
+    }
+    bloque.style.display = '';
+
+    const cuantas = r.clientas === 1 ? '1 clienta' : r.clientas + ' clientas';
+    resumen.textContent = plata(r.total) + ' · ' + cuantas;
+
+    cont.innerHTML = lista.map(d => {
+      const f = (d.fecha || '').toString().slice(0, 10).split('-').reverse().join('/');
+      const detalle = [d.servicio_nombre, d.servicio_zona].filter(Boolean).join(' · ');
+      const monto = d.precio > 0
+        ? plata(d.debe)
+        : '<small>sin precio</small>';
+      const nota = d.senia_cobrada > 0
+        ? ' · ya pagó ' + plata(d.senia_cobrada) + ' de seña'
+        : '';
+
+      return '' +
+        '<div class="caja-mov deuda">' +
+          '<div class="caja-mov-info">' +
+            '<p class="caja-mov-tit">' + escaparHTML(d.cliente || '') + '</p>' +
+            '<p class="caja-mov-sub">' + escaparHTML(detalle || 'Turno') + ' · ' + f + nota + '</p>' +
+          '</div>' +
+          '<div class="caja-mov-der">' +
+            '<b class="en-rojo">' + monto + '</b>' +
+            '<button class="btn-icon btn-deuda-wa" data-id="' + d.turno_id + '" title="Recordarle por WhatsApp">💬</button>' +
+            '<button class="btn-deuda-cobrar" data-id="' + d.turno_id + '">Cobrar</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    cont.querySelectorAll('.btn-deuda-cobrar').forEach(b => {
+      b.addEventListener('click', () => abrirModalCobro(b.dataset.id));
+    });
+    cont.querySelectorAll('.btn-deuda-wa').forEach(b => {
+      const d = lista.find(x => String(x.turno_id) === String(b.dataset.id));
+      b.addEventListener('click', () => recordarDeuda(d));
+    });
+
+  } catch (err) {
+    bloque.style.display = '';
+    cont.innerHTML = '<p class="caja-vacio">No se pudieron cargar: ' + escaparHTML(err.message) + '</p>';
+  }
+}
+
+// Abre WhatsApp con el mensaje escrito. No lo manda solo a propósito:
+// un cobro mal mandado le cuesta una clienta, así que lo lee antes.
+function recordarDeuda(d) {
+  if (!d) return;
+  if (!d.telefono) { mostrarToast('Esa clienta no tiene teléfono cargado', 'error'); return; }
+
+  const f = (d.fecha || '').toString().slice(0, 10).split('-').reverse().join('/');
+  const nombre = (d.cliente || '').split(' ')[0];
+
+  let msg = 'Hola ' + nombre + '! 🌸 ¿Cómo estás?\n\n';
+  msg += 'Te escribo por el turno del ' + f;
+  if (d.servicio_nombre) msg += ' (' + d.servicio_nombre + ')';
+  msg += '. ';
+  if (d.precio > 0) {
+    msg += d.senia_cobrada > 0
+      ? 'Quedó pendiente el saldo de $' + Math.round(d.debe) + '.'
+      : 'Quedó pendiente el pago de $' + Math.round(d.debe) + '.';
+  } else {
+    msg += 'Quedó pendiente el pago.';
+  }
+  msg += '\n\nCuando puedas me avisás 💕';
+
+  mostrarPreviewWA(d.telefono, msg);
+}
+
+// ─── Recordatorio automático de pago ──────────────────────
+// Se guarda aparte del resto de la caja porque toca al usuario, no a
+// los movimientos: es una preferencia, no un dato del mes.
+let avisoCobroBindeado = false;
+
+async function cargarAvisoCobro() {
+  const check = document.getElementById('aviso-cobro-activo');
+  if (!check) return;
+
+  if (!avisoCobroBindeado) {
+    check.addEventListener('change', () => {
+      document.getElementById('aviso-cobro-opciones')
+        .classList.toggle('oculto', !check.checked);
+    });
+    document.getElementById('btn-aviso-cobro')
+      ?.addEventListener('click', guardarAvisoCobro);
+    avisoCobroBindeado = true;
+  }
+
+  try {
+    const r = await CajaAPI.avisos();
+    check.checked = !!r.activo;
+    document.getElementById('aviso-cobro-dias').value    = r.dias ?? 3;
+    document.getElementById('aviso-cobro-repetir').value = r.repetir ?? 0;
+    document.getElementById('aviso-cobro-opciones')
+      .classList.toggle('oculto', !r.activo);
+  } catch (_) {
+    // Si no se puede leer la config, se deja el bloque como está: no
+    // vale la pena romper la caja entera por esto.
+  }
+}
+
+async function guardarAvisoCobro() {
+  const btn = document.getElementById('btn-aviso-cobro');
+  const activo  = document.getElementById('aviso-cobro-activo').checked;
+  const dias    = parseInt(document.getElementById('aviso-cobro-dias').value);
+  const repetir = parseInt(document.getElementById('aviso-cobro-repetir').value);
+
+  if (activo && (!dias || dias < 1 || dias > 30)) {
+    mostrarToast('Los días tienen que ir entre 1 y 30', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    const r = await CajaAPI.guardarAvisos({
+      activo:  activo,
+      dias:    dias || 3,
+      repetir: isNaN(repetir) ? 0 : repetir,
+    });
+    mostrarToast(r.mensaje || 'Guardado ✅', 'exito');
+  } catch (err) {
+    mostrarToast(err.message || 'No se pudo guardar', 'error');
   } finally {
     btn.disabled = false;
   }

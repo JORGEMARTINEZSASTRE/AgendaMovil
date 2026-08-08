@@ -513,6 +513,43 @@
         <button type="button" id="btn-caja-gasto"   class="caja-btn-out">➖ Gasto</button>
       </div>
 
+      <div class="caja-bloque" id="caja-bloque-deudas" style="display:none">
+        <p class="caja-bloque-tit">
+          💸 Te deben
+          <span id="caja-deudas-resumen" class="caja-deudas-resumen"></span>
+        </p>
+        <div id="caja-deudas" class="caja-lista"></div>
+      </div>
+
+      <div class="caja-bloque">
+        <p class="caja-bloque-tit">🔔 Recordatorio de pago</p>
+        <div class="aviso-cobro">
+          <label class="aviso-cobro-check">
+            <input type="checkbox" id="aviso-cobro-activo">
+            <span><b>Recordarles solo por WhatsApp</b></span>
+          </label>
+
+          <div id="aviso-cobro-opciones" class="oculto">
+            <div class="aviso-cobro-fila">
+              <span>Avisar a los</span>
+              <input type="number" id="aviso-cobro-dias" min="1" max="30" value="3">
+              <span>días del turno</span>
+            </div>
+            <div class="aviso-cobro-fila">
+              <span>Insistir cada</span>
+              <input type="number" id="aviso-cobro-repetir" min="0" max="30" value="0">
+              <span>días <small>(0 = una sola vez)</small></span>
+            </div>
+            <p class="aviso-cobro-nota">
+              ⚠️ Se le avisa a quien figure <b>sin cobrar</b> en la app.
+              Si cobraste en efectivo y no lo marcaste, igual le va a llegar.
+              Nunca más de 3 veces por turno.
+            </p>
+            <button type="button" id="btn-aviso-cobro" class="btn-secundario">Guardar</button>
+          </div>
+        </div>
+      </div>
+
       <div class="caja-bloque">
         <p class="caja-bloque-tit">💳 Cómo te pagaron</p>
         <div id="caja-por-medio" class="caja-desglose"></div>

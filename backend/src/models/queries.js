@@ -1594,6 +1594,97 @@ const Caja = {
     return { movimiento, turno, sesionDescontada };
   },
 
+  // Lo que le quedó por cobrar: turnos que ya pasaron, que no se
+  // cancelaron y que no tienen movimiento de cobro. No hace falta una
+  // tabla de deudas — la deuda es la ausencia del cobro.
+  //
+  // Se corta a 6 meses para atrás: más viejo que eso no es una deuda que
+  // vaya a cobrar, es un turno que se olvidó de marcar y sólo hace ruido.
+  async deudas(userId) {
+    const { rows } = await query(
+      `SELECT t.id, t.nombre, t.telefono, t.fecha, t.hora,
+              t.servicio_nombre, t.servicio_zona, t.duracion,
+              COALESCE(s.precio, 0) AS precio,
+              CASE WHEN t.senia_pagada THEN COALESCE(t.monto_senia, 0) ELSE 0 END AS senia
+         FROM turnos t
+         LEFT JOIN servicios s ON s.id = t.servicio_id
+        WHERE t.user_id = $1
+          AND t.estado != 'cancelado'
+          AND (t.fecha + t.hora) < NOW()
+          AND t.fecha >= CURRENT_DATE - INTERVAL '6 months'
+          AND NOT EXISTS (
+            SELECT 1 FROM movimientos m
+             WHERE m.turno_id = t.id AND m.categoria = 'Turno'
+          )
+        ORDER BY t.fecha DESC, t.hora DESC
+        LIMIT 300`,
+      [userId]
+    );
+
+    let total = 0;
+    let sinPrecio = 0;
+
+    const deudas = rows.map(r => {
+      const precio = parseFloat(r.precio) || 0;
+      const senia  = parseFloat(r.senia)  || 0;
+      const debe   = Math.max(precio - senia, 0);
+
+      if (precio > 0) total += debe;
+      else sinPrecio += 1;
+
+      return {
+        turno_id:        r.id,
+        cliente:         r.nombre,
+        telefono:        r.telefono,
+        fecha:           r.fecha,
+        hora:            r.hora,
+        servicio_nombre: r.servicio_nombre,
+        servicio_zona:   r.servicio_zona,
+        precio,
+        senia_cobrada:   senia,
+        debe,
+      };
+    });
+
+    // Cuántas clientas distintas, que es el número que ella mira primero.
+    const clientas = new Set(deudas.map(d => (d.telefono || d.cliente || '').trim())).size;
+
+    return { deudas, total, clientas, sinPrecio };
+  },
+
+  // Máximo de avisos por turno. No es configurable a propósito: insistirle
+  // más de tres veces a una clienta por plata deja de ser un recordatorio.
+  MAX_AVISOS_COBRO: 3,
+
+  async getAvisos(userId) {
+    const { rows } = await query(
+      `SELECT COALESCE(cobro_aviso_activo, FALSE)  AS activo,
+              COALESCE(cobro_aviso_dias, 3)        AS dias,
+              COALESCE(cobro_aviso_repetir, 0)     AS repetir
+         FROM usuarios WHERE id = $1`,
+      [userId]
+    );
+    if (!rows.length) return { activo: false, dias: 3, repetir: 0 };
+    return {
+      activo:  rows[0].activo,
+      dias:    parseInt(rows[0].dias),
+      repetir: parseInt(rows[0].repetir),
+      max:     Caja.MAX_AVISOS_COBRO,
+    };
+  },
+
+  async guardarAvisos(userId, { activo, dias, repetir }) {
+    await query(
+      `UPDATE usuarios
+          SET cobro_aviso_activo  = $2,
+              cobro_aviso_dias    = $3,
+              cobro_aviso_repetir = $4
+        WHERE id = $1`,
+      [userId, !!activo, dias, repetir]
+    );
+    return Caja.getAvisos(userId);
+  },
+
   async listarSocios(userId) {
     const { rows } = await query(
       `SELECT id, nombre, porcentaje, activo
