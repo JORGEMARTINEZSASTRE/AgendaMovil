@@ -541,6 +541,15 @@ const CajaAPI = {
   async deudas() {
     return await fetchAPI('/caja/deudas');
   },
+  async noVino(turnoId, valor = true) {
+    return await fetchAPI(`/caja/turnos/${turnoId}/no-vino`, {
+      method: 'POST',
+      body:   JSON.stringify({ no_vino: valor }),
+    });
+  },
+  async faltas(telefono) {
+    return await fetchAPI(`/caja/faltas?telefono=${encodeURIComponent(telefono)}`);
+  },
   async avisos() {
     return await fetchAPI('/caja/avisos');
   },

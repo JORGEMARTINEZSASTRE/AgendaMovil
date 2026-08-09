@@ -555,11 +555,20 @@ function cardTurno(t) {
           : ''}
         ${t.estado !== 'cancelado' ? `
           <div class="turno-cobro-wrap">
-            ${t.cobrado
-              ? `<span class="turno-cobro-badge cobrado">💵 Cobrado</span>`
-              : `<button class="btn-cobrar-turno" data-id="${t.id}" title="Registrar el cobro en la caja">
-                   💵 Cobrar
-                 </button>`
+            ${t.no_vino
+              ? `<span class="turno-falta-badge">🚷 No vino</span>
+                 <button class="btn-deshacer-falta" data-id="${t.id}" title="Deshacer">deshacer</button>`
+              : `${t.cobrado
+                    ? `<span class="turno-cobro-badge cobrado">💵 Cobrado</span>`
+                    : `<button class="btn-cobrar-turno" data-id="${t.id}" title="Registrar el cobro en la caja">
+                         💵 Cobrar
+                       </button>`
+                  }
+                 ${!t.cobrado && esTurnoPasado(t)
+                    ? `<button class="btn-no-vino" data-id="${t.id}" title="La clienta no se presentó">
+                         🚷 No vino
+                       </button>`
+                    : ''}`
             }
           </div>` : ''}
       </div>
@@ -608,6 +617,27 @@ contenedor.querySelectorAll('.btn-cancelar-turno').forEach(btn => {
   contenedor.querySelectorAll('.btn-cobrar-turno').forEach(btn => {
     btn.addEventListener('click', () => abrirModalCobro(btn.dataset.id));
   });
+
+  contenedor.querySelectorAll('.btn-no-vino').forEach(btn => {
+    btn.addEventListener('click', () => marcarNoVino(btn.dataset.id, true));
+  });
+
+  contenedor.querySelectorAll('.btn-deshacer-falta').forEach(btn => {
+    btn.addEventListener('click', () => marcarNoVino(btn.dataset.id, false));
+  });
+}
+
+// Marca que la clienta no se presentó. Ese turno deja de contar como
+// deuda —no recibió el servicio— y suma a su contador de faltas.
+async function marcarNoVino(turnoId, valor) {
+  try {
+    const r = await CajaAPI.noVino(turnoId, valor);
+    mostrarToast(r.mensaje || 'Listo', r.faltas >= 2 && valor ? 'error' : 'exito');
+    await cargarTurnos();
+    renderTabActual();
+  } catch (err) {
+    mostrarToast(err.message || 'No se pudo registrar', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -617,6 +647,8 @@ function bindFormTurno() {
   const form = document.getElementById('form-turno');
   if (!form) return;
   form.addEventListener('submit', handleSubmitTurno);
+
+  bindAvisoFaltas();
 
   // Al elegir servicio: autocompletar datos + aviso seña
   const selectServ = document.getElementById('turno-servicio-id');
@@ -842,6 +874,9 @@ function limpiarFormTurno() {
   if (form) form.reset();
   const errEl = document.getElementById('form-turno-error');
   if (errEl) errEl.classList.add('oculto');
+  // El aviso de faltas es de la clienta anterior: si no se limpia, le
+  // aparece a la siguiente que no tiene nada que ver.
+  if (typeof ocultarAvisoFaltas === 'function') ocultarAvisoFaltas();
 }
 // ═══════════════════════════════════════════════════════════
 //  Cargar horarios disponibles según fecha y duración
@@ -4440,5 +4475,59 @@ async function guardarAvisoCobro() {
     mostrarToast(err.message || 'No se pudo guardar', 'error');
   } finally {
     btn.disabled = false;
+  }
+}
+
+// ─── Aviso de faltas al dar un turno ──────────────────────
+// Le saca a la operadora el peso de acordarse quién le falló. Se
+// consulta al salir del campo de teléfono, que es cuando ya sabemos
+// de quién se trata.
+let faltasUltimoTel = '';
+
+function bindAvisoFaltas() {
+  const tel = document.getElementById('turno-telefono');
+  if (!tel || tel.__faltasBindeado) return;
+  tel.__faltasBindeado = true;
+
+  tel.addEventListener('blur', chequearFaltas);
+  document.getElementById('turno-contacto-select')
+    ?.addEventListener('change', () => setTimeout(chequearFaltas, 60));
+}
+
+function ocultarAvisoFaltas() {
+  const box = document.getElementById('turno-faltas-aviso');
+  if (box) { box.classList.add('oculto'); box.innerHTML = ''; }
+  faltasUltimoTel = '';
+}
+
+async function chequearFaltas() {
+  const box = document.getElementById('turno-faltas-aviso');
+  const inp = document.getElementById('turno-telefono');
+  if (!box || !inp) return;
+
+  const tel = (inp.value || '').trim();
+  if (tel.length < 6) { ocultarAvisoFaltas(); return; }
+
+  // El teléfono se guarda normalizado, así que se consulta como se ve y
+  // el backend compara contra lo que hay. Si no coincide, no avisa: es
+  // preferible no avisar a avisar de más.
+  const codigo = document.getElementById('turno-codigo-pais');
+  const completo = (codigo ? codigo.value : '') + tel.replace(/\D/g, '');
+
+  if (completo === faltasUltimoTel) return;
+  faltasUltimoTel = completo;
+
+  try {
+    const r = await CajaAPI.faltas(completo);
+    if (!r || r.faltas < 2) { box.classList.add('oculto'); box.innerHTML = ''; return; }
+
+    box.innerHTML =
+      '<span class="ic">⚠️</span>' +
+      '<div><b>Esta clienta faltó ' + r.faltas + ' veces.</b>' +
+      '<small>Conviene pedirle seña para guardarle el horario.</small></div>';
+    box.classList.remove('oculto');
+
+  } catch (_) {
+    box.classList.add('oculto');
   }
 }

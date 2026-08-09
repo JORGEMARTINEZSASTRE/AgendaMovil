@@ -400,6 +400,25 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Aviso de pago pendiente OK');
 
+    // ── Faltas: la clienta no vino ─────────────────────────────────────
+    // Va en columna propia y no en `estado` para no tocar la restricción
+    // CHECK, y sobre todo para que el turno siga apareciendo en la agenda
+    // del día con su etiqueta: la operadora quiere ver que ese hueco
+    // existió, no que desaparezca.
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS no_vino    BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS no_vino_en TIMESTAMPTZ
+    `);
+    // Las faltas se cuentan por teléfono: las clientas no son filas de
+    // ninguna tabla, son turnos agrupados.
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_turnos_faltas
+        ON public.turnos (user_id, telefono)
+        WHERE no_vino = TRUE
+    `);
+    console.log('[MIGRATIONS] ✓ Faltas de clientas OK');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

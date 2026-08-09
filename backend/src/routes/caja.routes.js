@@ -184,6 +184,51 @@ router.get('/deudas', async (req, res) => {
   }
 });
 
+// POST /api/caja/turnos/:id/no-vino — marcar o desmarcar la falta
+router.post('/turnos/:id/no-vino',
+  [
+    param('id').isUUID().withMessage('ID inválido'),
+    body('no_vino').optional().isBoolean(),
+  ],
+  validar,
+  async (req, res) => {
+    try {
+      const noVino = req.body.no_vino === undefined ? true : !!req.body.no_vino;
+      const r = await Caja.marcarNoVino(req.user.id, req.params.id, noVino);
+      if (!r) return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
+
+      return res.json({
+        ok: true,
+        no_vino: r.turno.no_vino,
+        faltas: r.faltas,
+        mensaje: r.turno.no_vino
+          ? (r.faltas >= 2
+              ? `Marcada. Es la falta N° ${r.faltas} de ${r.turno.nombre}: convendría pedirle seña.`
+              : 'Falta registrada')
+          : 'Falta deshecha',
+      });
+    } catch (err) {
+      console.error('[CAJA/no-vino]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al registrar la falta' });
+    }
+  }
+);
+
+// GET /api/caja/faltas?telefono=... — cuántas veces faltó esa clienta
+router.get('/faltas',
+  q('telefono').notEmpty().withMessage('Teléfono requerido'),
+  validar,
+  async (req, res) => {
+    try {
+      const faltas = await Caja.contarFaltas(req.user.id, String(req.query.telefono).trim());
+      return res.json({ ok: true, faltas });
+    } catch (err) {
+      console.error('[CAJA/faltas]', err.message);
+      return res.status(500).json({ ok: false, error: 'Error al consultar' });
+    }
+  }
+);
+
 // GET /api/caja/avisos — configuración del recordatorio de pago
 router.get('/avisos', async (req, res) => {
   try {

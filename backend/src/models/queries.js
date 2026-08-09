@@ -155,7 +155,7 @@ const Turnos = {
              t.profesional_id,
              t.profesional_nombre,
              t.senia_requerida, t.senia_pagada, t.monto_senia, t.estado_pago,
-             t.confirmacion_estado,
+             t.confirmacion_estado, t.no_vino,
              s.nombre AS sucursal_nombre,
              s.tipo   AS sucursal_tipo,
              -- Si ya hay un movimiento de caja para este turno, está cobrado.
@@ -1594,6 +1594,39 @@ const Caja = {
     return { movimiento, turno, sesionDescontada };
   },
 
+  // Marcar (o desmarcar) que la clienta no vino. Devuelve cuántas veces
+  // le faltó en total, que es el dato que la operadora necesita para
+  // decidir si le pide seña la próxima.
+  async marcarNoVino(userId, turnoId, noVino) {
+    const { rows } = await query(
+      `UPDATE turnos
+          SET no_vino    = $3,
+              no_vino_en = CASE WHEN $3 THEN NOW() ELSE NULL END,
+              editado_en = NOW()
+        WHERE id = $1 AND user_id = $2 AND estado != 'cancelado'
+        RETURNING id, nombre, telefono, no_vino`,
+      [turnoId, userId, !!noVino]
+    );
+    if (!rows.length) return null;
+
+    const t = rows[0];
+    const faltas = await Caja.contarFaltas(userId, t.telefono);
+    return { turno: t, faltas };
+  },
+
+  // Cuántas veces faltó esa clienta. Se busca por teléfono porque las
+  // clientas son un agrupamiento de turnos, no una tabla.
+  async contarFaltas(userId, telefono) {
+    if (!telefono) return 0;
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS n
+         FROM turnos
+        WHERE user_id = $1 AND telefono = $2 AND no_vino = TRUE`,
+      [userId, telefono]
+    );
+    return rows[0] ? rows[0].n : 0;
+  },
+
   // Lo que le quedó por cobrar: turnos que ya pasaron, que no se
   // cancelaron y que no tienen movimiento de cobro. No hace falta una
   // tabla de deudas — la deuda es la ausencia del cobro.
@@ -1610,6 +1643,8 @@ const Caja = {
          LEFT JOIN servicios s ON s.id = t.servicio_id
         WHERE t.user_id = $1
           AND t.estado != 'cancelado'
+          -- Si no vino, no debe nada: no recibió el servicio.
+          AND COALESCE(t.no_vino, FALSE) = FALSE
           AND (t.fecha + t.hora) < NOW()
           AND t.fecha >= CURRENT_DATE - INTERVAL '6 months'
           AND NOT EXISTS (

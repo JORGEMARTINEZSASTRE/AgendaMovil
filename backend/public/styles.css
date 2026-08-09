@@ -3321,3 +3321,26 @@ body {
   border-radius:10px; padding:10px 12px;
 }
 #btn-aviso-cobro { width:100%; margin-top:11px }
+
+/* ── Faltas de la clienta ───────────────────────────────── */
+.btn-no-vino {
+  background:#fff; color:var(--gris); border:1px solid var(--borde);
+  border-radius:999px; padding:7px 13px; margin-left:8px;
+  font-size:13px; font-weight:700; cursor:pointer;
+}
+.turno-falta-badge {
+  display:inline-block; background:#F3E6E6; color:#8A4A4A;
+  border-radius:999px; padding:5px 12px; font-size:12px; font-weight:700;
+}
+.btn-deshacer-falta {
+  background:none; border:0; color:var(--gris); cursor:pointer;
+  font-size:12px; text-decoration:underline; margin-left:7px;
+}
+.turno-faltas-aviso {
+  display:flex; gap:10px; align-items:flex-start;
+  background:#FFF3DC; border:1px solid #E8CF9B; border-radius:12px;
+  padding:11px 13px; margin-bottom:12px;
+}
+.turno-faltas-aviso .ic { font-size:19px; line-height:1.2; flex-shrink:0 }
+.turno-faltas-aviso b { font-size:14px; color:#7A5B14; display:block }
+.turno-faltas-aviso small { font-size:12.5px; color:#8A6A2F; display:block; margin-top:2px }

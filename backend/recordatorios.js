@@ -665,6 +665,8 @@ async function getDeudasParaAvisar() {
       LEFT JOIN servicios s ON s.id = t.servicio_id
      WHERE u.cobro_aviso_activo = TRUE
        AND t.estado != 'cancelado'
+       -- Si no vino, no se le reclama plata: no recibio el servicio.
+       AND COALESCE(t.no_vino, FALSE) = FALSE
        AND t.telefono IS NOT NULL AND t.telefono <> ''
        AND t.fecha >= CURRENT_DATE - INTERVAL '6 months'
        AND COALESCE(t.cobro_avisos, 0) < ${MAX_AVISOS_COBRO}
