@@ -76,21 +76,40 @@ router.post('/:token',
     try {
       const viene = req.body.respuesta === 'si';
 
-      // Se resuelve en una sola consulta para que dos toques seguidos no
-      // puedan pisarse. Si ya estaba respondido, no se cambia.
+      const nuevoEstado = viene ? 'confirmado' : 'rechazado';
+
+      // Se marca la respuesta en un solo UPDATE para que dos toques
+      // seguidos no puedan pisarse: el segundo no encuentra fila.
+      //
+      // La cancelación va aparte y no en un CASE dentro del mismo SET.
+      // Mezclarlas obligaba a Postgres a inferir el tipo del parámetro
+      // en dos contextos distintos, y esa consulta fallaba en producción
+      // con un 500 que le llegó a una clienta real.
       const { rows } = await query(
         `UPDATE turnos
-            SET confirmacion_estado = $2,
+            SET confirmacion_estado = $2::varchar,
                 confirmacion_en     = NOW(),
-                estado              = CASE WHEN $2 = 'rechazado' THEN 'cancelado' ELSE estado END,
                 editado_en          = NOW()
-          WHERE confirmacion_token = $1
-            AND estado != 'cancelado'
-            AND confirmacion_estado IN ('sin_pedir', 'pendiente')
+          WHERE confirmacion_token = $1::uuid
+            AND estado <> 'cancelado'
+            AND COALESCE(confirmacion_estado, 'sin_pedir') IN ('sin_pedir', 'pendiente')
           RETURNING id, user_id, nombre, telefono, fecha, hora,
                     servicio_nombre, confirmacion_estado`,
-        [req.params.token, viene ? 'confirmado' : 'rechazado']
+        [req.params.token, nuevoEstado]
       );
+
+      // Si no puede venir, además se libera el horario. Si esto fallara,
+      // la respuesta de ella ya quedó guardada igual.
+      if (rows.length && !viene) {
+        try {
+          await query(
+            `UPDATE turnos SET estado = 'cancelado', editado_en = NOW() WHERE id = $1`,
+            [rows[0].id]
+          );
+        } catch (e) {
+          console.error('[CONFIRMACION/cancelar]', e.code, e.message);
+        }
+      }
 
       if (!rows.length) {
         // O el link no existe, o ya lo respondió antes. Se le muestra el
@@ -123,8 +142,14 @@ router.post('/:token',
       return res.json({ ok: true, confirmacion: turno.confirmacion_estado });
 
     } catch (err) {
-      console.error('[CONFIRMACION/responder]', err.message);
-      return res.status(500).json({ ok: false, error: 'No se pudo registrar tu respuesta' });
+      // Se loguea el código de Postgres además del mensaje: sin él, un
+      // fallo acá es indistinguible de cualquier otro y hay que adivinar.
+      console.error('[CONFIRMACION/responder]', err.code, err.message);
+      return res.status(500).json({
+        ok: false,
+        error: 'No se pudo registrar tu respuesta',
+        codigo: err.code || 'desconocido',
+      });
     }
   }
 );
@@ -133,8 +158,11 @@ router.post('/:token',
 async function avisarOperadora(turno) {
   const evolution = require('../services/evolution.service');
 
+  // Ojo: `usuarios` NO tiene columna codigo_pais. Pedirla acá hacía que
+  // este aviso fallara siempre en silencio, y la operadora nunca se
+  // enteraba de que la clienta había contestado.
   const { rows } = await query(
-    `SELECT telefono, codigo_pais FROM usuarios WHERE id = $1`,
+    `SELECT telefono FROM usuarios WHERE id = $1`,
     [turno.user_id]
   );
   if (!rows.length || !rows[0].telefono) return;
