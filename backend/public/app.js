@@ -1371,7 +1371,7 @@ function cardServicioHTML(s) {
   return `
     <div class="card-servicio" data-id="${s.id}" style="border-left:4px solid ${s.color || '#A85568'}">
       <div class="serv-color" style="background:${s.color || '#A85568'}"></div>
-      ${s.foto_url ? `<div class="serv-foto-card"><img src="${s.foto_url}" alt="${escaparHTML(s.nombre)}" loading="lazy"></div>` : ''}
+      ${(s.foto_url || s.imagen_zona) ? `<div class="serv-foto-card"><img src="${s.foto_url || s.imagen_zona}" alt="${escaparHTML(s.nombre)}" loading="lazy"${s.foto_url ? '' : ` onerror="this.closest('.serv-foto-card').remove()"`}></div>` : ''}
       <div class="serv-info">
         <p class="serv-nombre">${escaparHTML(s.nombre)}</p>
         <p class="serv-zona">📍 ${escaparHTML(s.zona || '')}</p>

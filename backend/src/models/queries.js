@@ -1,6 +1,7 @@
 'use strict';
 
 const { query, getClient } = require('../config/db');
+const { imagenDeServicio } = require('../utils/zonas');
 
 // ═══════════════════════════════════════════════════════════
 //  QUERIES — DEPIMÓVIL PRO
@@ -457,7 +458,9 @@ const Servicios = {
        ORDER BY categoria ASC, nombre ASC`,
       [userId]
     );
-    return rows;
+    // La silueta que le toca por zona, para que el panel muestre lo mismo
+    // que ve la clienta cuando el servicio todavía no tiene foto propia.
+    return rows.map(s => ({ ...s, imagen_zona: imagenDeServicio(s) }));
   },
 
   async buscarPorId(id, userId) {

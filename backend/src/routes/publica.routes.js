@@ -13,6 +13,7 @@ const evolution = require('../services/evolution.service');
 const { normalizarTelefono } = require('../utils/telefono');
 const { ServicioFotos } = require('../models/queries');
 const { calcularSenia } = require('../utils/senia');
+const { imagenDeServicio } = require('../utils/zonas');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
 const pool = new Pool({
@@ -406,10 +407,14 @@ router.get('/:userId/servicios', async (req, res) => {
     }
     // monto_senia sale ya resuelto: si el servicio la cobra por porcentaje,
     // acá se convierte a pesos. El frontend no necesita saber la diferencia.
+    // imagen_zona es la silueta que le toca al servicio por su zona; va
+    // aparte de foto_url para que se note qué subió la operadora y qué
+    // puso la app sola.
     const servicios = rows.map(s => ({
       ...s,
       monto_senia: calcularSenia(s),
       fotos: fotosPorServicio[s.id] || [],
+      imagen_zona: imagenDeServicio(s),
     }));
 
     return res.json({ ok: true, servicios });
