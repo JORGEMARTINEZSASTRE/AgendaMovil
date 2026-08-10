@@ -909,12 +909,39 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
 
   const duracion = parseInt(getVal('turno-duracion')) || 30;
 
+  // Las horas que se ofrecen salen del horario que ella cargó, no de un
+  // rango fijo. Antes estaba clavado 07:00–20:00: la que trabajaba hasta
+  // las 22:00 no podía anotarse un turno a las 21:00, por más que lo
+  // tuviera configurado y la agenda pública sí se lo ofreciera a la clienta.
+  let bloques = [];
+  try {
+    const usuario = Sesion.getUsuario();
+    if (usuario?.id) {
+      const resp = await fetch(
+        `${API_URL}/publica/${usuario.id}/disponibilidad?fecha=${fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`
+      );
+      const data = await resp.json();
+      if (data?.ok) bloques = data.bloques || [];
+    }
+  } catch (err) {
+    console.warn('[horarios] no se pudieron traer los bloques:', err.message);
+  }
+
+  // Sin horario cargado (o si falló la consulta) no se le esconde nada:
+  // se le ofrece el día entero y que ella decida.
+  const sinHorario = !bloques.length;
+  const enSuHorario = m => sinHorario || bloques.some(b =>
+    m >= horaAMinutos(String(b.desde).slice(0, 5)) &&
+    (m + duracion) <= horaAMinutos(String(b.hasta).slice(0, 5))
+  );
+
   selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
 
-  for (let m = 7 * 60; m <= 20 * 60; m += 15) {
+  // Se recorre el día entero igual: si necesita meter una excepción fuera
+  // de su horario puede, solo queda avisada de que lo es.
+  for (let m = 7 * 60; m + duracion <= 23 * 60; m += 15) {
     const hora    = minutosAHora(m);
     const horaFin = m + duracion;
-    if (horaFin > 20 * 60) continue;
 
     const ocupado = ocupados.some(t => {
       const tMin = horaAMinutos(formatearHora(t.hora));
@@ -922,11 +949,16 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
       return m < tFin && horaFin > tMin;
     });
 
+    const fuera = !ocupado && !enSuHorario(m);
+
     const opt = document.createElement('option');
     opt.value       = hora;
-    opt.textContent = ocupado ? `${hora} — Ocupado` : `${hora} — Disponible`;
+    if (ocupado)      opt.textContent = `${hora} — Ocupado`;
+    else if (fuera)   opt.textContent = `${hora} — Fuera de tu horario`;
+    else              opt.textContent = `${hora} — Disponible`;
     opt.disabled    = ocupado;
     if (ocupado) opt.style.color = '#B09590';
+    if (fuera)   opt.style.color = '#9A8F92';
     if (horaSeleccionada === hora) opt.selected = true;
     selectHora.appendChild(opt);
   }
