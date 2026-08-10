@@ -249,6 +249,10 @@ let sucursales  = [];
 let infoNegocio = {};
 let pasoActual  = 1;
 let totalPasos  = 5;
+// Cuando hay una sola ubicación el paso 1 no se muestra y la reserva
+// arranca en el 2. Los data-step no se tocan: solo cambia lo que se ve.
+let saltarUbicacion = false;
+const primerPaso = () => (saltarUbicacion ? 2 : 1);
 let datosReserva = {
   sucursalId: null,
   sucursalNombre: '',
@@ -272,10 +276,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   await cargarSucursales();
   await cargarServicios();
 
-  // Si solo hay una ubicación, seleccionarla y saltar directo al paso 2
+  // La mayoría de las operadoras trabaja sola y en un solo lugar: ahí el
+  // paso "Ubicación" no es una elección, es un trámite. Si hay una sola,
+  // se elige sola y el paso desaparece también del indicador de arriba.
   if (sucursales.length === 1) {
+    saltarUbicacion = true;
     datosReserva.sucursalId     = sucursales[0].id;
     datosReserva.sucursalNombre = sucursales[0].nombre;
+    ocultarPasoUbicacion();
     renderPaso2();
     bindForm();
     irAPaso(2);
@@ -345,8 +353,26 @@ async function cargarServicios() {
 }
 
 // ─── NAVEGACIÓN DE PASOS ─────────────────────
+
+/**
+ * Saca "Ubicación" del indicador de pasos y renumera los que quedan,
+ * para que la clienta vea 1-2-3-4 y no arranque en el 2. Los data-step
+ * siguen valiendo 2..5, que es lo que usa toda la navegación.
+ */
+function ocultarPasoUbicacion() {
+  const chip = document.querySelector('.pub-step[data-step="1"]');
+  if (!chip) return;
+  const linea = chip.nextElementSibling;
+  if (linea && linea.classList.contains('pub-step-line')) linea.remove();
+  chip.remove();
+
+  document.querySelectorAll('.pub-step .pub-step-num').forEach((num, i) => {
+    num.textContent = i + 1;
+  });
+}
+
 function irAPaso(n) {
-  if (n < 1 || n > totalPasos) return;
+  if (n < primerPaso() || n > totalPasos) return;
   pasoActual = n;
 
   document.querySelectorAll('.pub-paso').forEach(p => p.classList.remove('activo'));
@@ -360,7 +386,7 @@ function irAPaso(n) {
 
   const prev = document.getElementById('pub-prev');
   const next = document.getElementById('pub-next');
-  prev.classList.toggle('oculto', n === 1);
+  prev.classList.toggle('oculto', n === primerPaso());
   if (n === totalPasos) {
     next.classList.add('oculto');
     renderResumen();
@@ -627,8 +653,10 @@ function renderResumen() {
     return s ? s.nombre : '';
   }).filter(Boolean).join(', ');
 
+  // Si no eligió ubicación porque hay una sola, repetirla acá tampoco
+  // aporta: la clienta ya sabe con quién se está por atender.
   cont.innerHTML = `
-    <div class="pub-resumen-item">📍 ${escaparHTML(datosReserva.sucursalNombre)}</div>
+    ${saltarUbicacion ? '' : `<div class="pub-resumen-item">📍 ${escaparHTML(datosReserva.sucursalNombre)}</div>`}
     <div class="pub-resumen-item">✨ ${escaparHTML(serviciosNombres)}</div>
     <div class="pub-resumen-item">📅 ${formatearFecha(datosReserva.fecha)}</div>
     <div class="pub-resumen-item">🕐 ${datosReserva.hora} hs</div>
