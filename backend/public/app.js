@@ -938,8 +938,10 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
   selectHora.innerHTML = '<option value="">— Elegí un horario —</option>';
 
   // Se recorre el día entero igual: si necesita meter una excepción fuera
-  // de su horario puede, solo queda avisada de que lo es.
-  for (let m = 7 * 60; m + duracion <= 23 * 60; m += 15) {
+  // de su horario puede, solo queda avisada de que lo es. La última hora
+  // que se puede anotar son las 23:30; no se corta por la duración del
+  // servicio, así que un turno puede terminar pasada la medianoche.
+  for (let m = 7 * 60; m <= 23 * 60 + 30; m += 15) {
     const hora    = minutosAHora(m);
     const horaFin = m + duracion;
 
