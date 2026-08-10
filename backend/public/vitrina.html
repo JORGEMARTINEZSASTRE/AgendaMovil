@@ -160,24 +160,16 @@ function renderCatalogo(servicios) {
 
 function tarjetaServicio(s) {
   // La galería trae todas las fotos; foto_url es la portada. Si por lo
-  // que sea no vino el array, se usa la portada sola. Y si el servicio
-  // todavía no tiene ninguna foto, la silueta de su zona (imagen_zona),
-  // así la vitrina nunca queda con tarjetas peladas.
-  const propias = (s.fotos && s.fotos.length)
+  // que sea no vino el array, se usa la portada sola.
+  const fotos = (s.fotos && s.fotos.length)
     ? s.fotos.map(f => f.url)
     : (s.foto_url ? [s.foto_url] : []);
-
-  const fotos = propias.length ? propias : (s.imagen_zona ? [s.imagen_zona] : []);
-
-  // La silueta vive en otro servidor: si no carga, se saca la galería
-  // entera en vez de dejar el cuadrito roto.
-  const siFalla = propias.length ? '' : ` onerror="this.closest('.vit-fotos').remove()"`;
 
   const galeria = fotos.length ? `
     <div class="vit-fotos">
       ${fotos.map(url => `
         <div class="vit-foto">
-          <img src="${escaparHTML(url)}" alt="${escaparHTML(s.nombre)}" loading="lazy"${siFalla}>
+          <img src="${escaparHTML(url)}" alt="${escaparHTML(s.nombre)}" loading="lazy">
         </div>`).join('')}
       ${fotos.length > 1 ? `<span class="vit-fotos-contador">1 / ${fotos.length}</span>` : ''}
     </div>` : '';

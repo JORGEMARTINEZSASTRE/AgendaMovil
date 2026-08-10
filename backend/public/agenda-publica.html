@@ -425,14 +425,6 @@ function renderPaso1() {
 }
 
 // ─── PASO 2: SERVICIOS (ACORDEÓN) ─────────────
-
-// La foto que subió la operadora manda. Si no subió ninguna, se usa la
-// silueta de la zona que arma el servidor (imagen_zona); puede venir en
-// null si no se pudo saber de qué zona habla el servicio.
-function fotoServicio(s) {
-  return s.foto_url || s.imagen_zona || null;
-}
-
 function renderPaso2() {
   const cont = document.getElementById('pub-servicios');
   if (!servicios.length) {
@@ -459,7 +451,7 @@ function renderPaso2() {
       <div class="pub-accordion-body oculto">
         ${agrupados[cat].map(s => `
           <div class="pub-servicio-card" data-id="${s.id}">
-            ${fotoServicio(s) ? `<div class="pub-servicio-foto"><img src="${escaparHTML(fotoServicio(s))}" alt="${escaparHTML(s.nombre)}" loading="lazy" onerror="this.closest('.pub-servicio-foto').remove()"></div>` : ''}
+            ${s.foto_url ? `<div class="pub-servicio-foto"><img src="${s.foto_url}" alt="${escaparHTML(s.nombre)}" loading="lazy"></div>` : ''}
             <div class="pub-servicio-info">
               <p class="pub-servicio-nombre">${escaparHTML(s.nombre)}</p>
               <p class="pub-servicio-zona">📍 ${escaparHTML(s.zona || '')}</p>
