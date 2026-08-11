@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
-    "seed-admin": "node backend/scripts/seed-admin.js"
+    "seed-admin": "node backend/scripts/seed-admin.js",
+    "test": "node --test \"backend/test/*.test.js\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
