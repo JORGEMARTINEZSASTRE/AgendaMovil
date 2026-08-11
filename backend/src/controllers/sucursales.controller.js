@@ -2,25 +2,10 @@
 
 const { Sucursales } = require('../models/queries');
 const { query } = require('../config/db');
-
-function normalizarHorarios(horarios) {
-  if (!Array.isArray(horarios)) return [];
-
-  return horarios
-    .map(h => ({
-      dia: Number(h?.dia),
-      activo: Boolean(h?.activo),
-      desde: String(h?.desde || ''),
-      hasta: String(h?.hasta || ''),
-    }))
-    .filter(h =>
-      Number.isInteger(h.dia) &&
-      h.dia >= 0 && h.dia <= 6 &&
-      /^([01]\d|2[0-3]):([0-5]\d)$/.test(h.desde) &&
-      /^([01]\d|2[0-3]):([0-5]\d)$/.test(h.hasta) &&
-      h.desde < h.hasta
-    );
-}
+// La tercera copia de esta función vivía acá. Ahora es la misma que usa
+// la agenda pública para leer, así que lo que se guarda y lo que se
+// ofrece no se pueden volver a separar.
+const { normalizarHorarios } = require('../utils/horarios');
 
 async function contarSucursalesActivas(userId, excluirId = null) {
   const params = [userId];

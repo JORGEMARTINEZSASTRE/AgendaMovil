@@ -2,7 +2,6 @@
 
 const express = require('express');
 const router  = express.Router();
-const { Pool } = require('pg');
 const { autoRegistro } = require('../controllers/registroController');
 const { registroLimiter } = require('../middleware/rateLimiter');
 const { validarRegistro } = require('../middleware/validate');
@@ -15,50 +14,16 @@ const { ServicioFotos, ClientesManual } = require('../models/queries');
 const { calcularSenia } = require('../utils/senia');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
-const pool = new Pool({
-  host:     process.env.DB_HOST,
-  port:     process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-});
+// Este archivo abría su propio pool de Postgres, en paralelo al de
+// config/db.js: dos juegos de conexiones contra la misma base, con
+// distinta configuración (sin límite, sin timeouts, sin SSL) y —lo peor—
+// sin manejador de 'error', que en pg tira una excepción no capturada y
+// voltea el proceso cuando la base corta una conexión ociosa. Justo acá,
+// que es por donde entran las reservas de las clientas.
+const { pool, query } = require('../config/db');
 
-// ─── Helpers ─────────────────────────────────────────────────
-function toMin(hhmm) {
-  const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number);
-  return (h * 60) + m;
-}
-
-function diaSemanaNumero(fechaStr) {
-  const d = new Date(`${fechaStr}T00:00:00`);
-  return d.getDay(); // 0..6
-}
-
-function normalizarHorarios(horarios) {
-  if (!Array.isArray(horarios)) return [];
-  return horarios
-    .map(h => ({
-      dia: Number(h?.dia),
-      desde: String(h?.desde || '').slice(0, 5),
-      hasta: String(h?.hasta || '').slice(0, 5),
-    }))
-    .filter(h =>
-      Number.isInteger(h.dia) &&
-      h.dia >= 0 && h.dia <= 6 &&
-      /^\d{2}:\d{2}$/.test(h.desde) &&
-      /^\d{2}:\d{2}$/.test(h.hasta) &&
-      h.desde < h.hasta
-    );
-}
-
-function estaDentroHorario(horarios, fecha, hora, duracion) {
-  const hs = normalizarHorarios(horarios);
-  if (!hs.length) return true;
-  const dia = diaSemanaNumero(fecha);
-  const inicioTurno = toMin(hora);
-  const finTurno = inicioTurno + Number(duracion || 0);
-  return hs.some(b => Number(b.dia) === dia && inicioTurno >= toMin(b.desde) && finTurno <= toMin(b.hasta));
-}
+// Los helpers de horarios viven en un solo lugar: ver utils/horarios.js.
+const { toMin, diaSemanaNumero, bloquesDelDia } = require('../utils/horarios');
 
 /**
  * Obtiene los bloques horarios para una fecha dada.
@@ -107,10 +72,10 @@ async function obtenerBloquesDia(userId, sucursalId, fecha) {
   );
   if (!sucRows.length) return { bloques: [], bloqueado: false };
 
-  const todos = normalizarHorarios(sucRows[0].horarios || []);
-  const bloquesDia = todos.filter(h => h.dia === dia);
+  // Acá también se respetan los días apagados (activo:false), que antes
+  // esta rama ignoraba y ofrecía igual.
   return {
-    bloques: bloquesDia.map(h => ({ desde: h.desde, hasta: h.hasta })),
+    bloques: bloquesDelDia(sucRows[0].horarios || [], fecha),
     bloqueado: false,
   };
 }

@@ -1,6 +1,7 @@
 'use strict';
 
 const { Turnos, Sucursales } = require('../models/queries');
+const { estaDentroHorario } = require('../utils/horarios');
 const { 
   enviarConfirmacionTurno,
   enviarModificacionTurno,
@@ -90,32 +91,6 @@ async function obtener(req, res) {
 // ════════════════════════════════════════════════════════════
 //  POST /api/turnos
 // ════════════════════════════════════════════════════════════
-function toMin(hhmm) {
-  const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number);
-  return (h * 60) + m;
-}
-
-function diaSemanaNumero(fechaStr) {
-  const d = new Date(`${fechaStr}T00:00:00`);
-  return d.getDay();
-}
-
-function estaDentroHorario(horarios, fecha, hora, duracion) {
-  if (!Array.isArray(horarios) || horarios.length === 0) return true;
-
-  const dia = diaSemanaNumero(fecha);
-  const bloque = horarios.find(h => Number(h.dia) === dia && h.activo);
-
-  if (!bloque) return false;
-
-  const inicioTurno  = toMin(hora);
-  const finTurno     = inicioTurno + Number(duracion || 0);
-  const inicioBloque = toMin(bloque.desde);
-  const finBloque    = toMin(bloque.hasta);
-
-  return inicioTurno >= inicioBloque && finTurno <= finBloque;
-}
-
 async function crear(req, res) {
   try {
     const {
