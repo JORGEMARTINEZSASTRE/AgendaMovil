@@ -7,6 +7,7 @@ const { planActivo }  = require('../middleware/planGuard');
 const { validar }     = require('../middleware/validate');
 const { apiLimiter }  = require('../middleware/rateLimiter');
 const { query }       = require('../config/db');
+const { Clientes }    = require('../models/queries');
 const { enviarConfirmacionSenia } = require('../../recordatorios');
 
 router.use(autenticar);
@@ -64,6 +65,8 @@ async function crearTurnoConSenia(userId, datos) {
       estadoPago     || 'no_aplica',
     ]
   );
+  // Igual que en los otros caminos: si sacó turno, queda como clienta.
+  await Clientes.registrarDesdeTurno(userId, { nombre, telefono, cumpleDia, cumpleMes });
   return rows[0];
 }
 

@@ -255,6 +255,9 @@ const Turnos = {
         profesionalNombre  || null,
       ]
     );
+    // Toda clienta con turno queda en su lista de clientas. Va acá, en el
+    // alta del turno, para que valga igual cargándolo ella desde el panel.
+    await Clientes.registrarDesdeTurno(userId, { nombre, telefono, cumpleDia, cumpleMes });
     return rows[0];
   },
 
@@ -321,14 +324,19 @@ const Turnos = {
     return rowCount > 0;
   },
 
+  /**
+   * Los cumpleaños del mes salen de la ficha de la clienta, no de sus
+   * turnos. Antes se leían de turnos: una clienta con tres turnos
+   * aparecía tres veces, y la que no volvía desaparecía de la lista
+   * aunque su cumpleaños siguiera siendo el mismo.
+   */
   async getCumples(userId) {
     const mesActual = new Date().getMonth() + 1;
     const { rows } = await query(
       `SELECT id, nombre, telefono, cumple_dia, cumple_mes
-       FROM turnos
-       WHERE user_id  = $1
+       FROM clientes
+       WHERE user_id = $1
          AND cumple_mes = $2
-         AND estado   != 'cancelado'
        ORDER BY cumple_dia ASC`,
       [userId, mesActual]
     );
@@ -1353,6 +1361,41 @@ const ClientesManual = {
       [userId, nombre, telefono]
     );
     return rows[0];
+  },
+
+  /**
+   * Da de alta a la clienta cada vez que saca un turno, venga de donde
+   * venga: la reserva pública, el panel o la confirmación de una seña.
+   * Antes la lista de clientas se llenaba sólo a mano, así que quien
+   * reservaba sola no quedaba registrada en ningún lado.
+   *
+   * Si ya existe se actualiza el nombre (se pudo haber escrito mejor) y
+   * se completa el cumpleaños **sólo si todavía no tenía**: un dato que
+   * ya está cargado no se pisa con un vacío.
+   *
+   * Nunca tira: registrar a la clienta no puede hacer fallar un turno.
+   */
+  async registrarDesdeTurno(userId, { nombre, telefono, cumpleDia, cumpleMes }) {
+    if (!userId || !telefono || !nombre) return null;
+    try {
+      const dia = Number(cumpleDia) >= 1 && Number(cumpleDia) <= 31 ? Number(cumpleDia) : null;
+      const mes = Number(cumpleMes) >= 1 && Number(cumpleMes) <= 12 ? Number(cumpleMes) : null;
+
+      const { rows } = await query(
+        `INSERT INTO clientes (user_id, nombre, telefono, cumple_dia, cumple_mes)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, telefono) DO UPDATE
+           SET nombre     = EXCLUDED.nombre,
+               cumple_dia = COALESCE(clientes.cumple_dia, EXCLUDED.cumple_dia),
+               cumple_mes = COALESCE(clientes.cumple_mes, EXCLUDED.cumple_mes)
+         RETURNING *`,
+        [userId, String(nombre).trim().slice(0, 255), telefono, dia, mes]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      console.error('[CLIENTES/registrarDesdeTurno]', err.message);
+      return null;
+    }
   },
 
   async toggleFavorito(id, userId) {

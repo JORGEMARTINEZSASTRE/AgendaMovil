@@ -84,6 +84,58 @@ async function correrMigraciones() {
         UNIQUE (user_id, telefono)
       )
     `);
+    // El cumpleaños vivía sólo en el turno, así que se perdía cuando la
+    // clienta dejaba de venir. Acá queda pegado a la persona.
+    // Va en su propio try: si esto falla, las migraciones que siguen
+    // —entre ellas las columnas de servicios— tienen que correr igual.
+    try {
+      await query(`
+        ALTER TABLE public.clientes
+          ADD COLUMN IF NOT EXISTS cumple_dia SMALLINT,
+          ADD COLUMN IF NOT EXISTS cumple_mes SMALLINT
+      `);
+    } catch (e) {
+      console.error('[MIGRATIONS] clientes: cumpleaños no agregado:', e.message);
+    }
+    // Backfill: hasta ahora la lista de clientas se llenaba sólo a mano,
+    // así que las que reservaron por el link no figuraban en ningún lado.
+    // Se rescatan de los turnos que ya existen, quedándose con el nombre
+    // del turno más nuevo de cada teléfono.
+    try {
+      const alta = await query(`
+        INSERT INTO public.clientes (user_id, nombre, telefono)
+        SELECT DISTINCT ON (t.user_id, t.telefono)
+               t.user_id, t.nombre, t.telefono
+          FROM public.turnos t
+         WHERE t.telefono IS NOT NULL AND t.telefono <> ''
+           AND t.nombre   IS NOT NULL AND t.nombre   <> ''
+         ORDER BY t.user_id, t.telefono, t.creado_en DESC NULLS LAST
+        ON CONFLICT (user_id, telefono) DO NOTHING
+      `);
+
+      // El cumpleaños vivía en el turno: se pasa a la ficha de la clienta.
+      const cumples = await query(`
+        UPDATE public.clientes c
+           SET cumple_dia = s.cumple_dia,
+               cumple_mes = s.cumple_mes
+          FROM (
+            SELECT DISTINCT ON (user_id, telefono)
+                   user_id, telefono, cumple_dia, cumple_mes
+              FROM public.turnos
+             WHERE cumple_dia IS NOT NULL AND cumple_mes IS NOT NULL
+             ORDER BY user_id, telefono, creado_en DESC NULLS LAST
+          ) s
+         WHERE c.user_id = s.user_id
+           AND c.telefono = s.telefono
+           AND c.cumple_dia IS NULL
+      `);
+
+      console.log(`[MIGRATIONS] ✓ clientes: ${alta.rowCount} alta(s) desde turnos, ` +
+                  `${cumples.rowCount} cumpleaños rescatado(s)`);
+    } catch (e) {
+      // Que no frene el arranque: la app sirve igual sin el backfill.
+      console.error('[MIGRATIONS] clientes: backfill no realizado:', e.message);
+    }
     console.log('[MIGRATIONS] ✓ Tabla clientes OK');
 
     // ── 7. Columnas de servicios agregadas a mano fuera del schema ─────

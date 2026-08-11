@@ -217,6 +217,21 @@
         </div>
 
         <div class="campo">
+          <label>🎂 Tu cumpleaños (opcional)</label>
+          <div style="display:flex; gap:8px;">
+            <select id="pub-cumple-dia" style="flex:1;" aria-label="Día de tu cumpleaños">
+              <option value="">Día</option>
+            </select>
+            <select id="pub-cumple-mes" style="flex:2;" aria-label="Mes de tu cumpleaños">
+              <option value="">Mes</option>
+            </select>
+          </div>
+          <p class="campo-ayuda" style="font-size:12.5px; opacity:.75; margin-top:4px;">
+            Solo día y mes, para saludarte. No pedimos el año 😊
+          </p>
+        </div>
+
+        <div class="campo">
           <label>📝 Notas (opcional)</label>
           <textarea id="pub-notas" rows="2" placeholder="Alguna indicación especial..."></textarea>
         </div>
@@ -664,7 +679,23 @@ function renderResumen() {
 }
 
 // ─── FORM SUBMIT ──────────────────────────────
+/** Llena los desplegables de día y mes del cumpleaños. */
+function llenarCumple() {
+  const selDia = document.getElementById('pub-cumple-dia');
+  const selMes = document.getElementById('pub-cumple-mes');
+  if (!selDia || !selMes || selDia.options.length > 1) return;
+
+  for (let d = 1; d <= 31; d++) {
+    selDia.appendChild(new Option(d, d));
+  }
+  ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    .forEach((m, i) => selMes.appendChild(new Option(m, i + 1)));
+}
+
 function bindForm() {
+  llenarCumple();
+
   document.getElementById('pub-next').addEventListener('click', () => {
     if (validarPaso()) irAPaso(pasoActual + 1);
   });
@@ -738,6 +769,8 @@ async function handleSubmit(e) {
         servicio_zonas: serviciosSel.map(s => s.zona).filter(Boolean).join(', '),
         servicio_colores: serviciosSel.map(s => s.color || '#A85568')[0],
         sucursal_id: datosReserva.sucursalId,
+        cumple_dia: document.getElementById('pub-cumple-dia')?.value || null,
+        cumple_mes: document.getElementById('pub-cumple-mes')?.value || null,
       }),
     });
 

@@ -11,7 +11,7 @@ const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
 const { normalizarTelefono } = require('../utils/telefono');
-const { ServicioFotos } = require('../models/queries');
+const { ServicioFotos, Clientes } = require('../models/queries');
 const { calcularSenia } = require('../utils/senia');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
@@ -437,10 +437,18 @@ router.post('/:userId/turno', [
     const { userId } = req.params;
     let { nombre, telefono, fecha, hora, duracion,
             servicio_ids, servicio_nombres, servicio_zonas,
-            servicio_colores, notas, email_clienta, sucursal_id } = req.body;
+            servicio_colores, notas, email_clienta, sucursal_id,
+            cumple_dia, cumple_mes } = req.body;
 
     // Normalizar teléfono a formato internacional
     telefono = normalizarTelefono(telefono);
+
+    // El cumpleaños es opcional y sólo día y mes: alcanza para saludarla
+    // y no hace falta pedirle el año a nadie. Si viene cualquier cosa, se
+    // ignora en silencio antes que rechazar la reserva por un dato de más.
+    cumple_dia = Number(cumple_dia) >= 1 && Number(cumple_dia) <= 31 ? Number(cumple_dia) : null;
+    cumple_mes = Number(cumple_mes) >= 1 && Number(cumple_mes) <= 12 ? Number(cumple_mes) : null;
+    if (cumple_dia === null || cumple_mes === null) { cumple_dia = null; cumple_mes = null; }
 
     // Verificar usuario
     const { rows: usuRows } = await pool.query(
@@ -543,8 +551,9 @@ router.post('/:userId/turno', [
           servicio_id, servicio_nombre, servicio_zona, servicio_color,
           notas, estado, sucursal_id,
           profesional_id, profesional_nombre,
-          senia_requerida, senia_pagada, monto_senia, estado_pago)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+          senia_requerida, senia_pagada, monto_senia, estado_pago,
+          cumple_dia, cumple_mes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING *`,
       [
         userId, nombre, telefono, fecha, hora, duracion,
@@ -553,9 +562,19 @@ router.post('/:userId/turno', [
         notas || null, estadoTurno, realSucursalId,
         realProfId, realProfNombre,
         seniaRequerida, false, montoSenia, estadoPago,
+        cumple_dia, cumple_mes,
       ]
     );
     const turno = tRows[0];
+
+    // Queda registrada como clienta de la operadora. Va después del turno
+    // y sin await bloqueante: si esto fallara, la reserva ya está hecha.
+    Clientes.registrarDesdeTurno(userId, {
+      nombre,
+      telefono,
+      cumpleDia: cumple_dia,
+      cumpleMes: cumple_mes,
+    });
 
     // ── Mails ──
     const servicioLabel = servicio_nombres || null;
