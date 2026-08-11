@@ -2754,6 +2754,48 @@ body {
   margin-top: 2px;
 }
 
+/* Ficha de la clienta: datos, cumpleaños y su historial */
+.ficha-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--borde);
+  margin-bottom: 12px;
+}
+
+.ficha-cabecera .btn-secundario {
+  align-self: flex-start;
+  margin-top: 6px;
+  text-decoration: none;
+}
+
+.ficha-cumple {
+  background: var(--crema2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-sm);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.ficha-cumple .form-label { margin-bottom: 6px; }
+.ficha-cumple .campo-ayuda { margin-top: 6px; }
+
+.ficha-subtitulo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--marron);
+  margin-bottom: 10px;
+}
+
+.historial-nota {
+  font-size: 13px;
+  color: var(--gris-texto, #6B5A60);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
 /* Historial cliente */
 .historial-contenido {
   display: flex;

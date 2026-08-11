@@ -3384,6 +3384,110 @@ async function borrarInactivosSeleccionados() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+//  FICHA DE LA CLIENTA
+//  El modal ya existía en el HTML y la card ya la llamaba, pero la
+//  función nunca se escribió: tocar una clienta no hacía nada.
+//  Muestra su historial de tratamientos y deja cargarle el cumpleaños,
+//  que es lo que alimenta la pestaña 🎂.
+// ═══════════════════════════════════════════════════════════
+const MESES_CUMPLE = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+async function abrirHistorialCliente(telefono) {
+  const modal = document.getElementById('modal-historial-cliente');
+  const cont  = document.getElementById('modal-historial-contenido');
+  const titulo = document.getElementById('modal-historial-titulo');
+  if (!modal || !cont) return;
+
+  const cliente = [...(clientesManuales || []), ...(clientes || [])]
+    .find(c => c.telefono === telefono) || { nombre: 'Clienta', telefono };
+
+  titulo.textContent = `📋 ${cliente.nombre}`;
+  cont.innerHTML = '<div class="pub-cargando">Cargando historial...</div>';
+  modal.classList.remove('oculto');
+
+  let historial = [];
+  try {
+    historial = await ClientesAPI.historial(telefono);
+  } catch (err) {
+    cont.innerHTML = '<div class="pub-vacio">No se pudo cargar el historial</div>';
+    return;
+  }
+
+  // El cumpleaños puede venir de la fila manual (la que tiene la columna)
+  const manual = (clientesManuales || []).find(c => c.telefono === telefono);
+  const dia = manual?.cumple_dia || '';
+  const mes = manual?.cumple_mes || '';
+
+  const opcionesDia = Array.from({ length: 31 }, (_, i) =>
+    `<option value="${i + 1}" ${Number(dia) === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('');
+  const opcionesMes = MESES_CUMPLE.map((m, i) =>
+    `<option value="${i + 1}" ${Number(mes) === i + 1 ? 'selected' : ''}>${m}</option>`).join('');
+
+  const activos = historial.filter(t => t.estado !== 'cancelado');
+  const total   = activos.length;
+
+  const filas = historial.length
+    ? historial.map(t => {
+        const cancelado = t.estado === 'cancelado';
+        const fecha = formatearFecha(String(t.fecha).split('T')[0]);
+        const zona  = t.servicio_zona ? ` · ${escaparHTML(t.servicio_zona)}` : '';
+        const nota  = t.notas ? `<p class="historial-nota">📝 ${escaparHTML(t.notas)}</p>` : '';
+        return `
+          <div class="historial-item ${cancelado ? 'historial-estado-cancelado' : ''}">
+            <p class="historial-fecha">${fecha} · ${String(t.hora).slice(0, 5)} hs</p>
+            <p class="historial-servicio">✨ ${escaparHTML(t.servicio_nombre || 'Sin servicio')}${zona}</p>
+            <p class="historial-precio">⏱ ${t.duracion} min${cancelado ? ' · cancelado' : ''}</p>
+            ${nota}
+          </div>`;
+      }).join('')
+    : '<div class="pub-vacio">Todavía no tiene tratamientos registrados</div>';
+
+  cont.innerHTML = `
+    <div class="ficha-cabecera">
+      <p class="cliente-tel">📞 ${escaparHTML(formatearTelefonoDisplay(telefono))}</p>
+      <p class="cliente-ultimo">${total} tratamiento${total === 1 ? '' : 's'} realizado${total === 1 ? '' : 's'}</p>
+      <a class="btn-secundario" href="https://wa.me/${String(telefono).replace(/\D/g, '')}" target="_blank" rel="noopener">💬 Escribirle</a>
+    </div>
+
+    <div class="ficha-cumple">
+      <label class="form-label">🎂 Cumpleaños</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="ficha-cumple-dia" class="form-input" style="flex:1;">
+          <option value="">Día</option>${opcionesDia}
+        </select>
+        <select id="ficha-cumple-mes" class="form-input" style="flex:2;">
+          <option value="">Mes</option>${opcionesMes}
+        </select>
+        <button type="button" id="ficha-cumple-guardar" class="btn-primary">Guardar</button>
+      </div>
+      <p class="campo-ayuda">Sólo día y mes. Aparece en la pestaña 🎂 el mes que cumple.</p>
+    </div>
+
+    <h3 class="ficha-subtitulo">Historial de tratamientos</h3>
+    ${filas}
+  `;
+
+  document.getElementById('ficha-cumple-guardar').onclick = async () => {
+    const d = document.getElementById('ficha-cumple-dia').value;
+    const m = document.getElementById('ficha-cumple-mes').value;
+    // O los dos o ninguno: un día suelto no sirve para saludar a nadie.
+    if ((d && !m) || (m && !d)) { mostrarToast('Elegí día y mes', 'error'); return; }
+    try {
+      await ClientesAPI.guardarCumple(telefono, {
+        nombre: cliente.nombre,
+        cumple_dia: d || null,
+        cumple_mes: m || null,
+      });
+      mostrarToast(d ? 'Cumpleaños guardado 🎂' : 'Cumpleaños borrado', 'exito');
+      await cargarYRenderizarClientes();
+    } catch (err) {
+      mostrarToast('No se pudo guardar', 'error');
+    }
+  };
+}
+
 async function cargarYRenderizarClientes() {
   const contenedor = document.getElementById('lista-clientes');
   contenedor.innerHTML = `<div class="pub-cargando">Cargando clientes...</div>`;

@@ -126,6 +126,38 @@ router.post('/manual', async (req, res) => {
   }
 });
 
+// PUT /api/clientes/:telefono/cumple — guardar día y mes de cumpleaños
+// Se guarda por teléfono y no por id porque la operadora abre la ficha
+// desde la lista, donde una clienta que nunca fue creada a mano todavía
+// no tiene fila propia: acá se le crea sola.
+router.put('/:telefono/cumple', async (req, res) => {
+  try {
+    const telefono = normalizarTelefono(req.params.telefono);
+    const nombre   = String(req.body?.nombre || '').trim();
+
+    const dia = req.body?.cumple_dia === null || req.body?.cumple_dia === ''
+      ? null : Number(req.body?.cumple_dia);
+    const mes = req.body?.cumple_mes === null || req.body?.cumple_mes === ''
+      ? null : Number(req.body?.cumple_mes);
+
+    const borrar = dia === null && mes === null;
+    if (!borrar) {
+      if (!(dia >= 1 && dia <= 31) || !(mes >= 1 && mes <= 12)) {
+        return res.status(422).json({ ok: false, error: 'Día o mes inválido' });
+      }
+    }
+
+    const cliente = await ClientesManual.guardarCumple(req.user.id, {
+      telefono, nombre, cumpleDia: borrar ? null : dia, cumpleMes: borrar ? null : mes,
+    });
+    if (!cliente) return res.status(404).json({ ok: false, error: 'No se pudo guardar' });
+    return res.json({ ok: true, cliente });
+  } catch (err) {
+    console.error('[CLIENTES/cumple]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al guardar el cumpleaños' });
+  }
+});
+
 // PATCH /api/clientes/manual/:id/favorito — toggle estrella
 router.patch('/manual/:id/favorito', async (req, res) => {
   try {

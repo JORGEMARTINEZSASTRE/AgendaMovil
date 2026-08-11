@@ -1375,6 +1375,24 @@ const ClientesManual = {
    *
    * Nunca tira: registrar a la clienta no puede hacer fallar un turno.
    */
+  /**
+   * Guarda (o borra) el cumpleaños desde la ficha de la clienta.
+   * A diferencia del alta automática, acá sí se pisa lo que había: si la
+   * operadora lo está editando a mano es porque quiere corregirlo.
+   */
+  async guardarCumple(userId, { telefono, nombre, cumpleDia, cumpleMes }) {
+    const { rows } = await query(
+      `INSERT INTO clientes (user_id, nombre, telefono, cumple_dia, cumple_mes)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, telefono) DO UPDATE
+         SET cumple_dia = EXCLUDED.cumple_dia,
+             cumple_mes = EXCLUDED.cumple_mes
+       RETURNING *`,
+      [userId, (nombre || 'Sin nombre').slice(0, 255), telefono, cumpleDia, cumpleMes]
+    );
+    return rows[0] || null;
+  },
+
   async registrarDesdeTurno(userId, { nombre, telefono, cumpleDia, cumpleMes }) {
     if (!userId || !telefono || !nombre) return null;
     try {

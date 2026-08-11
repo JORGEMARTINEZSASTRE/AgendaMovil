@@ -463,6 +463,13 @@ const ClientesAPI = {
   async toggleFavorito(id) {
     return await fetchAPI(`/clientes/manual/${id}/favorito`, { method: 'PATCH' });
   },
+  /** Día y mes del cumpleaños. Mandar los dos en null lo borra. */
+  async guardarCumple(telefono, { nombre, cumple_dia, cumple_mes }) {
+    return await fetchAPI(`/clientes/${encodeURIComponent(telefono)}/cumple`, {
+      method: 'PUT',
+      body: JSON.stringify({ nombre, cumple_dia, cumple_mes }),
+    });
+  },
   async eliminarManual(id) {
     return await fetchAPI(`/clientes/manual/${id}`, { method: 'DELETE' });
   },
