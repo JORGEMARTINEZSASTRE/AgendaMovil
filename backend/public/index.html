@@ -1401,6 +1401,10 @@
         <div class="campo"><label>Email</label><input type="email" name="email"></div>
         <div class="campo"><label>Dirección</label><input type="text" name="direccion"></div>
         <div class="campo"><label>Ocupación</label><input type="text" name="ocupacion"></div>
+        <div class="ficha-dos-columnas">
+          <div class="campo"><label>Peso</label><input type="text" name="peso" placeholder="Ej: 62 kg" inputmode="decimal"></div>
+          <div class="campo"><label>Altura</label><input type="text" name="altura" placeholder="Ej: 1,65 m" inputmode="decimal"></div>
+        </div>
         <div class="ficha-seccion-titulo">2. Motivo de Consulta</div>
         <div class="campo"><label>Motivo principal</label><textarea name="motivo_principal" rows="2"></textarea></div>
         <div class="campo"><label>Zonas a tratar</label><input type="text" name="zonas_a_tratar"></div>
@@ -1493,6 +1497,10 @@
       </div>
 
       <div class="ficha-panel" data-fpanel="sesiones">
+        <div class="ficha-seccion-titulo">Historial de tratamientos</div>
+        <div id="ficha-resumen" class="ficha-resumen"></div>
+        <div id="ficha-turnos-lista" class="ficha-turnos-lista"></div>
+
         <div class="ficha-seccion-titulo">9. Registro de Sesiones</div>
         <div id="ficha-sesiones-lista" class="ficha-sesiones-lista"></div>
         <div class="ficha-nueva-sesion">

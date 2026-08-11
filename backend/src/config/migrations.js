@@ -262,6 +262,76 @@ async function correrMigraciones() {
       }
     }
 
+    // ── 9 bis. Ficha clínica ──────────────────────────────────────────
+    // Estas dos tablas se habían creado a mano directamente en la base de
+    // producción y no estaban en ningún lado del código. Contra una base
+    // nueva —un entorno de prueba, una migración de servidor— la ficha
+    // clínica reventaba con "relation does not exist" y nadie sabía por qué.
+    //
+    // Los campos van casi todos como TEXT a propósito: son respuestas de
+    // una entrevista, no datos calculables, y así nadie pierde una ficha
+    // por escribir "no sabe" donde se esperaba un número.
+    try {
+      const CAMPOS_FICHA = [
+        'nombre','documento','fecha_nacimiento','email','direccion','ocupacion',
+        'peso','altura',
+        'motivo_principal','zonas_a_tratar','expectativas','tiempo_evolucion',
+        'enfermedades_actuales','enfermedades_cronicas','trastornos_hormonales',
+        'enfermedades_dermatologicas','alergias','medicacion_actual',
+        'embarazo_lactancia','cirugias_previas','implantes_protesis',
+        'tratamientos_previos','depilacion_laser_ipl','uso_aparatologia',
+        'peelings_dermapen_prp','reacciones_adversas','frecuencia_tratamientos',
+        'exposicion_solar','uso_protector_solar','tabaquismo','alcohol',
+        'actividad_fisica','alimentacion','consumo_agua','tipo_piel',
+        'fototipo_fitzpatrick','hidratacion','elasticidad','sebo',
+        'alteraciones_presentes','diagnostico_estetico','objetivo',
+        'tratamientos_indicados','zonas_plan','frecuencia_plan','duracion_plan',
+        'combinacion_tecnicas','respuesta_tratamiento','cambios_observados',
+        'ajustes','procedimiento_explicado','riesgos_informados','firma_paciente',
+        'firma_profesional','fecha_consentimiento','zona_documentada',
+        'rutina_cosmetica','cuidados_post','recomendaciones','observaciones_generales',
+      ];
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS public.fichas_clinicas (
+          id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id    UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+          telefono   VARCHAR(50) NOT NULL,
+          creado_en  TIMESTAMPTZ DEFAULT NOW(),
+          editado_en TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE (user_id, telefono)
+        )
+      `);
+
+      // Se agregan de a una: así corre igual contra la tabla que ya existe
+      // en producción, a la que le faltan peso y altura.
+      for (const campo of CAMPOS_FICHA) {
+        await query(`ALTER TABLE public.fichas_clinicas ADD COLUMN IF NOT EXISTS ${campo} TEXT`);
+      }
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS public.sesiones_clinicas (
+          id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          ficha_id      UUID NOT NULL REFERENCES public.fichas_clinicas(id) ON DELETE CASCADE,
+          turno_id      UUID REFERENCES public.turnos(id) ON DELETE SET NULL,
+          fecha         DATE NOT NULL DEFAULT CURRENT_DATE,
+          tratamiento   TEXT,
+          parametros    TEXT,
+          observaciones TEXT,
+          profesional   TEXT,
+          fotos         TEXT[] DEFAULT '{}',
+          creado_en     TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await query(`
+        CREATE INDEX IF NOT EXISTS idx_sesiones_ficha
+          ON public.sesiones_clinicas (ficha_id, fecha DESC)
+      `);
+      console.log('[MIGRATIONS] ✓ Ficha clínica OK (fichas_clinicas + sesiones_clinicas)');
+    } catch (e) {
+      console.error('[MIGRATIONS] ficha clínica:', e.message);
+    }
+
     // ── 10. Recordatorio de regreso (recompra) ────────────────────────
     // Marca el turno que ya disparó el aviso de "tocaría volver", para
     // que no se le escriba a la misma clienta una y otra vez.

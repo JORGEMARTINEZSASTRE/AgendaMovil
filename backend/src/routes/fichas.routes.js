@@ -43,13 +43,65 @@ const uploadServicio = multer({
 // FICHAS CLÍNICAS
 // ════════════════════════════════════════════════
 
+/**
+ * Números de la clienta que no hay que cargar a mano: salen de sus
+ * turnos y de las sesiones ya registradas.
+ *
+ * - dias_concurridos cuenta FECHAS distintas, no turnos: si vino un día
+ *   y se hizo axilas y piernas en dos turnos seguidos, concurrió una vez.
+ * - sesiones_hechas son los turnos que ya pasaron y no se cancelaron.
+ *   Los que están agendados para adelante se cuentan aparte: todavía no
+ *   se hicieron.
+ */
+async function resumenDeLaClienta(userId, telefono, fichaId) {
+  const vacio = {
+    sesiones_hechas: 0, turnos_futuros: 0, dias_concurridos: 0,
+    primera_visita: null, ultima_visita: null,
+    cancelados: 0, sesiones_registradas: 0,
+  };
+
+  try {
+    const { rows } = await query(
+      `SELECT
+         COUNT(*) FILTER (WHERE estado != 'cancelado' AND fecha <= CURRENT_DATE)::int AS sesiones_hechas,
+         COUNT(*) FILTER (WHERE estado != 'cancelado' AND fecha >  CURRENT_DATE)::int AS turnos_futuros,
+         COUNT(DISTINCT fecha) FILTER (WHERE estado != 'cancelado' AND fecha <= CURRENT_DATE)::int AS dias_concurridos,
+         COUNT(*) FILTER (WHERE estado  = 'cancelado')::int AS cancelados,
+         MIN(fecha) FILTER (WHERE estado != 'cancelado') AS primera_visita,
+         MAX(fecha) FILTER (WHERE estado != 'cancelado' AND fecha <= CURRENT_DATE) AS ultima_visita
+       FROM turnos
+       WHERE user_id = $1 AND telefono = $2`,
+      [userId, telefono]
+    );
+
+    const r = { ...vacio, ...(rows[0] || {}) };
+
+    if (fichaId) {
+      const s = await query(
+        'SELECT COUNT(*)::int AS total FROM sesiones_clinicas WHERE ficha_id = $1',
+        [fichaId]
+      );
+      r.sesiones_registradas = s.rows[0]?.total || 0;
+    }
+    return r;
+  } catch (e) {
+    // El resumen es informativo: si falla, la ficha tiene que abrir igual.
+    console.error('[FICHAS/resumen]', e.message);
+    return vacio;
+  }
+}
+
 router.get('/ficha/:telefono', autenticar, async (req, res) => {
   try {
     const { rows } = await query(
       'SELECT * FROM fichas_clinicas WHERE user_id=$1 AND telefono=$2',
       [req.user.id, req.params.telefono]
     );
-    if (!rows.length) return res.json({ ficha: null, sesiones: [] });
+    // El resumen se arma aunque todavía no exista la ficha: son datos de
+    // sus turnos, y sirven para decidir si vale la pena abrirle una.
+    const resumen = await resumenDeLaClienta(req.user.id, req.params.telefono, rows[0]?.id);
+
+    if (!rows.length) return res.json({ ficha: null, sesiones: [], resumen });
 
     const sesiones = await query(
       `SELECT sc.*, t.fecha as turno_fecha, t.hora as turno_hora, t.servicio_nombre
@@ -59,7 +111,7 @@ router.get('/ficha/:telefono', autenticar, async (req, res) => {
        ORDER BY sc.fecha DESC, sc.creado_en DESC`,
       [rows[0].id]
     );
-    res.json({ ficha: rows[0], sesiones: sesiones.rows });
+    res.json({ ficha: rows[0], sesiones: sesiones.rows, resumen });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -72,6 +124,7 @@ router.post('/ficha', autenticar, async (req, res) => {
 
   const campos = [
     'nombre','documento','fecha_nacimiento','email','direccion','ocupacion',
+    'peso','altura',
     'motivo_principal','zonas_a_tratar','expectativas','tiempo_evolucion',
     'enfermedades_actuales','enfermedades_cronicas','trastornos_hormonales',
     'enfermedades_dermatologicas','alergias','medicacion_actual',

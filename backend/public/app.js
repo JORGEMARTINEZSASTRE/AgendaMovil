@@ -3434,7 +3434,10 @@ async function abrirHistorialCliente(telefono) {
     <div class="ficha-cabecera">
       <p class="cliente-tel">📞 ${escaparHTML(formatearTelefonoDisplay(telefono))}</p>
       <p class="cliente-ultimo">${total} tratamiento${total === 1 ? '' : 's'} realizado${total === 1 ? '' : 's'}</p>
-      <a class="btn-secundario" href="https://wa.me/${String(telefono).replace(/\D/g, '')}" target="_blank" rel="noopener">💬 Escribirle</a>
+      <div class="ficha-cabecera-botones">
+        <a class="btn-secundario" href="https://wa.me/${String(telefono).replace(/\D/g, '')}" target="_blank" rel="noopener">💬 Escribirle</a>
+        <button type="button" class="btn-primary" id="ficha-abrir-clinica">🩺 Ficha clínica</button>
+      </div>
     </div>
 
     <div class="ficha-cumple">
@@ -3454,6 +3457,16 @@ async function abrirHistorialCliente(telefono) {
     <h3 class="ficha-subtitulo">Historial de tratamientos</h3>
     ${filas}
   `;
+
+  // La ficha clínica sólo se abría desde un turno, así que si la clienta
+  // no tenía uno a mano no había forma de llegar. Ahora también desde acá.
+  const btnClinica = document.getElementById('ficha-abrir-clinica');
+  if (btnClinica) {
+    btnClinica.onclick = () => {
+      cerrarModales();
+      abrirFicha(telefono, cliente.nombre, null);
+    };
+  }
 
   document.getElementById('ficha-cumple-guardar').onclick = async () => {
     const d = document.getElementById('ficha-cumple-dia').value;

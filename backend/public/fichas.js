@@ -38,6 +38,11 @@ async function abrirFicha(telefono, nombre, turnoId = null) {
     });
     const data = await res.json();
 
+    // El resumen y el historial salen de sus turnos, así que se muestran
+    // exista o no la ficha: sirven justamente para decidir si abrirla.
+    renderResumenFicha(data.resumen);
+    await cargarHistorialFicha(telefono);
+
     if (data.ficha) {
       fichaActual.fichaId = data.ficha.id;
       fichaActual.esNueva = false;
@@ -57,6 +62,69 @@ async function abrirFicha(telefono, nombre, turnoId = null) {
   }
 
   document.getElementById('modal-ficha').classList.remove('oculto');
+}
+
+// ── Resumen: los números que no se cargan a mano ──
+// Salen de sus turnos. "Días que concurrió" cuenta fechas distintas y no
+// turnos: si un día se hizo axilas y piernas en dos turnos seguidos,
+// concurrió una vez sola.
+function renderResumenFicha(r) {
+  const cont = document.getElementById('ficha-resumen');
+  if (!cont) return;
+  if (!r) { cont.innerHTML = ''; return; }
+
+  const dato = (valor, etiqueta) => `
+    <div class="ficha-dato">
+      <span class="ficha-dato-num">${valor}</span>
+      <span class="ficha-dato-lbl">${etiqueta}</span>
+    </div>`;
+
+  cont.innerHTML = `
+    <div class="ficha-datos-grid">
+      ${dato(r.sesiones_hechas || 0, 'sesiones hechas')}
+      ${dato(r.dias_concurridos || 0, 'días que vino')}
+      ${dato(r.turnos_futuros || 0, 'turnos por venir')}
+      ${dato(r.sesiones_registradas || 0, 'sesiones con nota')}
+    </div>
+    <p class="ficha-resumen-pie">
+      ${r.primera_visita ? 'Primera vez: <strong>' + formatearFecha(r.primera_visita) + '</strong>' : 'Todavía no vino'}
+      ${r.ultima_visita ? ' · Última: <strong>' + formatearFecha(r.ultima_visita) + '</strong>' : ''}
+      ${r.cancelados ? ' · ' + r.cancelados + ' cancelado' + (r.cancelados === 1 ? '' : 's') : ''}
+    </p>`;
+}
+
+// ── Historial: todas las veces que vino, con qué se hizo ──
+async function cargarHistorialFicha(telefono) {
+  const cont = document.getElementById('ficha-turnos-lista');
+  if (!cont) return;
+  cont.innerHTML = '<p class="sesion-vacio">Cargando historial...</p>';
+
+  try {
+    const token = localStorage.getItem('depimovil_token');
+    const res = await fetch(`/api/clientes/${encodeURIComponent(telefono)}/historial`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const turnos = data.historial || [];
+
+    if (!turnos.length) {
+      cont.innerHTML = '<p class="sesion-vacio">Todavía no tiene turnos registrados.</p>';
+      return;
+    }
+
+    cont.innerHTML = turnos.map(t => {
+      const cancelado = t.estado === 'cancelado';
+      const zona = t.servicio_zona ? ' · ' + t.servicio_zona : '';
+      return `
+        <div class="ficha-turno-fila ${cancelado ? 'cancelado' : ''}">
+          <span class="ficha-turno-fecha">${formatearFecha(t.fecha)}</span>
+          <span class="ficha-turno-serv">${t.servicio_nombre || 'Sin servicio'}${zona}</span>
+          <span class="ficha-turno-dur">${cancelado ? 'cancelado' : t.duracion + ' min'}</span>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<p class="sesion-vacio">No se pudo cargar el historial.</p>';
+  }
 }
 
 // ── Rellenar form con datos de la ficha ──────────
