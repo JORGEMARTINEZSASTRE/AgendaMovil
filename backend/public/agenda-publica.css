@@ -537,6 +537,33 @@ html, body { margin: 0; padding: 0; }
   box-shadow: 0 0 0 3px rgba(168,85,104,.15);
 }
 
+/* Horario que no se puede reservar. Se muestra igual, apagado: si no
+   aparece queda un hueco sin explicación y parece que la agenda falla. */
+.pub-hora-btn.pub-hora-no {
+  background: transparent;
+  border-style: dashed;
+  color: var(--marron2);
+  opacity: .45;
+  font-weight: 600;
+}
+.pub-hora-btn.pub-hora-no:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--borde);
+  background: transparent;
+  opacity: .65;
+}
+
+.pub-horarios-nota {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--marron2);
+  opacity: .75;
+  text-align: center;
+}
+
 /* ─── PASO 5: RESUMEN + DATOS ────────── */
 .pub-resumen {
   background: linear-gradient(135deg, var(--crema2), var(--blush));

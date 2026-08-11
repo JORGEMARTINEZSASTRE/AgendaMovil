@@ -625,34 +625,67 @@ async function cargarHorarios() {
     return;
   }
 
-  const horariosDisponibles = [];
+  // Se arma la grilla ENTERA del día, no sólo lo que está libre. Antes los
+  // horarios que no entraban simplemente no aparecían, y para la clienta
+  // eso era indistinguible de una agenda rota: veía un hueco entre las
+  // 8:00 y las 10:00 sin ninguna explicación. Ahora los ve en gris y, si
+  // los toca, le dice por qué no puede.
+  const duracion = datosReserva.duracionTotal;
+  const slots = [];
+
   for (const b of bloques) {
-    const inicio = horaAMinutos(String(b.desde).slice(0, 5));
+    const inicio    = horaAMinutos(String(b.desde).slice(0, 5));
     const finBloque = horaAMinutos(String(b.hasta).slice(0, 5));
+    const cierre    = String(b.hasta).slice(0, 5);
+
     for (let m = inicio; m < finBloque; m += 15) {
-      const hora = minutosAHora(m);
-      const horaFin = m + datosReserva.duracionTotal;
-      const ocupado = ocupados.some(t => {
+      const hora    = minutosAHora(m);
+      const horaFin = m + duracion;
+
+      // Arranca justo encima de otro turno.
+      const arranqueTomado = ocupados.some(t => {
+        const tMin = horaAMinutos(String(t.hora).slice(0, 5));
+        return m >= tMin && m < tMin + parseInt(t.duracion);
+      });
+      // Arranca libre pero se estira sobre el siguiente.
+      const pisaAlSiguiente = ocupados.some(t => {
         const tMin = horaAMinutos(String(t.hora).slice(0, 5));
         return m < tMin + parseInt(t.duracion) && horaFin > tMin;
       });
-      if (!ocupado && horaFin <= finBloque) {
-        horariosDisponibles.push(hora);
+
+      let estado = 'libre';
+      let motivo = '';
+      if (arranqueTomado) {
+        estado = 'ocupado';
+        motivo = 'Ya hay un turno reservado a esa hora.';
+      } else if (horaFin > finBloque) {
+        estado = 'no-entra';
+        motivo = `Lo que elegiste dura ${duracion} min y no llega a terminar antes de las ${cierre}.`;
+      } else if (pisaAlSiguiente) {
+        estado = 'no-entra';
+        motivo = `Lo que elegiste dura ${duracion} min y se superpone con el turno siguiente. Probá más temprano.`;
       }
+
+      slots.push({ hora, estado, motivo });
     }
   }
 
-  if (!horariosDisponibles.length) {
-    cont.innerHTML = '<p class="pub-vacio">No quedan horarios disponibles</p>';
-    return;
-  }
+  const libres = slots.filter(s => s.estado === 'libre');
 
-  cont.innerHTML = horariosDisponibles.map(h =>
-    `<button type="button" class="pub-hora-btn" data-hora="${h}">${h} hs</button>`
-  ).join('');
+  cont.innerHTML = slots.map(s =>
+    `<button type="button" class="pub-hora-btn ${s.estado !== 'libre' ? 'pub-hora-no' : ''}"
+             data-hora="${s.hora}" data-estado="${s.estado}"
+             data-motivo="${escaparHTML(s.motivo)}">${s.hora} hs</button>`
+  ).join('') + (libres.length
+    ? '<p class="pub-horarios-nota">Los horarios en gris no están disponibles. Tocalos para ver por qué.</p>'
+    : '<p class="pub-horarios-nota">No queda ningún horario libre ese día para lo que elegiste. Tocá un horario gris para ver por qué, o probá otra fecha.</p>');
 
   cont.querySelectorAll('.pub-hora-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.dataset.estado !== 'libre') {
+        mostrarToast(btn.dataset.motivo, 'error');
+        return;
+      }
       cont.querySelectorAll('.pub-hora-btn').forEach(b => b.classList.remove('seleccionado'));
       btn.classList.add('seleccionado');
       datosReserva.hora = btn.dataset.hora;
