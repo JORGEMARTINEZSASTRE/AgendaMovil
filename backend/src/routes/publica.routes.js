@@ -656,8 +656,15 @@ router.post('/:userId/turno', [
     });
 
   } catch(err) {
-    console.error('[PUBLICA/turno]', err.message);
-    return res.status(500).json({ ok: false, error: 'Error al crear el turno' });
+    // Igual que en la confirmación: sin el código de Postgres ni el paso
+    // donde reventó, un fallo acá es indistinguible de cualquier otro.
+    console.error('[PUBLICA/turno]', err.code, err.message, err.stack);
+    return res.status(500).json({
+      ok: false,
+      error: 'Error al crear el turno',
+      codigo: err.code || 'desconocido',
+      donde: String(err.message || '').slice(0, 120),
+    });
   }
 });
 
