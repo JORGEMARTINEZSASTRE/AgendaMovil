@@ -67,7 +67,7 @@ async function resumenDeLaClienta(userId, telefono, fichaId) {
          COUNT(*) FILTER (WHERE estado != 'cancelado' AND fecha >  CURRENT_DATE)::int AS turnos_futuros,
          COUNT(DISTINCT fecha) FILTER (WHERE estado != 'cancelado' AND fecha <= CURRENT_DATE)::int AS dias_concurridos,
          COUNT(*) FILTER (WHERE estado  = 'cancelado')::int AS cancelados,
-         MIN(fecha) FILTER (WHERE estado != 'cancelado') AS primera_visita,
+         MIN(fecha) FILTER (WHERE estado != 'cancelado' AND fecha <= CURRENT_DATE) AS primera_visita,
          MAX(fecha) FILTER (WHERE estado != 'cancelado' AND fecha <= CURRENT_DATE) AS ultima_visita
        FROM turnos
        WHERE user_id = $1 AND telefono = $2`,
