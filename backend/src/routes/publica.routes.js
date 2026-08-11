@@ -11,7 +11,7 @@ const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
 const { normalizarTelefono } = require('../utils/telefono');
-const { ServicioFotos, Clientes } = require('../models/queries');
+const { ServicioFotos, ClientesManual } = require('../models/queries');
 const { calcularSenia } = require('../utils/senia');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
@@ -569,7 +569,7 @@ router.post('/:userId/turno', [
 
     // Queda registrada como clienta de la operadora. Va después del turno
     // y sin await bloqueante: si esto fallara, la reserva ya está hecha.
-    Clientes.registrarDesdeTurno(userId, {
+    ClientesManual.registrarDesdeTurno(userId, {
       nombre,
       telefono,
       cumpleDia: cumple_dia,

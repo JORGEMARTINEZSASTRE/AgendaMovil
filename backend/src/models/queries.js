@@ -257,7 +257,7 @@ const Turnos = {
     );
     // Toda clienta con turno queda en su lista de clientas. Va acá, en el
     // alta del turno, para que valga igual cargándolo ella desde el panel.
-    await Clientes.registrarDesdeTurno(userId, { nombre, telefono, cumpleDia, cumpleMes });
+    await ClientesManual.registrarDesdeTurno(userId, { nombre, telefono, cumpleDia, cumpleMes });
     return rows[0];
   },
 
