@@ -633,6 +633,14 @@ async function cargarHorarios() {
   const duracion = datosReserva.duracionTotal;
   const slots = [];
 
+  // Si la fecha elegida es hoy, las horas que ya pasaron no se ofrecen.
+  // Antes se ofrecían todas: a las 3 de la tarde se podía reservar para
+  // las 9 de la mañana y el turno se creaba igual.
+  const ahora    = new Date();
+  const hoyLocal = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+  const esHoy    = String(datosReserva.fecha).slice(0, 10) === hoyLocal;
+  const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+
   for (const b of bloques) {
     const inicio    = horaAMinutos(String(b.desde).slice(0, 5));
     const finBloque = horaAMinutos(String(b.hasta).slice(0, 5));
@@ -655,7 +663,10 @@ async function cargarHorarios() {
 
       let estado = 'libre';
       let motivo = '';
-      if (arranqueTomado) {
+      if (esHoy && m <= minutosAhora) {
+        estado = 'no-entra';
+        motivo = 'Esa hora ya pasó. Elegí una más tarde o probá otro día.';
+      } else if (arranqueTomado) {
         estado = 'ocupado';
         motivo = 'Ya hay un turno reservado a esa hora.';
       } else if (horaFin > finBloque) {

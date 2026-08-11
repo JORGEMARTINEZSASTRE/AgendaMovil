@@ -23,7 +23,7 @@ const { enviarModificacionTurno } = require('../../recordatorios');
 const { pool, query } = require('../config/db');
 
 // Los helpers de horarios viven en un solo lugar: ver utils/horarios.js.
-const { toMin, diaSemanaNumero, bloquesDelDia } = require('../utils/horarios');
+const { toMin, diaSemanaNumero, bloquesDelDia, yaPaso } = require('../utils/horarios');
 
 /**
  * Obtiene los bloques horarios para una fecha dada.
@@ -433,6 +433,17 @@ router.post('/:userId/turno', [
     const realSucursalId  = esProfesional ? null : sucursal_id;
     const realProfId      = esProfesional ? sucursal_id : null;
     const realProfNombre  = esProfesional ? esProfRows[0].nombre : null;
+
+    // Nadie reserva para atrás. La pantalla ya no lo ofrece, pero una
+    // página vieja abierta desde ayer sí puede mandarlo, y el turno se
+    // creaba igual. Esto NO aplica al panel: la operadora tiene que poder
+    // anotar un turno que ya ocurrió.
+    if (yaPaso(fecha, hora)) {
+      return res.status(409).json({
+        ok: false,
+        error: 'Ese horario ya pasó. Actualizá la página y elegí uno nuevo.',
+      });
+    }
 
     // Validar sucursal/profesional y horarios
     const { bloques, bloqueado } = await obtenerBloquesDia(userId, sucursal_id, fecha);

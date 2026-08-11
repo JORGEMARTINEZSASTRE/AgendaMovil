@@ -84,4 +84,36 @@ function estaDentroHorario(horarios, fecha, hora, duracion) {
   return delDia.some(b => inicio >= toMin(b.desde) && fin <= toMin(b.hasta));
 }
 
-module.exports = { toMin, diaSemanaNumero, normalizarHorarios, bloquesDelDia, estaDentroHorario };
+/**
+ * Fecha y hora de ahora en la zona del negocio, como texto comparable.
+ *
+ * El servidor corre en UTC y Uruguay está 3 horas atrás: comparar contra
+ * `new Date()` pelado haría que a las 22:00 de acá el servidor ya crea
+ * que es mañana. Se comparan cadenas "YYYY-MM-DD" y "HH:MM", que en ese
+ * formato se ordenan igual que las fechas.
+ */
+function ahoraEnZona(tz = 'America/Montevideo') {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date()).reduce((a, x) => (a[x.type] = x.value, a), {});
+
+  // Algunas versiones devuelven "24" para la medianoche.
+  const hora = (p.hour === '24' ? '00' : p.hour) + ':' + p.minute;
+  return { fecha: `${p.year}-${p.month}-${p.day}`, hora };
+}
+
+/** ¿Ese día y esa hora ya pasaron? */
+function yaPaso(fecha, hora, tz) {
+  const ahora = ahoraEnZona(tz);
+  const f = String(fecha).slice(0, 10);
+  const h = String(hora).slice(0, 5);
+  if (f < ahora.fecha) return true;
+  if (f > ahora.fecha) return false;
+  return h < ahora.hora;
+}
+
+module.exports = {
+  toMin, diaSemanaNumero, normalizarHorarios, bloquesDelDia, estaDentroHorario,
+  ahoraEnZona, yaPaso,
+};
