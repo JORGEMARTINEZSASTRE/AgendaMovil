@@ -6,23 +6,9 @@
 // ═══════════════════════════════════════════════════════════
 
 // ─── UTILIDADES DE TELÉFONO ────────────────────────────────
-// Normaliza a formato internacional (+598...) para guardar
-function normalizarTelefono(raw, codigoPais = '598') {
-  const limpio = String(raw || '').replace(/\D/g, '');
-  if (!limpio) return '';
-
-  // Si ya empieza con +, extraer código de país
-  if (String(raw).trim().startsWith('+')) {
-    // Detectar código de país
-    if (limpio.startsWith('598')) return '+' + limpio;
-    if (limpio.startsWith('54'))  return '+' + limpio;
-    return '+' + limpio; // fallback
-  }
-
-  // Quitar 0 inicial si existe
-  let numero = limpio.startsWith('0') ? limpio.slice(1) : limpio;
-  return '+' + codigoPais + numero;
-}
+// normalizarTelefono() vive en telefono.js, que se carga antes que este
+// archivo. Acá había una tercera versión con reglas propias que duplicaba
+// el código de país cuando la operadora escribía el 598 a mano.
 
 // Convierte formato internacional a local para mostrar (+59892787477 → 092787477)
 function formatearTelefonoDisplay(raw) {
@@ -984,10 +970,10 @@ async function handleSubmitTurno(e) {
   const cumpleDia      = parseInt(getVal('turno-cumple-dia')) || null;
   const cumpleMes      = parseInt(getVal('turno-cumple-mes')) || null;
 
-  // Armar teléfono con código de país
-  let telefonoLimpio = telefonoRaw.replace(/\D/g, '');
-  if (telefonoLimpio.startsWith('0')) telefonoLimpio = telefonoLimpio.slice(1);
-  const telefono = '+' + codigoPais + telefonoLimpio;
+  // Acá se armaba el teléfono a mano y se duplicaba el código de país
+  // cuando la operadora lo escribía ella. Ahora usa la misma función que
+  // el resto de la app; el servidor igual lo vuelve a normalizar.
+  const telefono = normalizarTelefono(telefonoRaw, codigoPais);
 
   // Buscar nombre del servicio por ID (del array local)
   const servicio       = servicios.find(s => s.id === servicioId);

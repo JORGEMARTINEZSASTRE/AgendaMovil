@@ -190,52 +190,76 @@ async function correrMigraciones() {
     // los 3 dígitos sobrantes. El WHERE solo alcanza a los que empiezan
     // con 598598, así que un número correcto nunca se toca. Y es
     // idempotente: después de la primera corrida ya no queda ninguno.
-    const roto      = `regexp_replace(telefono, '\\D', '', 'g') LIKE '598598%'`;
-    const reparado  = `'+' || substring(regexp_replace(telefono, '\\D', '', 'g') from 4)`;
+    // Son dos daños distintos, del mismo origen: había cuatro versiones
+    // de la normalización y cada una armaba el número a su manera.
+    //
+    //   a) '598598...'  el código de país quedó dos veces.
+    //   b) '5980...'    quedó un cero pegado después del código. Ningún
+    //                   número uruguayo real empieza con 0 después del
+    //                   598 (los móviles van con 9 y los fijos con 2 o 4),
+    //                   así que el patrón no puede tocar uno bueno.
+    //
+    // Ninguna borra filas ni datos: solo sacan los dígitos sobrantes. Y
+    // son idempotentes: después de la primera corrida no queda ninguno.
+    const DIGITOS = `regexp_replace(telefono, '\\D', '', 'g')`;
+    const REPARACIONES = [
+      {
+        nombre:   'codigo de pais duplicado',
+        roto:     `${DIGITOS} LIKE '598598%'`,
+        reparado: `'+' || substring(${DIGITOS} from 4)`,
+      },
+      {
+        nombre:   'cero pegado al codigo de pais',
+        roto:     `${DIGITOS} LIKE '5980%'`,
+        reparado: `'+598' || ltrim(substring(${DIGITOS} from 4), '0')`,
+      },
+    ];
 
-    // turnos: sin restricción de unicidad, se reparan todos.
-    try {
-      const { rows } = await query(
-        `SELECT COUNT(*)::int AS total FROM public.turnos WHERE ${roto}`
-      );
-      if (rows[0].total > 0) {
-        const r = await query(
-          `UPDATE public.turnos SET telefono = ${reparado} WHERE ${roto}`
+    for (const rep of REPARACIONES) {
+      // turnos: sin restricción de unicidad, se reparan todos.
+      try {
+        const { rows } = await query(
+          `SELECT COUNT(*)::int AS total FROM public.turnos WHERE ${rep.roto}`
         );
-        console.log(`[MIGRATIONS] ✓ turnos: ${r.rowCount} teléfono(s) reparado(s)`);
-      } else {
-        console.log('[MIGRATIONS] ✓ turnos: sin teléfonos que reparar');
+        if (rows[0].total > 0) {
+          const r = await query(
+            `UPDATE public.turnos SET telefono = ${rep.reparado} WHERE ${rep.roto}`
+          );
+          console.log(`[MIGRATIONS] ✓ turnos (${rep.nombre}): ${r.rowCount} reparado(s)`);
+        } else {
+          console.log(`[MIGRATIONS] ✓ turnos (${rep.nombre}): nada que reparar`);
+        }
+      } catch (e) {
+        console.error(`[MIGRATIONS] turnos (${rep.nombre}): no se pudo reparar:`, e.message);
       }
-    } catch (e) {
-      console.error('[MIGRATIONS] turnos: no se pudieron reparar:', e.message);
-    }
 
-    // clientes: tiene UNIQUE (user_id, telefono). Si ya existe una fila
-    // con el número correcto, reparar la rota chocaría contra el índice.
-    // Esas se saltean y quedan como están: preferible dejarlas a borrarlas.
-    try {
-      const { rows } = await query(
-        `SELECT COUNT(*)::int AS total FROM public.clientes WHERE ${roto}`
-      );
-      if (rows[0].total > 0) {
-        const r = await query(
-          `UPDATE public.clientes c
-              SET telefono = ${reparado}
-            WHERE ${roto}
-              AND NOT EXISTS (
-                SELECT 1 FROM public.clientes c2
-                 WHERE c2.user_id = c.user_id
-                   AND c2.telefono = '+' || substring(regexp_replace(c.telefono, '\\D', '', 'g') from 4)
-              )`
+      // clientes: tiene UNIQUE (user_id, telefono). Si ya existe una fila
+      // con el número correcto, reparar la rota chocaría contra el índice.
+      // Esas se saltean y quedan como están: preferible dejarlas a borrarlas.
+      try {
+        const { rows } = await query(
+          `SELECT COUNT(*)::int AS total FROM public.clientes WHERE ${rep.roto}`
         );
-        const salteadas = rows[0].total - r.rowCount;
-        console.log(`[MIGRATIONS] ✓ clientes: ${r.rowCount} reparado(s)` +
-          (salteadas > 0 ? `, ${salteadas} salteado(s) por duplicado` : ''));
-      } else {
-        console.log('[MIGRATIONS] ✓ clientes: sin teléfonos que reparar');
+        if (rows[0].total > 0) {
+          const r = await query(
+            `UPDATE public.clientes c
+                SET telefono = ${rep.reparado.replace(/telefono/g, 'c.telefono')}
+              WHERE ${rep.roto.replace(/telefono/g, 'c.telefono')}
+                AND NOT EXISTS (
+                  SELECT 1 FROM public.clientes c2
+                   WHERE c2.user_id = c.user_id
+                     AND c2.telefono = ${rep.reparado.replace(/telefono/g, 'c.telefono')}
+                )`
+          );
+          const salteadas = rows[0].total - r.rowCount;
+          console.log(`[MIGRATIONS] ✓ clientes (${rep.nombre}): ${r.rowCount} reparado(s)` +
+            (salteadas > 0 ? `, ${salteadas} salteado(s) por duplicado` : ''));
+        } else {
+          console.log(`[MIGRATIONS] ✓ clientes (${rep.nombre}): nada que reparar`);
+        }
+      } catch (e) {
+        console.error(`[MIGRATIONS] clientes (${rep.nombre}): no se pudo reparar:`, e.message);
       }
-    } catch (e) {
-      console.error('[MIGRATIONS] clientes: no se pudieron reparar:', e.message);
     }
 
     // ── 10. Recordatorio de regreso (recompra) ────────────────────────

@@ -1,6 +1,7 @@
 'use strict';
 
 const axios = require('axios');
+const { telefonoParaWhatsApp } = require('../utils/telefono');
 
 const EVOLUTION_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY;
@@ -81,58 +82,13 @@ async function eliminarInstancia(nombreInstancia) {
 //  ENVÍO DE MENSAJES
 // ═══════════════════════════════════════════════════════════
 
-function normalizarTelefono(telefono) {
-  if (!telefono) return '';
-
-  // Quitar todo lo que no sea número
-  let tel = String(telefono).replace(/\D/g, '');
-
-  // Si empieza con 00 (formato internacional viejo), quitarlo
-  if (tel.startsWith('00')) {
-    tel = tel.slice(2);
-  }
-
-  // ──────────────────────────────────────────
-  // Ya tiene código de país (empieza con 54 o 598)
-  // ──────────────────────────────────────────
-  if (tel.startsWith('54') || tel.startsWith('598')) {
-    return tel;
-  }
-
-  // ──────────────────────────────────────────
-  // URUGUAY
-  // Números uruguayos típicos:
-  //   - Móvil: 9 dígitos empezando con 9 (ej: 92614060)
-  //   - Fijo:  8 dígitos
-  // Código país: 598
-  // ──────────────────────────────────────────
-  if (tel.length === 8 && tel.startsWith('9')) {
-    return '598' + tel;
-  }
-  if (tel.length === 9 && tel.startsWith('09')) {
-    return '598' + tel.slice(1); // quitar el 0 inicial
-  }
-
-  // ──────────────────────────────────────────
-  // ARGENTINA
-  // Móvil: 10 dígitos (ej: 1112345678)
-  // Fijo:  10 dígitos
-  // Código país: 54 (y opcionalmente 9 para móviles)
-  // ──────────────────────────────────────────
-  if (tel.length === 10) {
-    return '549' + tel;  // asumimos móvil argentino
-  }
-
-  // ──────────────────────────────────────────
-  // Si ya viene con 11 dígitos o más, devolverlo tal cual
-  // (probablemente ya tiene código de país)
-  // ──────────────────────────────────────────
-  return tel;
-}
-
 async function enviarMensaje(nombreInstancia, telefono, mensaje) {
   try {
-    const telNormalizado = normalizarTelefono(telefono);
+    // A qué número sale el WhatsApp lo decide utils/telefono, el mismo
+    // que decide cómo se guarda. Acá vivía una segunda versión con
+    // reglas propias: un número argentino se guardaba como uruguayo y el
+    // mensaje salía al argentino, o sea a otra persona.
+    const telNormalizado = telefonoParaWhatsApp(telefono);
 
     const { data } = await client.post(`/message/sendText/${nombreInstancia}`, {
       number: telNormalizado,

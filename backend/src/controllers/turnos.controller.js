@@ -2,6 +2,7 @@
 
 const { Turnos, Sucursales } = require('../models/queries');
 const { estaDentroHorario } = require('../utils/horarios');
+const { normalizarTelefono } = require('../utils/telefono');
 const { 
   enviarConfirmacionTurno,
   enviarModificacionTurno,
@@ -94,12 +95,18 @@ async function obtener(req, res) {
 async function crear(req, res) {
   try {
     const {
-      servicio_id,     nombre,        telefono,
+      servicio_id,     nombre,        telefono: telefonoRaw,
       servicio_nombre, servicio_zona, servicio_color,
       duracion,        fecha,         hora,
       notas,           cumple_dia,    cumple_mes,
       sucursal_id,     profesional_id, profesional_nombre,
     } = req.body;
+
+    // El teléfono se normaliza siempre acá, del lado del servidor. El
+    // panel tenía su propia cuenta de cómo armarlo y guardaba un formato
+    // distinto al de la reserva pública: la misma clienta quedaba como
+    // dos personas y el cruce con su ficha no encontraba nada.
+    const telefono = normalizarTelefono(telefonoRaw);
 
     let sucursalNombre = null;
 
@@ -186,7 +193,7 @@ async function crear(req, res) {
 async function actualizar(req, res) {
   try {
     const {
-      servicio_id,     nombre,        telefono,
+      servicio_id,     nombre,        telefono: telefonoRaw,
       servicio_nombre, servicio_zona, servicio_color,
       duracion,        fecha,         hora,
       notas,           cumple_dia,    cumple_mes,
