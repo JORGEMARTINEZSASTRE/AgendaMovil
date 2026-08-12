@@ -358,14 +358,23 @@ async function procesarRecordatorios() {
    try {
     const turnos24h = await getTurnosPendientes24h();
     for (const turno of turnos24h) {
-      try { await enviarEmailRecordatorio(turno, '24h'); }
+      let emailOk = false, waOk = false;
+      try { await enviarEmailRecordatorio(turno, '24h'); emailOk = true; }
       catch (err) { console.error(`[CRON] ❌ Email 24h para ${turno.id}:`, err.message); }
 
-      try { await enviarWhatsAppAutomatico(turno, '24h'); }
+      try { waOk = (await enviarWhatsAppAutomatico(turno, '24h')).ok; }
       catch (err) { console.error(`[CRON] ❌ WA 24h para ${turno.id}:`, err.message); }
 
-      await marcarEnviado24h(turno.id);
-      console.log(`[CRON] ✅ Recordatorio 24h: ${turno.nombre} (${turno.id})`);
+      // Solo se marca enviado si al menos un canal llegó. Si fallaron los
+      // dos, se deja sin marcar para que el cron lo reintente (la ventana
+      // horaria de arriba dura ~20 min, asi que reintenta unas pocas veces
+      // y no para siempre).
+      if (emailOk || waOk) {
+        await marcarEnviado24h(turno.id);
+        console.log(`[CRON] ✅ Recordatorio 24h: ${turno.nombre} (${turno.id})`);
+      } else {
+        console.log(`[CRON] ⚠️ Recordatorio 24h falló en los dos canales, reintenta: ${turno.nombre} (${turno.id})`);
+      }
     }
     await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
@@ -376,14 +385,19 @@ async function procesarRecordatorios() {
   try {
     const turnos2h = await getTurnosPendientes2h();
     for (const turno of turnos2h) {
-      try { await enviarEmailRecordatorio(turno, '2h'); }
+      let emailOk = false, waOk = false;
+      try { await enviarEmailRecordatorio(turno, '2h'); emailOk = true; }
       catch (err) { console.error(`[CRON] ❌ Email 2h para ${turno.id}:`, err.message); }
 
-      try { await enviarWhatsAppAutomatico(turno, '2h'); }
+      try { waOk = (await enviarWhatsAppAutomatico(turno, '2h')).ok; }
       catch (err) { console.error(`[CRON] ❌ WA 2h para ${turno.id}:`, err.message); }
 
-      await marcarEnviado2h(turno.id);
-      console.log(`[CRON] ✅ Recordatorio 2h: ${turno.nombre} (${turno.id})`);
+      if (emailOk || waOk) {
+        await marcarEnviado2h(turno.id);
+        console.log(`[CRON] ✅ Recordatorio 2h: ${turno.nombre} (${turno.id})`);
+      } else {
+        console.log(`[CRON] ⚠️ Recordatorio 2h falló en los dos canales, reintenta: ${turno.nombre} (${turno.id})`);
+      }
     }
     await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
