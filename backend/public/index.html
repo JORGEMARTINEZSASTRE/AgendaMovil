@@ -297,6 +297,10 @@
       🎂 <span>Cumples</span>
       <span id="badge-cumples" class="badge-tab" style="display:none"></span>
     </button>
+    <button class="tab-btn" data-tab="referidos">
+      🎁 <span>Referidos</span>
+      <span id="badge-referidos" class="badge-tab" style="display:none"></span>
+    </button>
     <button class="tab-btn" data-tab="sucursales">
       🏪 <span>Sucursales</span>
     </button>
@@ -398,6 +402,19 @@
 
       <div id="lista-cumple-hoy" class="lista-cumples">
         <!-- Cumpleaños se renderizan aquí -->
+      </div>
+
+    </section>
+
+    <!-- ══ PANEL: REFERIDOS ═══════════════════ -->
+    <section class="tab-panel" data-panel="referidos">
+
+      <div class="panel-header">
+        <p class="panel-titulo">🎁 Premios de referidos</p>
+      </div>
+
+      <div id="lista-referidos-pendientes" class="lista-cumples">
+        <!-- Premios pendientes se renderizan aquí -->
       </div>
 
     </section>
@@ -607,6 +624,23 @@
         <input type="file" id="config-logo-input" accept="image/*" class="oculto">
         <span class="campo-ayuda">PNG, JPG o WebP — Máx 2MB</span>
       </div>
+    </div>
+
+    <!-- ── TARJETA HORARIO (solo si trabaja sola, 0 o 1 sucursal) ── -->
+    <div id="config-card-horario" class="config-card oculto">
+      <div class="config-card-header">
+        <span class="config-card-icon">🕐</span>
+        <div>
+          <p class="config-card-titulo">Horario de trabajo</p>
+          <p class="config-card-desc">Días y horas en que atendés (dejá vacío el día que no trabajás)</p>
+        </div>
+      </div>
+      <div id="config-horario-grid" class="horarios-grid">
+        <!-- Se renderiza con JS -->
+      </div>
+      <button type="button" id="btn-guardar-horario-unico" class="btn-primario">
+        💾 Guardar horario
+      </button>
     </div>
 
     <!-- ── TARJETA 2: Mensajes ─────────────────────── -->
@@ -1728,6 +1762,9 @@
   if (btnAbrirConfig && panelConfig) {
     btnAbrirConfig.addEventListener('click', () => {
       panelConfig.classList.toggle('oculto');
+      if (!panelConfig.classList.contains('oculto') && typeof renderHorarioConfigUnica === 'function') {
+        renderHorarioConfigUnica();
+      }
     });
   }
 

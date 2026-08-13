@@ -103,6 +103,14 @@ const validarId = [
 // GET /api/turnos/cumples — ANTES de /:id para no confundir rutas
 router.get('/cumples', ctrl.getCumples);
 
+// GET/PUT /api/turnos/referidos/... — ANTES de /:id por la misma razón
+router.get('/referidos/pendientes', ctrl.getReferidosPendientes);
+router.put('/referidos/:id/entregado',
+  [param('id').isUUID().withMessage('ID inválido')],
+  validar,
+  ctrl.marcarReferidoEntregado
+);
+
 // GET /api/turnos
 router.get('/', ctrl.listar);
 

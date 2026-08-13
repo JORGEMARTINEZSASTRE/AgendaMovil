@@ -65,6 +65,41 @@ async function getCumples(req, res) {
 }
 
 // ════════════════════════════════════════════════════════════
+//  GET /api/turnos/referidos/pendientes
+// ════════════════════════════════════════════════════════════
+async function getReferidosPendientes(req, res) {
+  try {
+    const pendientes = await Turnos.premiosReferidosPendientes(req.user.id);
+    return res.json({ ok: true, pendientes });
+  } catch (err) {
+    console.error('[TURNOS/referidos-pendientes]', err.message);
+    return res.status(500).json({
+      ok:    false,
+      error: 'Error al obtener los premios de referidos pendientes',
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  PUT /api/turnos/referidos/:id/entregado
+// ════════════════════════════════════════════════════════════
+async function marcarReferidoEntregado(req, res) {
+  try {
+    const ok = await Turnos.marcarPremioReferidoEntregado(req.params.id, req.user.id);
+    if (!ok) {
+      return res.status(404).json({ ok: false, error: 'Turno no encontrado' });
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[TURNOS/referido-entregado]', err.message);
+    return res.status(500).json({
+      ok:    false,
+      error: 'Error al marcar el premio como entregado',
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
 //  GET /api/turnos/:id
 // ════════════════════════════════════════════════════════════
 async function obtener(req, res) {
@@ -379,4 +414,7 @@ async function eliminar(req, res) {
   }
 }
 
-module.exports = { listar, getCumples, obtener, crear, actualizar, eliminar };
+module.exports = {
+  listar, getCumples, obtener, crear, actualizar, eliminar,
+  getReferidosPendientes, marcarReferidoEntregado,
+};

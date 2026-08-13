@@ -126,6 +126,68 @@ async function marcarRegresoEnviado(id) {
   );
 }
 
+// ─── PREMIO DE REFERIDOS ──────────────────────────────────────
+// Cuando una clienta agenda con el link de invitación de otra, el turno
+// queda con `referido_por_telefono`. Acá se espera a que el turno haya
+// pasado de verdad (con un colchón de 3 horas para que la operadora
+// llegue a marcar "no vino" si corresponde) y recién ahí se avisa: así
+// no se premia una invitación que nunca se presentó.
+const REFERIDO_COLCHON_HORAS = 3;
+const REFERIDO_MAX_POR_VUELTA = 15;
+
+async function getReferidosParaAvisar() {
+  const { rows } = await query(`
+    SELECT t.id, t.user_id, t.nombre, t.referido_por_telefono,
+           u.telefono AS telefono_operadora, u.nombre_negocio, u.nombre AS user_nombre,
+           c.nombre AS referente_nombre
+      FROM turnos t
+      JOIN usuarios u ON u.id = t.user_id
+      LEFT JOIN clientes c
+        ON c.user_id = t.user_id AND c.telefono = t.referido_por_telefono
+     WHERE t.referido_por_telefono IS NOT NULL
+       AND t.premio_referido_avisado = FALSE
+       AND t.estado != 'cancelado'
+       AND COALESCE(t.no_vino, FALSE) = FALSE
+       AND (t.fecha + t.hora) < (NOW() - ($1 || ' hours')::interval)
+     ORDER BY t.fecha ASC
+     LIMIT $2::int
+  `, [REFERIDO_COLCHON_HORAS, REFERIDO_MAX_POR_VUELTA]);
+  return rows;
+}
+
+async function marcarReferidoAvisado(id) {
+  await query(`UPDATE turnos SET premio_referido_avisado = TRUE WHERE id = $1`, [id]);
+}
+
+function mensajeReferido(turno) {
+  const invitada  = (turno.nombre || 'Tu clienta').split(' ')[0];
+  const invitador = turno.referente_nombre
+    ? turno.referente_nombre.split(' ')[0]
+    : `el teléfono ${turno.referido_por_telefono}`;
+
+  let msg = `🎁 *Premio de referido*\n\n`;
+  msg += `${invitada} vino a su turno invitada por ${invitador}.\n\n`;
+  msg += `Dale su premio la próxima vez que venga 💕`;
+  return msg;
+}
+
+// Se manda al WhatsApp de la propia operadora (su número conectado se
+// escribe a sí mismo), no al de la clienta: esto es un aviso para ella,
+// no algo que la referente tenga que ver.
+async function enviarWhatsAppReferido(turno) {
+  if (!turno.telefono_operadora) return { ok: false, error: 'operadora_sin_telefono' };
+
+  const instance = `user_${turno.user_id}`;
+  const estadoRes = await evolution.estadoInstancia(instance);
+  if (!estadoRes.ok || estadoRes.estado !== 'open') {
+    return { ok: false, error: 'wa_desconectado' };
+  }
+
+  const resultado = await evolution.enviarMensaje(instance, turno.telefono_operadora, mensajeReferido(turno));
+  if (!resultado.ok) return { ok: false, error: resultado.error };
+  return { ok: true };
+}
+
 /** Hora local de Uruguay, para no escribirle a nadie de madrugada. */
 function horaUruguay() {
   return Number(new Intl.DateTimeFormat('es-UY', {
@@ -446,6 +508,35 @@ async function procesarRecordatorios() {
     }
   } catch (err) {
     console.error('[CRON] Error al buscar clientas para regreso:', err.message);
+  }
+
+  // ── Premio de referidos ──
+  try {
+    const referidos = await getReferidosParaAvisar();
+    if (referidos.length) {
+      console.log(`[CRON] Referidos: ${referidos.length} para avisar`);
+    }
+
+    for (const turno of referidos) {
+      try {
+        const r = await enviarWhatsAppReferido(turno);
+        if (r.ok) {
+          await marcarReferidoAvisado(turno.id);
+          console.log(`[CRON] ✅ Referido avisado: ${turno.nombre} (turno ${turno.id})`);
+        } else if (r.error === 'wa_desconectado' || r.error === 'operadora_sin_telefono') {
+          // No se marca: se reintenta cuando tenga WhatsApp conectado o teléfono cargado.
+          console.log(`[CRON] Referido: usuario ${turno.user_id} sin ${r.error === 'wa_desconectado' ? 'WhatsApp' : 'teléfono'}, se pospone`);
+        } else {
+          await marcarReferidoAvisado(turno.id);
+          console.error(`[CRON] ❌ Referido turno ${turno.id}:`, r.error);
+        }
+      } catch (err) {
+        console.error(`[CRON] ❌ Referido para turno ${turno.id}:`, err.message);
+      }
+      await new Promise(r => setTimeout(r, 1200));
+    }
+  } catch (err) {
+    console.error('[CRON] Error al buscar referidos para avisar:', err.message);
   }
 }
 

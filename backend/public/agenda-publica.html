@@ -95,6 +95,11 @@
     <p class="exito-sub">Una vez abonada, recibirás la confirmación 🌸</p>
   </div>
 
+  <!-- BANNER DE REFERIDO: solo se ve si el link trae ?ref= -->
+  <div id="pub-banner-referido" class="oculto" style="max-width:480px;margin:0 auto 14px;padding:12px 16px;background:#FCE9EE;border:1px solid #EBB6C6;border-radius:12px;color:#7A3B4C;font-size:14px;text-align:center;">
+    🎁 Te invitó una amiga — girá tu primer turno con nosotras
+  </div>
+
   <!-- FLUJO MULTI-PASO -->
   <div id="publica-form-wrap" class="publica-card">
 
@@ -259,6 +264,7 @@
 
 const API_URL = 'https://agendamovil.pro/api';
 let userId      = null;
+let refTelefono = null;
 let servicios   = [];
 let sucursales  = [];
 let infoNegocio = {};
@@ -282,6 +288,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   userId = params.get('u');
   if (!userId) { mostrarError('Link inválido. Pedile el link correcto a tu profesional.'); return; }
+
+  // Link de referidos: ?ref=<telefono de quien invita>. Se guarda para
+  // mandarlo con la reserva y se muestra el cartel de bienvenida.
+  refTelefono = params.get('ref') || null;
+  if (refTelefono) {
+    document.getElementById('pub-banner-referido')?.classList.remove('oculto');
+  }
 
   const hoy = new Date();
   mesCalendario = hoy.getMonth();
@@ -815,6 +828,7 @@ async function handleSubmit(e) {
         sucursal_id: datosReserva.sucursalId,
         cumple_dia: document.getElementById('pub-cumple-dia')?.value || null,
         cumple_mes: document.getElementById('pub-cumple-mes')?.value || null,
+        ref: refTelefono,
       }),
     });
 

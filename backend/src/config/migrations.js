@@ -565,6 +565,28 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Faltas de clientas OK');
 
+    // ── Referidos: premio por invitar a una amiga ──────────────────────
+    // referido_por_telefono: teléfono (normalizado) de la clienta que
+    // compartió su link. Vive en el turno, no en la clienta: una persona
+    // puede traer varias amigas y cada una es su propia invitación.
+    //
+    // premio_referido_avisado arranca en TRUE (arranque limpio, mismo
+    // patrón que recordatorio_regreso_enviado): los turnos que ya existen
+    // no tienen referido cargado, así que no hay nada que avisar, pero si
+    // el default fuera FALSE el cron los barrería a todos el día que se
+    // despliega esto. Después el default pasa a FALSE para los nuevos.
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS referido_por_telefono     VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS premio_referido_avisado   BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS premio_referido_entregado BOOLEAN DEFAULT FALSE
+    `);
+    await query(`
+      ALTER TABLE public.turnos
+        ALTER COLUMN premio_referido_avisado SET DEFAULT FALSE
+    `);
+    console.log('[MIGRATIONS] ✓ Columnas de referidos OK (arranque limpio)');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

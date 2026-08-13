@@ -392,6 +392,7 @@ router.post('/:userId/turno', [
   body('hora').matches(/^\d{2}:\d{2}$/),
   body('duracion').isInt({ min: 5, max: 480 }),
   body('sucursal_id').trim().notEmpty(),
+  body('ref').optional({ checkFalsy: true }).trim(),
 ], async (req, res) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
@@ -403,10 +404,19 @@ router.post('/:userId/turno', [
     let { nombre, telefono, fecha, hora, duracion,
             servicio_ids, servicio_nombres, servicio_zonas,
             servicio_colores, notas, email_clienta, sucursal_id,
-            cumple_dia, cumple_mes } = req.body;
+            cumple_dia, cumple_mes, ref } = req.body;
 
     // Normalizar teléfono a formato internacional
     telefono = normalizarTelefono(telefono);
+
+    // El link de referidos trae el teléfono de quien invitó. Se normaliza
+    // igual que cualquier teléfono y, si por lo que sea coincide con el de
+    // la propia clienta (alguien reenviándose su propio link), se ignora:
+    // nadie se autoinvita para llevarse el premio.
+    let referidoPorTelefono = ref ? normalizarTelefono(ref) : null;
+    if (referidoPorTelefono && referidoPorTelefono === telefono) {
+      referidoPorTelefono = null;
+    }
 
     // El cumpleaños es opcional y sólo día y mes: alcanza para saludarla
     // y no hace falta pedirle el año a nadie. Si viene cualquier cosa, se
@@ -528,8 +538,8 @@ router.post('/:userId/turno', [
           notas, estado, sucursal_id,
           profesional_id, profesional_nombre,
           senia_requerida, senia_pagada, monto_senia, estado_pago,
-          cumple_dia, cumple_mes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+          cumple_dia, cumple_mes, referido_por_telefono)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
        RETURNING *`,
       [
         userId, nombre, telefono, fecha, hora, duracion,
@@ -538,7 +548,7 @@ router.post('/:userId/turno', [
         notas || null, estadoTurno, realSucursalId,
         realProfId, realProfNombre,
         seniaRequerida, false, montoSenia, estadoPago,
-        cumple_dia, cumple_mes,
+        cumple_dia, cumple_mes, referidoPorTelefono,
       ]
     );
     const turno = tRows[0];

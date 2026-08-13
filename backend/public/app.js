@@ -157,6 +157,7 @@ function initUI() {
   bindBotonesHeader();
   bindConfiguracion();
   bindBtnConectarWhatsApp();
+  aplicarVisibilidadSucursales();
   renderTabActual();
   inicializarWaPendientes(); 
   const inputBuscarServ = document.getElementById('buscar-servicio');
@@ -206,6 +207,7 @@ function renderTabActual() {
     case 'calendario': renderCalendario(); break;
     case 'servicios':  renderServicios();  break;
     case 'cumples':    renderCumples();    break;
+    case 'referidos':  renderReferidos();  break;
     case 'sucursales': renderSucursalesOperadora(); break;
     case 'clientes':   renderClientes();   break;
     case 'cuponeras':  renderCuponeras();  break;
@@ -1946,6 +1948,61 @@ async function renderCumples() {
   });
 }
 
+// ═══════════════════════════════════════════════════════════
+//  REFERIDOS
+// ═══════════════════════════════════════════════════════════
+async function renderReferidos() {
+  const contenedor = document.getElementById('lista-referidos-pendientes');
+  if (!contenedor) return;
+
+  const pendientes = await apiCall(
+    () => TurnosAPI.getReferidosPendientes(),
+    'Error al cargar los referidos'
+  ) || [];
+
+  const badgeEl = document.getElementById('badge-referidos');
+  if (badgeEl) {
+    badgeEl.textContent = pendientes.length > 0 ? pendientes.length : '';
+    badgeEl.style.display = pendientes.length > 0 ? 'flex' : 'none';
+  }
+
+  if (pendientes.length === 0) {
+    contenedor.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icono">🎁</span>
+        <p class="empty-titulo">Sin premios pendientes</p>
+        <p class="empty-sub">Cuando una clienta invitada venga a su turno, aparece acá</p>
+      </div>`;
+    return;
+  }
+
+  contenedor.innerHTML = pendientes.map(p => `
+    <div class="card-cumple" data-id="${p.id}">
+      <div class="cumple-info">
+        <span class="cumple-icono">🎁</span>
+        <div>
+          <p class="cumple-nombre">${p.referida_nombre}</p>
+          <p class="cumple-fecha">Invitada por ${p.referente_nombre || p.referido_por_telefono}</p>
+        </div>
+      </div>
+      <button class="btn-wa-cumple btn-referido-entregado" data-id="${p.id}">Ya se lo di ✓</button>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('.btn-referido-entregado').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const r = await apiCall(
+        () => TurnosAPI.marcarReferidoEntregado(btn.dataset.id),
+        'Error al marcar el premio'
+      );
+      if (r?.ok) {
+        mostrarToast('Premio marcado como entregado ✓', 'exito');
+        renderReferidos();
+      }
+    });
+  });
+}
+
 function cardCumple(c, esHoy) {
   const meses = [
     'enero','febrero','marzo','abril','mayo','junio',
@@ -2858,6 +2915,119 @@ async function handleCrearSucursalOperadora(e) {
   } catch (err) {
     mostrarErrorForm('form-sucursal-operadora-error', err.message || 'Error al crear');
   }
+}
+
+// La mayoría trabaja sola, sin socia ni segunda estética: para esas la
+// pestaña de Sucursales (pensada para manejar varios lugares) sobra y
+// solo llena el menú. Se oculta cuando hay 0 o 1 cargada; el horario de
+// esa única sucursal se edita desde la tarjeta de Configuración.
+function aplicarVisibilidadSucursales() {
+  const tieneVarias = sucursales.length >= 2;
+
+  const btnTab = document.querySelector('.tab-btn[data-tab="sucursales"]');
+  if (btnTab) btnTab.style.display = tieneVarias ? '' : 'none';
+
+  // Si la pestaña quedó oculta pero era la activa (ej. tenía 2 y borró
+  // una), volvemos a Agenda para no dejar la pantalla en un panel al que
+  // ya no se puede volver a entrar por el menú.
+  if (!tieneVarias && tabActual === 'sucursales') {
+    irATab('agenda');
+  }
+}
+
+async function renderHorarioConfigUnica() {
+  const card = document.getElementById('config-card-horario');
+  const grid = document.getElementById('config-horario-grid');
+  const btnGuardar = document.getElementById('btn-guardar-horario-unico');
+  if (!card || !grid) return;
+
+  // Con 2+ sucursales cada una tiene su propio horario en la pestaña
+  // dedicada: esta tarjeta chica es solo para cuando hay una sola (o
+  // ninguna todavía).
+  if (sucursales.length >= 2) {
+    card.classList.add('oculto');
+    return;
+  }
+  card.classList.remove('oculto');
+
+  grid.innerHTML = DIAS_SEMANA_SUC.map((dia, idx) => `
+    <div class="horario-item">
+      <label>${dia}</label>
+      <div class="horario-rango">
+        <input type="time" class="horario-desde-unico" data-dia="${idx}">
+        <span>a</span>
+        <input type="time" class="horario-hasta-unico" data-dia="${idx}">
+      </div>
+    </div>
+  `).join('');
+
+  const sucursalUnica = sucursales[0] || null;
+
+  if (sucursalUnica) {
+    try {
+      const detalle = await SucursalesAPI.obtenerHorarios(sucursalUnica.id);
+      const horarios = normalizarHorariosSucursalUI(detalle?.sucursal?.horarios);
+      horarios.forEach(h => {
+        const d   = grid.querySelector(`.horario-desde-unico[data-dia="${h.dia}"]`);
+        const hst = grid.querySelector(`.horario-hasta-unico[data-dia="${h.dia}"]`);
+        if (d)   d.value   = h.desde;
+        if (hst) hst.value = h.hasta;
+      });
+    } catch {}
+  }
+
+  if (!btnGuardar) return;
+  // Se reemplaza el botón para no acumular listeners cada vez que se abre
+  // la configuración (esta función se llama en cada apertura del panel).
+  const btnNuevo = btnGuardar.cloneNode(true);
+  btnGuardar.replaceWith(btnNuevo);
+
+  btnNuevo.addEventListener('click', async () => {
+    const horarios = [];
+    for (const idx of [0, 1, 2, 3, 4, 5, 6]) {
+      const desde = grid.querySelector(`.horario-desde-unico[data-dia="${idx}"]`)?.value || '';
+      const hasta = grid.querySelector(`.horario-hasta-unico[data-dia="${idx}"]`)?.value || '';
+      if (!desde && !hasta) continue;
+      if (!desde || !hasta) {
+        mostrarToast('Completá desde/hasta en ambos campos', 'error');
+        return;
+      }
+      if (desde >= hasta) {
+        mostrarToast(`Rango inválido en ${DIAS_SEMANA_SUC[idx]}`, 'error');
+        return;
+      }
+      horarios.push({ dia: idx, desde, hasta, activo: true });
+    }
+
+    setBtnLoading('btn-guardar-horario-unico', true);
+    try {
+      let id = sucursales[0]?.id;
+
+      // Todavía no tiene ninguna sucursal cargada: se crea una "Principal"
+      // silenciosa la primera vez que guarda un horario, sin que la
+      // operadora tenga que pasar por la pantalla de "nueva sucursal".
+      if (!id) {
+        const creada = await SucursalesAPI.crear({ nombre: 'Principal', tipo: 'sucursal', max_turnos_hora: 1 });
+        if (!creada?.ok) {
+          mostrarToast(creada?.error || 'No se pudo guardar el horario', 'error');
+          return;
+        }
+        id = creada.sucursal?.id || creada.id;
+        sucursales.push(creada.sucursal || { id });
+      }
+
+      const data = await SucursalesAPI.guardarHorarios(id, horarios);
+      if (!data?.ok) {
+        mostrarToast(data?.error || 'Error al guardar el horario', 'error');
+        return;
+      }
+      mostrarToast('Horario guardado ✅', 'exito');
+    } catch (err) {
+      mostrarToast(err.message || 'Error al guardar el horario', 'error');
+    } finally {
+      setBtnLoading('btn-guardar-horario-unico', false);
+    }
+  });
 }
 
 function normalizarHorariosSucursalUI(horarios) {

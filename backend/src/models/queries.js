@@ -343,6 +343,38 @@ const Turnos = {
     return rows;
   },
 
+  // Turnos que vinieron invitados por otra clienta, ya avisados por el
+  // cron (procesarPremiosReferidos) y todavía sin premio entregado. El
+  // aviso llega por WhatsApp cuando pasa; esto es la lista para cuando
+  // la operadora se olvida o quiere revisar quién falta.
+  async premiosReferidosPendientes(userId) {
+    const { rows } = await query(
+      `SELECT t.id, t.nombre AS referida_nombre, t.telefono AS referida_telefono,
+              t.fecha, t.referido_por_telefono,
+              c.nombre AS referente_nombre
+         FROM turnos t
+         LEFT JOIN clientes c
+           ON c.user_id = t.user_id AND c.telefono = t.referido_por_telefono
+        WHERE t.user_id = $1
+          AND t.referido_por_telefono IS NOT NULL
+          AND t.premio_referido_avisado   = TRUE
+          AND t.premio_referido_entregado = FALSE
+        ORDER BY t.fecha DESC`,
+      [userId]
+    );
+    return rows;
+  },
+
+  async marcarPremioReferidoEntregado(id, userId) {
+    const { rows } = await query(
+      `UPDATE turnos SET premio_referido_entregado = TRUE
+        WHERE id = $1 AND user_id = $2
+        RETURNING id`,
+      [id, userId]
+    );
+    return rows.length > 0;
+  },
+
   async verificarConflicto(userId, fecha, hora, duracion, excludeId = null) {
     let sql = `
       SELECT id, nombre, hora, duracion

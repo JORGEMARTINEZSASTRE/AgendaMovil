@@ -247,6 +247,17 @@ const TurnosAPI = {
       method: 'POST',
     });
   },
+
+  async getReferidosPendientes() {
+    const data = await fetchAPI('/turnos/referidos/pendientes');
+    return data?.pendientes ?? [];
+  },
+
+  async marcarReferidoEntregado(id) {
+    return await fetchAPI(`/turnos/referidos/${id}/entregado`, {
+      method: 'PUT',
+    });
+  },
 };
 
 // ═══════════════════════════════════════════════════════════
