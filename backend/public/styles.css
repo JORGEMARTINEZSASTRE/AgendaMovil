@@ -628,6 +628,22 @@ body {
 
 .config-card-header > div { flex: 1; }
 
+.lista-otras-apps { display: flex; flex-direction: column; gap: 10px; }
+
+.item-otra-app {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1.5px solid var(--borde);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: border-color .15s ease;
+}
+.item-otra-app:hover { border-color: var(--rosa-vino); }
+.item-otra-app > div { flex: 1; }
+
 .btn-config-agregar {
   flex-shrink: 0;
   background: var(--panel);
