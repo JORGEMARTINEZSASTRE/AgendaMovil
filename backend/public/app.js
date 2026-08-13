@@ -2998,6 +2998,33 @@ function mostrarStepWA(step) {
   });
 }
 
+let waQrRefreshInterval = null;
+
+async function cargarQR() {
+  const container = document.getElementById('wa-qr-container');
+  try {
+    const data = await WhatsAppAPI.conectar();
+
+    if (!data?.ok) {
+      mostrarErrorWA(data?.error || 'No se pudo generar el QR');
+      return false;
+    }
+
+    if (data.qr) {
+      const src = data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`;
+      if (container) container.innerHTML = `<img src="${src}" alt="QR WhatsApp">`;
+      return true;
+    }
+
+    mostrarErrorWA('No se recibió el código QR. Probá con el método de código numérico.');
+    return false;
+
+  } catch (err) {
+    mostrarErrorWA(err.message || 'Error de conexión');
+    return false;
+  }
+}
+
 async function iniciarConexionQR() {
   mostrarStepWA('qr');
   const container = document.getElementById('wa-qr-container');
@@ -3005,29 +3032,19 @@ async function iniciarConexionQR() {
     container.innerHTML = '<p style="text-align:center;color:var(--gris)">Generando QR...</p>';
   }
 
-  try {
-    const data = await WhatsAppAPI.conectar();
+  const ok = await cargarQR();
+  if (!ok) return;
 
-    if (!data?.ok) {
-      mostrarErrorWA(data?.error || 'No se pudo generar el QR');
-      return;
-    }
+  iniciarPollingEstado();
 
-    if (data.qr) {
-      const src = data.qr.startsWith('data:') ? data.qr : `data:image/png;base64,${data.qr}`;
-      container.innerHTML = `<img src="${src}" alt="QR WhatsApp">`;
-    } else if (data.code) {
-      container.innerHTML = `<p style="color:var(--gris);word-break:break-all">${data.code}</p>`;
-    } else {
-      mostrarErrorWA('No se recibió ningún código');
-      return;
-    }
-
-    iniciarPollingEstado();
-
-  } catch (err) {
-    mostrarErrorWA(err.message || 'Error de conexión');
-  }
+  // El QR de WhatsApp vence rápido (segundos), así que se renueva solo
+  // mientras el modal está abierto para que siempre haya uno vigente
+  // aunque tarde en escanearlo.
+  if (waQrRefreshInterval) clearInterval(waQrRefreshInterval);
+  waQrRefreshInterval = setInterval(() => {
+    if (waPollingInterval) cargarQR();
+    else clearInterval(waQrRefreshInterval);
+  }, 20000);
 }
 
 async function iniciarConexionCodigo() {
@@ -3051,9 +3068,9 @@ async function iniciarConexionCodigo() {
       return;
     }
 
-    const pairing = data.pairingCode || data.code;
+    const pairing = data.pairingCode;
     if (!pairing) {
-      mostrarErrorWA('No se recibió el código de emparejamiento');
+      mostrarErrorWA('No se pudo generar el código numérico para ese teléfono. Probá con el método de QR.');
       return;
     }
 
@@ -3109,6 +3126,10 @@ document.addEventListener('click', (e) => {
     if (waPollingInterval) {
       clearInterval(waPollingInterval);
       waPollingInterval = null;
+    }
+    if (waQrRefreshInterval) {
+      clearInterval(waQrRefreshInterval);
+      waQrRefreshInterval = null;
     }
   }
 });
