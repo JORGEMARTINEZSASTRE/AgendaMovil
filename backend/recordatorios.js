@@ -775,9 +775,78 @@ async function procesarAvisosCobro() {
 
 cron.schedule('0 11 * * *', procesarAvisosCobro, { timezone: 'America/Montevideo' });
 
+// ═══════════════════════════════════════════════════════════
+//  MONITOREO DE CONEXIONES WHATSAPP
+//
+//  Antes, si a una operadora se le cortaba el WhatsApp, nadie se
+//  enteraba hasta que ella misma notaba que dejaron de llegar
+//  confirmaciones/recordatorios — a veces días después. Esto revisa
+//  cada 30 min el estado real de cada operadora conectada y avisa por
+//  mail apenas alguna pasa de conectada a desconectada (no en cada
+//  chequeo, solo en el cambio, para no repetir el mismo aviso).
+// ═══════════════════════════════════════════════════════════
+
+const ADMIN_ALERT_EMAIL = process.env.ADMIN_ALERT_EMAIL || process.env.ADMIN_EMAIL || '';
+const estadoWaConocido = {}; // user_id -> ultimo estado visto en este proceso
+
+async function chequearConexionesWA() {
+  try {
+    const { rows: sesiones } = await query(`
+      SELECT ws.user_id, ws.estado AS estado_guardado, u.nombre_negocio, u.nombre AS user_nombre
+      FROM whatsapp_sesiones ws
+      JOIN usuarios u ON u.id = ws.user_id
+    `);
+
+    const caidas = [];
+
+    for (const s of sesiones) {
+      const instance = `user_${s.user_id}`;
+      const r = await evolution.estadoInstancia(instance);
+      const estadoActual = r.ok ? r.estado : 'error';
+
+      await query(
+        `UPDATE whatsapp_sesiones SET estado = $1, actualizado_en = NOW() WHERE user_id = $2`,
+        [estadoActual, s.user_id]
+      );
+
+      const previo = estadoWaConocido[s.user_id] ?? s.estado_guardado;
+      estadoWaConocido[s.user_id] = estadoActual;
+
+      if (previo === 'open' && estadoActual !== 'open') {
+        caidas.push({ nombre: s.nombre_negocio || s.user_nombre, estado: estadoActual });
+      }
+    }
+
+    if (caidas.length && ADMIN_ALERT_EMAIL) {
+      const lista = caidas.map(c => `- ${c.nombre}: ahora está "${c.estado}"`).join('\n');
+      try {
+        await transporter.sendMail({
+          from:    `"AgendaMovil - Alertas" <${process.env.MAIL_USER}>`,
+          to:      ADMIN_ALERT_EMAIL,
+          subject: `⚠️ WhatsApp desconectado: ${caidas.map(c => c.nombre).join(', ')}`,
+          text:    `Se desconectó el WhatsApp de:\n\n${lista}\n\nHay que pedirles que reconecten desde su panel (botón "Conectar WhatsApp").`,
+        });
+      } catch (err) {
+        console.error('[WA-MONITOR] No se pudo mandar el mail de alerta:', err.message);
+      }
+    }
+
+    if (caidas.length) {
+      console.log(`[WA-MONITOR] ⚠️ Se desconectaron: ${caidas.map(c => c.nombre).join(', ')}`);
+    } else {
+      console.log(`[WA-MONITOR] Chequeo OK, ${sesiones.length} conexión(es) revisada(s)`);
+    }
+  } catch (err) {
+    console.error('[WA-MONITOR] Error general:', err.message);
+  }
+}
+
+cron.schedule('*/30 * * * *', chequearConexionesWA);
+
 module.exports = {
   procesarRecordatorios,
   procesarAvisosCobro,
+  chequearConexionesWA,
   testRecordatorioManual,
   enviarConfirmacionTurno,
   enviarConfirmacionSenia,

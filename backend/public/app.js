@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initUI();
   bindBtnConectarWhatsApp();
   mostrarApp();
+  actualizarEstadoBadgeWA();
+  setInterval(actualizarEstadoBadgeWA, 120000); // cada 2 min, para que el semaforo no quede viejo
 
   // Mostrar botón admin si es admin
   const usuario = Sesion.getUsuario();
@@ -2998,6 +3000,21 @@ function mostrarStepWA(step) {
   });
 }
 
+// Semaforo del botón de WhatsApp en el header: verde conectado, rojo
+// desconectado, gris mientras no se sabe. Así la operadora lo nota sola
+// en vez de descubrirlo cuando sus clientas dejan de recibir avisos.
+async function actualizarEstadoBadgeWA() {
+  const dot = document.getElementById('wa-estado-dot');
+  if (!dot) return;
+  try {
+    const data = await WhatsAppAPI.obtenerEstado();
+    dot.style.background = (data?.ok && data.conectado) ? '#2ecc71' : '#e74c3c';
+    dot.title = (data?.ok && data.conectado) ? 'WhatsApp conectado' : 'WhatsApp desconectado — tocá para reconectar';
+  } catch (err) {
+    dot.style.background = '#ccc';
+  }
+}
+
 let waQrRefreshInterval = null;
 
 async function cargarQR() {
@@ -3107,6 +3124,7 @@ function iniciarPollingEstado() {
         clearInterval(waPollingInterval);
         waPollingInterval = null;
         mostrarStepWA('ok');
+        actualizarEstadoBadgeWA();
       }
     } catch (err) {
       console.warn('[wa polling]', err.message);
