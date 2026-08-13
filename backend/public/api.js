@@ -25,6 +25,11 @@ function limpiarSesion() {
 }
 
 // ─── HELPER: fetch con auth ──────────────────────────────
+// Sin timeout, si la red se cuelga a mitad de camino el fetch queda
+// esperando para siempre y la pantalla parece "trabada" (botón en
+// loading eterno, sin ningún error). El AbortController le pone un
+// límite de 20s: si no hay respuesta para entonces, corta y avisa
+// error en vez de dejar la app colgada.
 async function fetchAPI(endpoint, opciones = {}) {
   const token = getToken();
 
@@ -34,10 +39,24 @@ async function fetchAPI(endpoint, opciones = {}) {
     ...opciones.headers,
   };
 
-  const resp = await fetch(`${API_URL}${endpoint}`, {
-    ...opciones,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+  let resp;
+  try {
+    resp = await fetch(`${API_URL}${endpoint}`, {
+      ...opciones,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Se agotó el tiempo de espera. Revisá tu conexión e intentá de nuevo.');
+    }
+    throw new Error('No se pudo conectar. Revisá tu conexión e intentá de nuevo.');
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // Token expirado o inválido
   if (resp.status === 401) {
