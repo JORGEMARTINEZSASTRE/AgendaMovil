@@ -375,6 +375,10 @@ async function procesarRecordatorios() {
       } else {
         console.log(`[CRON] ⚠️ Recordatorio 24h falló en los dos canales, reintenta: ${turno.nombre} (${turno.id})`);
       }
+      // Pausa con variacion entre cada turno: mandar todo en rafaga sin
+      // espera es justo el patron que WhatsApp detecta como bot y puede
+      // terminar restringiendo el numero de la operadora.
+      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
     }
     await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
@@ -398,6 +402,7 @@ async function procesarRecordatorios() {
       } else {
         console.log(`[CRON] ⚠️ Recordatorio 2h falló en los dos canales, reintenta: ${turno.nombre} (${turno.id})`);
       }
+      await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
     }
     await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
