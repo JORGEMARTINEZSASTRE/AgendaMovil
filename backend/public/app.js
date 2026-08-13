@@ -987,12 +987,12 @@ async function handleSubmitTurno(e) {
   const profesionalNombre = profesional?.nombre || null;
 
   // Validaciones frontend
-  if (!nombre || !telefonoLimpio || !fecha || !hora || !duracion) {
+  if (!nombre || !telefono || !fecha || !hora || !duracion) {
     mostrarErrorForm('form-turno-error', 'Completá todos los campos obligatorios');
     return;
   }
 
-  if (telefonoLimpio.length < 7) {
+  if (telefono.length < 7) {
     mostrarErrorForm('form-turno-error', 'Número de teléfono inválido');
     return;
   }
