@@ -638,6 +638,18 @@ function bindFormTurno() {
 
   bindAvisoFaltas();
 
+  // Si escribe el teléfono a mano (sin elegirlo de la lista de
+  // contactos) y ese número ya es de una clienta con cumpleaños
+  // guardado, se oculta el campo igual que si la hubiera elegido.
+  const inputTelefono = document.getElementById('turno-telefono');
+  if (inputTelefono) {
+    inputTelefono.addEventListener('blur', () => {
+      if (editandoId) return; // en edición no se toca, ya viene del turno
+      const tel = normalizarTelefono(getVal('turno-telefono'), getVal('turno-codigo-pais') || '598');
+      if (tel) actualizarVisibilidadCumple(tel);
+    });
+  }
+
   // Al elegir servicio: autocompletar datos + aviso seña
   const selectServ = document.getElementById('turno-servicio-id');
   if (selectServ) {
@@ -705,6 +717,28 @@ async function cargarContactosParaTurno() {
     clientesManuales = manuales;
   } catch (e) {
     // Silencioso, ya se cargan en renderClientes
+  }
+}
+
+// Si la clienta ya tiene fecha de cumpleaños guardada de un turno
+// anterior, no tiene sentido volver a pedírsela — se oculta el campo
+// solo. Si es nueva o todavía no la cargó, se deja visible como
+// siempre. No se usa mientras se está editando un turno existente:
+// ahí el campo ya se llena con lo que ese turno tenía guardado.
+function actualizarVisibilidadCumple(telefonoNormalizado) {
+  const detalle = document.getElementById('turno-cumple-detalle');
+  if (!detalle) return;
+
+  // El cumpleaños vive únicamente en clientesManuales (tabla "clientes"):
+  // el array "clientes" es un resumen armado desde los turnos y nunca
+  // trae ese dato, así que buscarlo ahí siempre daría "no tiene".
+  const existente = (clientesManuales || []).find(c => c.telefono === telefonoNormalizado);
+  const yaTieneCumple = !!(existente && existente.cumple_dia && existente.cumple_mes);
+
+  detalle.style.display = yaTieneCumple ? 'none' : '';
+  if (yaTieneCumple) {
+    setVal('turno-cumple-dia', '');
+    setVal('turno-cumple-mes', '');
   }
 }
 
@@ -791,6 +825,7 @@ function abrirFormTurno(turno = null) {
           setVal('turno-codigo-pais', '598');
           setVal('turno-telefono', tel);
         }
+        if (!turno) actualizarVisibilidadCumple(opt.value);
       }
     };
   }
@@ -842,6 +877,11 @@ function abrirFormTurno(turno = null) {
     setVal('turno-codigo-pais',    '598');
     const selectContacto = document.getElementById('turno-contacto-select');
     if (selectContacto) selectContacto.value = '';
+
+    // Turno nuevo: por defecto se muestra el campo de cumpleaños hasta
+    // que se sepa (por el teléfono) que ya lo tenemos guardado.
+    const detalleCumple = document.getElementById('turno-cumple-detalle');
+    if (detalleCumple) detalleCumple.style.display = '';
 
     // Si hay una sola sucursal, seleccionarla por defecto
     if (!turno && (sucursales || []).length === 1) {

@@ -1162,8 +1162,9 @@
         ></textarea>
       </div>
 
-      <!-- Cumpleaños -->
-      <details class="campo-detalle">
+      <!-- Cumpleaños: se oculta sola si la clienta ya tiene fecha guardada,
+           para no volver a pedirla en cada turno nuevo. -->
+      <details class="campo-detalle" id="turno-cumple-detalle">
         <summary>🎂 Fecha de cumpleaños (opcional)</summary>
         <div class="campos-fila">
           <div class="campo">
