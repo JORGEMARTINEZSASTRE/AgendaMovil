@@ -2,6 +2,7 @@
 
 const cron       = require('node-cron');
 const nodemailer = require('nodemailer');
+const axios      = require('axios');
 const { query }  = require('./src/config/db');
 const evolution = require('./src/services/evolution.service');
 
@@ -786,8 +787,23 @@ cron.schedule('0 11 * * *', procesarAvisosCobro, { timezone: 'America/Montevideo
 //  chequeo, solo en el cambio, para no repetir el mismo aviso).
 // ═══════════════════════════════════════════════════════════
 
-const ADMIN_ALERT_EMAIL = process.env.ADMIN_ALERT_EMAIL || process.env.ADMIN_EMAIL || '';
+// Las clientas no usan mail, pero Jorge sí usa WhatsApp: la alerta le
+// llega por un relay chico en el VPS que manda por el WhatsApp
+// "depimovil" (ese anda estable, no depende de ninguna operadora).
+const ALERTAS_URL = process.env.ALERTAS_URL || 'https://depimovil.live/alertas/enviar';
+const ALERTAS_KEY = process.env.ALERTAS_KEY || '';
 const estadoWaConocido = {}; // user_id -> ultimo estado visto en este proceso
+
+async function avisarleAJorge(mensaje) {
+  if (!ALERTAS_KEY) { console.warn('[WA-MONITOR] Falta ALERTAS_KEY, no se pudo avisar'); return; }
+  try {
+    await axios.post(ALERTAS_URL, { origen: 'AgendaMovil', mensaje }, {
+      headers: { 'x-key': ALERTAS_KEY }, timeout: 10000,
+    });
+  } catch (err) {
+    console.error('[WA-MONITOR] No se pudo mandar la alerta por WhatsApp:', err.response?.data || err.message);
+  }
+}
 
 async function chequearConexionesWA() {
   try {
@@ -817,18 +833,9 @@ async function chequearConexionesWA() {
       }
     }
 
-    if (caidas.length && ADMIN_ALERT_EMAIL) {
+    if (caidas.length) {
       const lista = caidas.map(c => `- ${c.nombre}: ahora está "${c.estado}"`).join('\n');
-      try {
-        await transporter.sendMail({
-          from:    `"AgendaMovil - Alertas" <${process.env.MAIL_USER}>`,
-          to:      ADMIN_ALERT_EMAIL,
-          subject: `⚠️ WhatsApp desconectado: ${caidas.map(c => c.nombre).join(', ')}`,
-          text:    `Se desconectó el WhatsApp de:\n\n${lista}\n\nHay que pedirles que reconecten desde su panel (botón "Conectar WhatsApp").`,
-        });
-      } catch (err) {
-        console.error('[WA-MONITOR] No se pudo mandar el mail de alerta:', err.message);
-      }
+      await avisarleAJorge(`Se desconectó el WhatsApp de:\n\n${lista}\n\nHay que pedirles que reconecten desde su panel (botón "Conectar WhatsApp").`);
     }
 
     if (caidas.length) {
