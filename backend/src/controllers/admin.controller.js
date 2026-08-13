@@ -185,6 +185,40 @@ async function eliminarUsuario(req, res) {
   }
 }
 
+// Bajar (o subir) el rol de una cuenta. Existe aparte de eliminar/
+// desactivar porque esas dos rechazan cualquier cuenta admin de entrada:
+// primero hay que bajarla a "cliente" acá, y recién ahí se puede tocar
+// con los botones de siempre.
+async function cambiarRol(req, res) {
+  try {
+    const { rol } = req.body;
+    if (!['admin', 'cliente'].includes(rol)) {
+      return res.status(422).json({ ok: false, error: 'Rol inválido' });
+    }
+
+    const existente = await Usuarios.buscarPorId(req.params.id);
+    if (!existente) {
+      return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+    }
+
+    if (existente.rol === 'admin' && rol === 'cliente') {
+      const totalAdmins = await Usuarios.contarAdmins();
+      if (totalAdmins <= 1) {
+        return res.status(400).json({
+          ok:    false,
+          error: 'No podés bajar al último administrador: el sistema se quedaría sin nadie que pueda entrar acá.',
+        });
+      }
+    }
+
+    const usuario = await Usuarios.cambiarRol(req.params.id, rol);
+    return res.json({ ok: true, mensaje: `Rol actualizado a ${rol}`, usuario });
+  } catch (err) {
+    console.error('[ADMIN/cambiarRol]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al cambiar el rol' });
+  }
+}
+
 async function crearInvitacion(req, res) {
   try {
     const { email, plan, dias_trial } = req.body;
@@ -244,4 +278,7 @@ async function listarInvitaciones(req, res) {
   }
 }
 
-module.exports = { listarUsuarios, crearUsuario, toggleActivo, cambiarPlan, eliminarUsuario, crearInvitacion, listarInvitaciones };
+module.exports = {
+  listarUsuarios, crearUsuario, toggleActivo, cambiarPlan, cambiarRol,
+  eliminarUsuario, crearInvitacion, listarInvitaciones,
+};

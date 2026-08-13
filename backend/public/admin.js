@@ -207,7 +207,11 @@ function cardClientaHTML(u) {
         <button class="btn-admin btn-danger btn-eliminar-clienta" data-id="${u.id}" data-nombre="${escaparHTML(u.nombre)}">
           🗑 Eliminar
         </button>
-        ` : ''}
+        ` : `
+        <button class="btn-admin btn-bajar-admin" data-id="${u.id}" data-nombre="${escaparHTML(u.nombre)}">
+          ⬇️ Bajar a cliente
+        </button>
+        `}
       </div>
     </div>`;
 }
@@ -285,6 +289,13 @@ function bindAccionesClientas() {
   document.querySelectorAll('.btn-eliminar-clienta').forEach(btn => {
     btn.addEventListener('click', () => {
       eliminarClienta(btn.dataset.id, btn.dataset.nombre);
+    });
+  });
+
+  // Bajar admin a cliente (recién ahí se puede desactivar/eliminar)
+  document.querySelectorAll('.btn-bajar-admin').forEach(btn => {
+    btn.addEventListener('click', () => {
+      bajarAdminACliente(btn.dataset.id, btn.dataset.nombre);
     });
   });
 }
@@ -515,6 +526,37 @@ async function eliminarClienta(id, nombre) {
     }
 
     mostrarToast('🗑 Clienta eliminada');
+    await cargarUsuarios();
+
+  } catch {
+    mostrarToast('Error de conexión', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BAJAR ADMIN A CLIENTE
+// ═══════════════════════════════════════════════════════════
+async function bajarAdminACliente(id, nombre) {
+  if (!confirm(`¿Bajar a "${nombre}" de administrador a cliente? Después vas a poder desactivarla o eliminarla como a cualquier otra cuenta.`)) return;
+
+  try {
+    const resp = await fetch(`${API_URL}/admin/usuarios/${id}/rol`, {
+      method:  'PUT',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${tokenAdmin}`
+      },
+      body: JSON.stringify({ rol: 'cliente' })
+    });
+
+    const data = await resp.json();
+
+    if (!data.ok) {
+      mostrarToast(data.error || 'Error al cambiar el rol', 'error');
+      return;
+    }
+
+    mostrarToast('⬇️ Cuenta bajada a cliente');
     await cargarUsuarios();
 
   } catch {

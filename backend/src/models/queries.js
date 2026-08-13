@@ -138,6 +138,24 @@ async cambiarPlan(id, plan, trialFin = null) {
   async eliminar(id) {
     await query(`DELETE FROM usuarios WHERE id = $1`, [id]);
   },
+
+  // Cuántos admins activos quedan. Se usa antes de bajarle el rol a uno:
+  // si es el último, el sistema se queda sin nadie que pueda entrar a
+  // admin.html y no hay forma de volver a subir a nadie desde ahí mismo.
+  async contarAdmins() {
+    const { rows } = await query(
+      `SELECT COUNT(*)::int AS n FROM usuarios WHERE rol = 'admin' AND activo = true`
+    );
+    return rows[0].n;
+  },
+
+  async cambiarRol(id, rol) {
+    const { rows } = await query(
+      `UPDATE usuarios SET rol = $1 WHERE id = $2 RETURNING id, email, rol`,
+      [rol, id]
+    );
+    return rows[0] || null;
+  },
 };
 
 // ─── TURNOS ──────────────────────────────────────────────────

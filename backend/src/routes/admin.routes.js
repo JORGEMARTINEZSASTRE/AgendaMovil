@@ -123,6 +123,14 @@ router.delete('/usuarios/:id',
   ctrl.eliminarUsuario
 );
 
+// PUT /api/admin/usuarios/:id/rol — bajar/subir entre admin y cliente
+router.put('/usuarios/:id/rol',
+  validarId,
+  [body('rol').isIn(['admin', 'cliente']).withMessage('Rol inválido')],
+  validar,
+  ctrl.cambiarRol
+);
+
 // POST /api/admin/invitaciones
 router.post('/invitaciones',
   validarInvitacion,
