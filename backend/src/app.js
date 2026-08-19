@@ -68,25 +68,11 @@ app.use('/api/confirmar',     require('./routes/confirmacion.routes'));
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, servicio: 'DEPIMÓVIL PRO API', ts: new Date().toISOString() });
 });
-// ─── TEST RECORDATORIO (TEMPORAL, borrar después) ──────────
-const { testRecordatorioManual } = require('../recordatorios');
-
-app.post('/api/test-recordatorio/:turnoId', async (req, res) => {
-  const { turnoId } = req.params;
-  const { tipo = '2h' } = req.body || {};
-
-  const resultado = await testRecordatorioManual(turnoId, tipo);
-  res.json(resultado);
-});
-
 /// ─── STATIC FRONTEND ─────────────────────────────
 const path = require('path');
 const fs = require('fs');
 
 const frontendPath = path.join(__dirname, '../public');
-console.log('[STATIC] path:', frontendPath);
-console.log('[STATIC] existe?', fs.existsSync(frontendPath));
-console.log('[STATIC] archivos:', fs.existsSync(frontendPath) ? fs.readdirSync(frontendPath) : 'N/A');
 
 // ─── VITRINA PÚBLICA ─────────────────────────────
 // Va ANTES de express.static para poder inyectar los metadatos Open
@@ -138,7 +124,6 @@ app.get(['/vitrina', '/vitrina.html'], async (req, res) => {
   }
 });
 
-app.use(express.static(frontendPath));
 app.use(express.static(frontendPath));
 
 // Redirigir raíz al login
