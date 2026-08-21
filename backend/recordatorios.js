@@ -178,7 +178,7 @@ async function enviarWhatsAppReferido(turno) {
   if (!turno.telefono_operadora) return { ok: false, error: 'operadora_sin_telefono' };
 
   const instance = `user_${turno.user_id}`;
-  const estadoRes = await evolution.estadoInstancia(instance);
+  const estadoRes = await evolution.estadoConReconexion(instance);
   if (!estadoRes.ok || estadoRes.estado !== 'open') {
     return { ok: false, error: 'wa_desconectado' };
   }
@@ -209,7 +209,7 @@ function mensajeRegreso(turno) {
 
 async function enviarWhatsAppRegreso(turno) {
   const instance = `user_${turno.user_id}`;
-  const estadoRes = await evolution.estadoInstancia(instance);
+  const estadoRes = await evolution.estadoConReconexion(instance);
 
   if (!estadoRes.ok || estadoRes.estado !== 'open') {
     // Sin WhatsApp conectado no se marca como enviado: queda para cuando lo conecte.
@@ -383,7 +383,7 @@ async function enviarWhatsAppAutomatico(turno, tipo) {
 
     // Verificar que la estética tenga WhatsApp conectado
     const instance = `user_${turno.user_id}`;
-    const estadoRes = await evolution.estadoInstancia(instance);
+    const estadoRes = await evolution.estadoConReconexion(instance);
 
     if (!estadoRes.ok || estadoRes.estado !== 'open') {
       console.log(`[WA] Usuario ${turno.user_id} sin WhatsApp conectado (estado: ${estadoRes.estado || 'error'})`);
@@ -606,7 +606,7 @@ async function enviarConfirmacionTurno(turno) {
     }
 
     const instance = `user_${turno.user_id}`;
-    const estadoRes = await evolution.estadoInstancia(instance);
+    const estadoRes = await evolution.estadoConReconexion(instance);
 
     if (!estadoRes.ok || estadoRes.estado !== 'open') {
       console.log(`[WA-CONFIRM] Usuario ${turno.user_id} sin WhatsApp conectado`);
@@ -637,7 +637,7 @@ async function enviarConfirmacionSenia(turno) {
     if (!turno.telefono) return { ok: false, error: 'sin_telefono' };
 
     const instance = `user_${turno.user_id}`;
-    const estadoRes = await evolution.estadoInstancia(instance);
+    const estadoRes = await evolution.estadoConReconexion(instance);
     if (!estadoRes.ok || estadoRes.estado !== 'open') {
       console.log(`[WA-SENIA] Usuario ${turno.user_id} sin WhatsApp conectado`);
       return { ok: false, error: 'wa_desconectado' };
@@ -677,7 +677,7 @@ async function enviarModificacionTurno(turno) {
     if (!turno.telefono) return { ok: false, error: 'sin_telefono' };
 
     const instance = `user_${turno.user_id}`;
-    const estadoRes = await evolution.estadoInstancia(instance);
+    const estadoRes = await evolution.estadoConReconexion(instance);
     if (!estadoRes.ok || estadoRes.estado !== 'open') {
       console.log(`[WA-MOD] Usuario ${turno.user_id} sin WhatsApp conectado`);
       return { ok: false, error: 'wa_desconectado' };
@@ -717,7 +717,7 @@ async function enviarCancelacionTurno(turno) {
     if (!turno.telefono) return { ok: false, error: 'sin_telefono' };
 
     const instance = `user_${turno.user_id}`;
-    const estadoRes = await evolution.estadoInstancia(instance);
+    const estadoRes = await evolution.estadoConReconexion(instance);
     if (!estadoRes.ok || estadoRes.estado !== 'open') {
       console.log(`[WA-CANCEL] Usuario ${turno.user_id} sin WhatsApp conectado`);
       return { ok: false, error: 'wa_desconectado' };
@@ -835,7 +835,7 @@ async function procesarAvisosCobro() {
     for (const d of deudas) {
       try {
         const instancia = `user_${d.user_id}`;
-        const estado = await evolution.estadoInstancia(instancia);
+        const estado = await evolution.estadoConReconexion(instancia);
         if (!estado.ok || estado.estado !== 'open') {
           console.log(`[COBRO] usuario ${d.user_id} sin WhatsApp conectado, salteo`);
           continue;
@@ -908,7 +908,7 @@ async function chequearConexionesWA() {
 
     for (const s of sesiones) {
       const instance = `user_${s.user_id}`;
-      const r = await evolution.estadoInstancia(instance);
+      const r = await evolution.estadoConReconexion(instance);
       const estadoActual = r.ok ? r.estado : 'error';
 
       await query(

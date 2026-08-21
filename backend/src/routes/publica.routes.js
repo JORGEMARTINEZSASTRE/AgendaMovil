@@ -173,7 +173,7 @@ async function enviarWAReservaConfirmada({ userId, telefono, nombre, fecha, hora
     if (!telefono) return;
 
     const instance = `user_${userId}`;
-    const estado = await evolution.estadoInstancia(instance);
+    const estado = await evolution.estadoConReconexion(instance);
     if (!estado.ok || estado.estado !== 'open') {
       console.log(`[WA-PUB] Usuario ${userId} sin WhatsApp conectado`);
       return;
@@ -211,7 +211,7 @@ async function enviarWAReservaPendienteSenia({ userId, telefono, nombre, fecha, 
     if (!telefono) return;
 
     const instance = `user_${userId}`;
-    const estado = await evolution.estadoInstancia(instance);
+    const estado = await evolution.estadoConReconexion(instance);
     if (!estado.ok || estado.estado !== 'open') {
       console.log(`[WA-PUB] Usuario ${userId} sin WhatsApp conectado`);
       return;

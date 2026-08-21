@@ -33,8 +33,10 @@ async function obtenerEstado(req, res) {
       return res.json({ ok: true, conectado: false, estado: 'desconectado' });
     }
 
-    // Consultar estado real en Evolution API
-    const estadoReal = await evolution.estadoInstancia(instance);
+    // Consultar estado real en Evolution API (con reintento de reconexión
+    // automática: así, si Adriana solo tuvo un corte de socket, el panel
+    // la muestra conectada de nuevo sin que tenga que escanear nada).
+    const estadoReal = await evolution.estadoConReconexion(instance);
 
     if (!estadoReal.ok) {
       return res.json({

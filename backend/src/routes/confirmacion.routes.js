@@ -183,7 +183,7 @@ async function avisarOperadora(turno) {
       `\n\nEse horario te quedó libre. Todavía estás a tiempo de ofrecérselo a otra clienta 💪`;
 
   const instancia = `user_${turno.user_id}`;
-  const estado = await evolution.estadoInstancia(instancia);
+  const estado = await evolution.estadoConReconexion(instancia);
   if (!estado.ok || estado.estado !== 'open') {
     console.log(`[CONFIRMACION] usuario ${turno.user_id} sin WhatsApp conectado`);
     return;

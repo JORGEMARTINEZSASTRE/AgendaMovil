@@ -78,6 +78,38 @@ async function eliminarInstancia(nombreInstancia) {
   }
 }
 
+async function reiniciarInstancia(nombreInstancia) {
+  try {
+    const { data } = await client.put(`/instance/restart/${nombreInstancia}`);
+    return { ok: true, data };
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message;
+    console.error('[Evolution/reiniciarInstancia]', msg);
+    return { ok: false, error: msg };
+  }
+}
+
+// Cada punto del código que necesitaba saber si una operadora tenía
+// WhatsApp conectado hacía su propio estadoInstancia() y, si no estaba
+// "open", se rendía ahí mismo (como mucho avisando a Jorge). La mayoría
+// de esos cortes no son un logout real desde el teléfono, sino que se
+// cayó el socket de Evolution — y eso se resuelve reiniciando la
+// instancia con las credenciales ya guardadas, sin pedir escanear el QR
+// de nuevo. Por eso este es el único lugar que debería consultarse: si
+// el reinicio no la revive, es porque de verdad hay que volver a
+// vincular el teléfono, y ahí sí corresponde avisar.
+async function estadoConReconexion(nombreInstancia) {
+  const primero = await estadoInstancia(nombreInstancia);
+  if (primero.ok && primero.estado === 'open') return primero;
+
+  const reinicio = await reiniciarInstancia(nombreInstancia);
+  if (!reinicio.ok) return primero;
+
+  await new Promise((r) => setTimeout(r, 3000));
+  const segundo = await estadoInstancia(nombreInstancia);
+  return segundo.ok ? segundo : primero;
+}
+
 // ═══════════════════════════════════════════════════════════
 //  ENVÍO DE MENSAJES
 // ═══════════════════════════════════════════════════════════
@@ -120,6 +152,8 @@ module.exports = {
   crearInstancia,
   obtenerQR,
   estadoInstancia,
+  estadoConReconexion,
+  reiniciarInstancia,
   eliminarInstancia,
   enviarMensaje,
   ping,
