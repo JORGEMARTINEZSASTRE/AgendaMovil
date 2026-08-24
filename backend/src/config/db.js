@@ -21,6 +21,17 @@ pool.on('error', (err) => {
   process.exit(1);
 });
 
+// El servidor de Postgres corre en UTC, pero fecha/hora de los turnos se
+// cargan y se piensan en hora de Uruguay. Sin esto, cualquier comparación
+// contra NOW() (recordatorios, avisos de regreso, avisos de cobro) queda
+// desfasada por el huso horario completo (UTC-3): el sistema termina
+// mandando el aviso de "2 horas" cuando en realidad faltan 5.
+pool.on('connect', (client) => {
+  client.query("SET TIME ZONE 'America/Montevideo'").catch((err) => {
+    console.error('❌ No se pudo fijar el huso horario de la conexión:', err.message);
+  });
+});
+
 async function query(text, params) {
   try {
     return await pool.query(text, params);
