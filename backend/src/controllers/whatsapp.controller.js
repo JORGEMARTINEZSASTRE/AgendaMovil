@@ -11,6 +11,29 @@ function nombreInstanciaDe(userId) {
   return `user_${userId}`;
 }
 
+// Instancias con una vinculación por QR/código en curso ahora mismo, y
+// desde cuándo. Mientras dura esta ventana, el polling de /estado NO debe
+// reiniciar la instancia con estadoConReconexion(): el estado "connecting"
+// o "close" es normal ahí (todavía no escaneó), y reiniciar en ese momento
+// mata el socket que está esperando el escaneo, invalidando el QR antes de
+// que la operadora llegue a usarlo.
+const VINCULACION_VENTANA_MS = 3 * 60 * 1000; // igual al tope del polling del front (60 x 3s)
+const vinculacionesEnCurso = new Map(); // instance -> timestamp
+
+function marcarVinculacionEnCurso(instance) {
+  vinculacionesEnCurso.set(instance, Date.now());
+}
+
+function vinculacionEnCurso(instance) {
+  const marca = vinculacionesEnCurso.get(instance);
+  if (!marca) return false;
+  if (Date.now() - marca > VINCULACION_VENTANA_MS) {
+    vinculacionesEnCurso.delete(instance);
+    return false;
+  }
+  return true;
+}
+
 // ═══════════════════════════════════════════════════════════
 //  GET /api/whatsapp/estado
 //  Devuelve el estado actual de la sesión del usuario.
@@ -33,10 +56,15 @@ async function obtenerEstado(req, res) {
       return res.json({ ok: true, conectado: false, estado: 'desconectado' });
     }
 
-    // Consultar estado real en Evolution API (con reintento de reconexión
-    // automática: así, si Adriana solo tuvo un corte de socket, el panel
-    // la muestra conectada de nuevo sin que tenga que escanear nada).
-    const estadoReal = await evolution.estadoConReconexion(instance);
+    // Consultar estado real en Evolution API. Con reintento de reconexión
+    // automática (así, si alguien solo tuvo un corte de socket, el panel
+    // la muestra conectada de nuevo sin que tenga que escanear nada) —
+    // salvo que haya una vinculación por QR en curso ahora mismo, donde
+    // reiniciar la instancia mataría el socket que está esperando el
+    // escaneo.
+    const estadoReal = vinculacionEnCurso(instance)
+      ? await evolution.estadoInstancia(instance)
+      : await evolution.estadoConReconexion(instance);
 
     if (!estadoReal.ok) {
       return res.json({
@@ -49,6 +77,8 @@ async function obtenerEstado(req, res) {
 
     const estado = estadoReal.estado; // 'open', 'connecting', 'close'
     const conectado = estado === 'open';
+
+    if (conectado) vinculacionesEnCurso.delete(instance);
 
     // Actualizar DB si cambió
     await query(
@@ -80,6 +110,8 @@ async function conectar(req, res) {
     const userId = req.user.id;
     const instance = nombreInstanciaDe(userId);
     const { telefono } = req.body; // Opcional — si lo mandan, devuelve pairing code
+
+    marcarVinculacionEnCurso(instance);
 
     // Verificar si ya existe en DB
     const { rows } = await query(
