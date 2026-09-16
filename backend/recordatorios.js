@@ -222,6 +222,71 @@ async function enviarWhatsAppRegreso(turno) {
   return { ok: true };
 }
 
+// ─── ESTRELLITAS: FIDELIZACIÓN DE CLIENTAS ────────────────────
+// Cada turno completado (no cancelado, sin falta) le suma una estrella
+// a la clienta en la app externa "estrellitas". El mismo colchón de 3
+// horas que los referidos: le da tiempo a la operadora a marcar
+// "no vino" antes de premiar una sesión que nunca pasó. El conteo y el
+// premio los decide esa app (cada operadora configura su propia meta);
+// acá solo se detecta el turno, se le pregunta qué mensaje mandar, y se
+// manda por el WhatsApp de la propia operadora.
+const ESTRELLA_COLCHON_HORAS = 3;
+const ESTRELLA_MAX_POR_VUELTA = 15;
+
+async function getTurnosParaEstrella() {
+  const { rows } = await query(`
+    SELECT t.*, u.nombre_negocio, u.nombre AS user_nombre
+      FROM turnos t
+      JOIN usuarios u ON u.id = t.user_id
+     WHERE t.estado != 'cancelado'
+       AND COALESCE(t.no_vino, FALSE) = FALSE
+       AND t.estrella_enviada = FALSE
+       AND t.telefono IS NOT NULL
+       AND (t.fecha + t.hora) < (NOW() - ($1 || ' hours')::interval)
+     ORDER BY t.fecha ASC
+     LIMIT $2::int
+  `, [ESTRELLA_COLCHON_HORAS, ESTRELLA_MAX_POR_VUELTA]);
+  return rows;
+}
+
+async function marcarEstrellaEnviada(id) {
+  await query(`UPDATE turnos SET estrella_enviada = TRUE WHERE id = $1`, [id]);
+}
+
+/** Le avisa a la app "estrellitas" que este turno se completó y le pide
+ * el mensaje ya armado (ella sabe la meta y el premio de esta operadora). */
+async function notificarEstrellaCliente(turno) {
+  const url = process.env.ESTRELLAS_WEBHOOK_URL;
+  const secret = process.env.ESTRELLAS_WEBHOOK_SECRET;
+  if (!url || !secret) return { ok: false, error: 'no_configurado' };
+
+  try {
+    const res = await axios.post(`${url.replace(/\/+$/, '')}/webhook/turno-completado`, {
+      operadora_id: turno.user_id,
+      operadora_nombre: turno.nombre_negocio || turno.user_nombre,
+      cliente_nombre: turno.nombre,
+      cliente_telefono: turno.telefono,
+    }, {
+      headers: { 'x-webhook-secret': secret },
+      timeout: 10000,
+    });
+    return res.data;
+  } catch (err) {
+    return { ok: false, error: err.response?.data?.error || err.message };
+  }
+}
+
+async function enviarWhatsAppEstrella(turno, mensaje) {
+  const instance = `user_${turno.user_id}`;
+  const estadoRes = await evolution.estadoConReconexion(instance);
+  if (!estadoRes.ok || estadoRes.estado !== 'open') {
+    return { ok: false, error: 'wa_desconectado' };
+  }
+  const resultado = await evolution.enviarMensaje(instance, turno.telefono, mensaje);
+  if (!resultado.ok) return { ok: false, error: resultado.error };
+  return { ok: true };
+}
+
 // ─── HELPERS ─────────────────────────────────────────────────
 function formatearFecha(fechaInput) {
   if (!fechaInput) return '';
@@ -537,6 +602,44 @@ async function procesarRecordatorios() {
     }
   } catch (err) {
     console.error('[CRON] Error al buscar referidos para avisar:', err.message);
+  }
+
+  // ── Estrellitas de fidelización ──
+  try {
+    const turnosEstrella = await getTurnosParaEstrella();
+    if (turnosEstrella.length) {
+      console.log(`[CRON] Estrellitas: ${turnosEstrella.length} turno(s) para procesar`);
+    }
+
+    for (const turno of turnosEstrella) {
+      try {
+        const resultado = await notificarEstrellaCliente(turno);
+        if (!resultado.ok) {
+          console.error(`[CRON] ❌ Estrellitas turno ${turno.id}:`, resultado.error);
+          continue; // no se marca: reintenta cuando la app externa responda
+        }
+        if (resultado.skip) {
+          // La operadora tiene el programa pausado: no hay nada que mandar.
+          await marcarEstrellaEnviada(turno.id);
+          continue;
+        }
+
+        const envio = await enviarWhatsAppEstrella(turno, resultado.mensaje);
+        if (envio.ok) {
+          await marcarEstrellaEnviada(turno.id);
+          console.log(`[CRON] ✅ Estrellita enviada a ${turno.nombre} (turno ${turno.id})`);
+        } else if (envio.error === 'wa_desconectado') {
+          console.log(`[CRON] Estrellitas: usuario ${turno.user_id} sin WhatsApp, se pospone`);
+        } else {
+          console.error(`[CRON] ❌ Estrellitas WA turno ${turno.id}:`, envio.error);
+        }
+      } catch (err) {
+        console.error(`[CRON] ❌ Estrellitas turno ${turno.id}:`, err.message);
+      }
+      await new Promise(r => setTimeout(r, 1200));
+    }
+  } catch (err) {
+    console.error('[CRON] Error al buscar turnos para estrellitas:', err.message);
   }
 }
 

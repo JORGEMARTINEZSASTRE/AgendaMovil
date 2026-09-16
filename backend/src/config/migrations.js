@@ -587,6 +587,22 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Columnas de referidos OK (arranque limpio)');
 
+    // ── Estrellitas: fidelización de clientas por sesión completada ────
+    // Marca el turno que ya disparó la estrellita, para no sumarle dos
+    // veces por el mismo turno. Mismo patrón de "arranque limpio" que
+    // recordatorio_regreso_enviado y premio_referido_avisado: arranca en
+    // TRUE para que los turnos que ya existen no disparen una ráfaga de
+    // estrellitas retroactivas el día del despliegue.
+    await query(`
+      ALTER TABLE public.turnos
+        ADD COLUMN IF NOT EXISTS estrella_enviada BOOLEAN DEFAULT TRUE
+    `);
+    await query(`
+      ALTER TABLE public.turnos
+        ALTER COLUMN estrella_enviada SET DEFAULT FALSE
+    `);
+    console.log('[MIGRATIONS] ✓ Columna estrella_enviada OK (arranque limpio)');
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);
