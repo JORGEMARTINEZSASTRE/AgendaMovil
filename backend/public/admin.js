@@ -897,6 +897,7 @@ async function cargarSucursalesAdmin() {
         <div class="sucursal-card-head">
           <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
           <button class="btn-admin btn-guardar-horarios" data-id="${s.id}">💾 Guardar horarios</button>
+          <button class="btn-admin btn-icon btn-eliminar-sucursal" data-id="${s.id}" data-nombre="${escaparHTML(s.nombre || 'Sucursal')}" title="Eliminar">🗑</button>
         </div>
         <div class="horarios-grid">
           ${DIAS.map((diaNombre, idx) => `
@@ -921,8 +922,34 @@ async function cargarSucursalesAdmin() {
       btn.addEventListener('click', () => guardarHorariosSucursal(btn.dataset.id));
     });
 
+    document.querySelectorAll('.btn-eliminar-sucursal').forEach(btn => {
+      btn.addEventListener('click', () => eliminarSucursalAdmin(btn.dataset.id, btn.dataset.nombre));
+    });
+
   } catch (err) {
     cont.innerHTML = `<div class="empty-state"><p class="empty-sub">Error de conexión al cargar sucursales.</p></div>`;
+  }
+}
+
+// El servidor decide si borra la sucursal o solo la desactiva (si tiene
+// turnos asociados, la desactiva y avisa) — acá solo se confirma y se
+// muestra lo que responda, sin duplicar esa lógica del lado del cliente.
+async function eliminarSucursalAdmin(sucursalId, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}"? Si tiene turnos cargados, se desactiva en vez de borrarse, para no perder el historial.`)) return;
+  try {
+    const resp = await fetch(`${API_URL}/sucursales/${sucursalId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${tokenAdmin}` }
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      mostrarToast(data.error || 'No se pudo eliminar', 'error');
+      return;
+    }
+    mostrarToast(data.mensaje || (data.soft_delete ? 'Sucursal desactivada' : 'Sucursal eliminada'));
+    await cargarSucursalesAdmin();
+  } catch {
+    mostrarToast('Error de conexión al eliminar', 'error');
   }
 }
 
