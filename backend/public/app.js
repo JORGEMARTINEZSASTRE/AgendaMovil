@@ -3084,6 +3084,7 @@ async function renderSucursalesOperadora() {
             <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
             ${tipoBadge}
             <button class="btn-primario btn-sucursal-guardar" data-id="${s.id}">💾 Guardar horarios</button>
+            <button class="btn-icon btn-sucursal-eliminar" data-id="${s.id}" data-nombre="${escaparHTML(s.nombre || 'Sucursal')}" title="Eliminar">🗑</button>
           </div>
           <div class="horarios-grid">
           ${DIAS_SEMANA_SUC.map((dia, idx) => `
@@ -3118,8 +3119,30 @@ async function renderSucursalesOperadora() {
       btn.addEventListener('click', () => guardarHorariosSucursalOperadora(btn.dataset.id));
     });
 
+    cont.querySelectorAll('.btn-sucursal-eliminar').forEach(btn => {
+      btn.addEventListener('click', () => eliminarSucursalOperadora(btn.dataset.id, btn.dataset.nombre));
+    });
+
   } catch (err) {
     cont.innerHTML = `<div class="empty-state"><p class="empty-sub">Error al cargar sucursales.</p></div>`;
+  }
+}
+
+// El servidor decide si borra la sucursal o solo la desactiva (si tiene
+// turnos asociados, la desactiva y avisa) — acá solo se confirma y se
+// muestra lo que responda, sin duplicar esa lógica del lado del cliente.
+async function eliminarSucursalOperadora(sucursalId, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}"? Si tiene turnos cargados, se desactiva en vez de borrarse, para no perder el historial.`)) return;
+  try {
+    const data = await SucursalesAPI.eliminar(sucursalId);
+    if (!data?.ok) {
+      mostrarToast(data?.error || 'No se pudo eliminar', 'error');
+      return;
+    }
+    mostrarToast(data.mensaje || (data.soft_delete ? 'Sucursal desactivada' : 'Sucursal eliminada'), 'exito');
+    renderSucursalesOperadora();
+  } catch (err) {
+    mostrarToast(err.message || 'Error al eliminar', 'error');
   }
 }
 

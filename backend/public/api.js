@@ -440,6 +440,13 @@ const SucursalesAPI = {
       body: JSON.stringify({ horarios }),
     });
   },
+
+  // El servidor decide solo si borra o desactiva: si tiene turnos asociados,
+  // la desactiva y avisa (soft_delete:true); si no tiene ninguno, la borra
+  // de verdad. Acá no hace falta elegir, solo mostrar lo que responda.
+  async eliminar(id) {
+    return await fetchAPI(`/sucursales/${id}`, { method: 'DELETE' });
+  },
 };
 
 const WhatsAppAPI = {
