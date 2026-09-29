@@ -944,6 +944,7 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
   // las 22:00 no podía anotarse un turno a las 21:00, por más que lo
   // tuviera configurado y la agenda pública sí se lo ofreciera a la clienta.
   let bloques = [];
+  let tieneHorario = false;
   try {
     const usuario = Sesion.getUsuario();
     if (usuario?.id) {
@@ -951,15 +952,22 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
         `${API_URL}/publica/${usuario.id}/disponibilidad?fecha=${fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`
       );
       const data = await resp.json();
-      if (data?.ok) bloques = data.bloques || [];
+      if (data?.ok) {
+        bloques = data.bloques || [];
+        tieneHorario = !!data.tieneHorario;
+      }
     }
   } catch (err) {
     console.warn('[horarios] no se pudieron traer los bloques:', err.message);
   }
 
-  // Sin horario cargado (o si falló la consulta) no se le esconde nada:
-  // se le ofrece el día entero y que ella decida.
-  const sinHorario = !bloques.length;
+  // Sin horario cargado en NINGÚN día (o si falló la consulta) no se le
+  // esconde nada: se le ofrece el día entero y que ella decida. Pero si
+  // configuró horario y justo este día no tiene bloques, es un día que no
+  // trabaja — antes se confundía con "sin configurar" y se ofrecía igual,
+  // así que una profesional con un solo día a la semana veía "Disponible"
+  // los siete días.
+  const sinHorario = !bloques.length && !tieneHorario;
   const enSuHorario = m => sinHorario || bloques.some(b =>
     m >= horaAMinutos(String(b.desde).slice(0, 5)) &&
     (m + duracion) <= horaAMinutos(String(b.hasta).slice(0, 5))

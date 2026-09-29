@@ -23,13 +23,22 @@ const { enviarModificacionTurno } = require('../../recordatorios');
 const { pool, query } = require('../config/db');
 
 // Los helpers de horarios viven en un solo lugar: ver utils/horarios.js.
-const { toMin, diaSemanaNumero, bloquesDelDia, yaPaso } = require('../utils/horarios');
+const { toMin, diaSemanaNumero, bloquesDelDia, normalizarHorarios, yaPaso } = require('../utils/horarios');
 
 /**
  * Obtiene los bloques horarios para una fecha dada.
  * Si el id corresponde a un profesional, usa horarios_profesional.
  * Si no, usa la columna JSON de sucursales (fallback legacy).
- * Retorna { bloques: [{desde, hasta}], bloqueado: bool }
+ * Retorna { bloques: [{desde, hasta}], bloqueado: bool, tieneHorario: bool }
+ *
+ * `tieneHorario` dice si la profesional/sucursal tiene ALGÚN horario
+ * cargado, en cualquier día — no solo en el de `fecha`. Es lo que permite
+ * distinguir "todavía no configuró nada" (se le ofrece el día entero,
+ * a propósito) de "configuró horario y este día no es de los suyos"
+ * (antes las dos pasaban como `bloques: []` y se trataban igual, así que
+ * una profesional que carga un solo día a la semana quedaba "disponible"
+ * el resto de los días igual: nadie se lo bloqueaba, ni el panel ni la
+ * agenda pública al reprogramar).
  */
 async function obtenerBloquesDia(userId, sucursalId, fecha) {
   const dia = diaSemanaNumero(fecha);
@@ -46,22 +55,23 @@ async function obtenerBloquesDia(userId, sucursalId, fecha) {
       `SELECT id FROM bloqueos_profesional WHERE profesional_id = $1 AND fecha = $2`,
       [sucursalId, fecha]
     );
-    if (bloqueos.length) return { bloques: [], bloqueado: true };
+    if (bloqueos.length) return { bloques: [], bloqueado: true, tieneHorario: true };
 
-    // Traer horarios semanales del profesional para ese día
+    // Traer horarios semanales del profesional para ese día, y de paso
+    // saber si tiene algún horario cargado en cualquier día.
     const { rows: horarios } = await pool.query(
-      `SELECT hora_inicio AS desde, hora_fin AS hasta
+      `SELECT dia_semana, hora_inicio AS desde, hora_fin AS hasta
        FROM horarios_profesional
-       WHERE profesional_id = $1 AND dia_semana = $2
+       WHERE profesional_id = $1
        ORDER BY hora_inicio`,
-      [sucursalId, dia]
+      [sucursalId]
     );
     return {
-      bloques: horarios.map(h => ({
-        desde: String(h.desde).slice(0, 5),
-        hasta: String(h.hasta).slice(0, 5),
-      })),
+      bloques: horarios
+        .filter(h => h.dia_semana === dia)
+        .map(h => ({ desde: String(h.desde).slice(0, 5), hasta: String(h.hasta).slice(0, 5) })),
       bloqueado: false,
+      tieneHorario: horarios.length > 0,
     };
   }
 
@@ -70,13 +80,14 @@ async function obtenerBloquesDia(userId, sucursalId, fecha) {
     `SELECT horarios FROM sucursales WHERE id = $1 AND user_id = $2 AND activo = true`,
     [sucursalId, userId]
   );
-  if (!sucRows.length) return { bloques: [], bloqueado: false };
+  if (!sucRows.length) return { bloques: [], bloqueado: false, tieneHorario: false };
 
   // Acá también se respetan los días apagados (activo:false), que antes
   // esta rama ignoraba y ofrecía igual.
   return {
     bloques: bloquesDelDia(sucRows[0].horarios || [], fecha),
     bloqueado: false,
+    tieneHorario: normalizarHorarios(sucRows[0].horarios || []).length > 0,
   };
 }
 
@@ -311,10 +322,10 @@ router.get('/:userId/disponibilidad', async (req, res) => {
     if (!fecha)       return res.status(400).json({ ok: false, error: 'Fecha requerida' });
     if (!sucursal_id) return res.status(400).json({ ok: false, error: 'Sucursal/profesional requerido' });
 
-    const { bloques, bloqueado } = await obtenerBloquesDia(req.params.userId, sucursal_id, fecha);
+    const { bloques, bloqueado, tieneHorario } = await obtenerBloquesDia(req.params.userId, sucursal_id, fecha);
 
     if (bloqueado) {
-      return res.json({ ok: true, ocupados: [], bloques: [], bloqueado: true });
+      return res.json({ ok: true, ocupados: [], bloques: [], bloqueado: true, tieneHorario });
     }
 
     const { rows: ocupados } = await pool.query(
@@ -327,7 +338,7 @@ router.get('/:userId/disponibilidad', async (req, res) => {
       [req.params.userId, fecha, sucursal_id]
     );
 
-    return res.json({ ok: true, ocupados, bloques, bloqueado: false });
+    return res.json({ ok: true, ocupados, bloques, bloqueado: false, tieneHorario });
   } catch(err) {
     console.error('[PUBLICA/disponibilidad]', err.message);
     return res.status(500).json({ ok: false, error: 'Error interno' });
@@ -456,14 +467,20 @@ router.post('/:userId/turno', [
     }
 
     // Validar sucursal/profesional y horarios
-    const { bloques, bloqueado } = await obtenerBloquesDia(userId, sucursal_id, fecha);
+    const { bloques, bloqueado, tieneHorario } = await obtenerBloquesDia(userId, sucursal_id, fecha);
 
     if (bloqueado) {
       return res.status(409).json({ ok: false, error: 'La profesional no trabaja ese día.' });
     }
 
-    // Verificar que la hora esté dentro de algún bloque horario
-    if (bloques.length > 0) {
+    // Sin bloques para este día: si tiene horario configurado en otros días,
+    // este es un día que no trabaja (rechazar). Si nunca configuró nada,
+    // se le sigue ofreciendo el día entero a propósito (ver obtenerBloquesDia).
+    if (!bloques.length) {
+      if (tieneHorario) {
+        return res.status(409).json({ ok: false, error: 'La profesional no trabaja ese día.' });
+      }
+    } else {
       const inicioTurno = toMin(hora);
       const finTurno    = inicioTurno + Number(duracion);
       const dentroDeBloque = bloques.some(b =>
@@ -732,11 +749,15 @@ router.put('/:userId/turno/:turnoId', [
     // Verificar disponibilidad en la nueva fecha/hora
     const refId = turno.profesional_id || turno.sucursal_id;
     if (refId) {
-      const { bloques, bloqueado } = await obtenerBloquesDia(userId, refId, fecha);
+      const { bloques, bloqueado, tieneHorario } = await obtenerBloquesDia(userId, refId, fecha);
       if (bloqueado) {
         return res.status(409).json({ ok: false, error: 'La profesional no trabaja ese día.' });
       }
-      if (bloques.length > 0) {
+      if (!bloques.length) {
+        if (tieneHorario) {
+          return res.status(409).json({ ok: false, error: 'La profesional no trabaja ese día.' });
+        }
+      } else {
         const inicioTurno = toMin(hora);
         const finTurno    = inicioTurno + Number(turno.duracion);
         const ok = bloques.some(b => inicioTurno >= toMin(b.desde) && finTurno <= toMin(b.hasta));
