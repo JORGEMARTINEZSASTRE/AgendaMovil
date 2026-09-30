@@ -2984,6 +2984,13 @@ body {
   margin-top: 2px;
 }
 
+.prof-config-meta {
+  font-size: 11.5px;
+  color: var(--gris);
+  margin-top: 3px;
+  font-weight: 600;
+}
+
 .prof-config-acciones {
   display: flex;
   gap: 6px;

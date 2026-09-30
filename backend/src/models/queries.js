@@ -1269,9 +1269,12 @@ const Clientes = {
 const Profesionales = {
   async listar(userId) {
     const { rows } = await query(
-      `SELECT * FROM profesionales
-       WHERE user_id = $1 AND activo = true
-       ORDER BY nombre ASC`,
+      `SELECT p.*,
+              (SELECT COUNT(*) FROM turnos t WHERE t.profesional_id = p.id)::int AS turnos_count,
+              EXISTS(SELECT 1 FROM horarios_profesional h WHERE h.profesional_id = p.id) AS tiene_horario
+       FROM profesionales p
+       WHERE p.user_id = $1 AND p.activo = true
+       ORDER BY p.nombre ASC`,
       [userId]
     );
     return rows;

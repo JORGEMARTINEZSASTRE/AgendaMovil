@@ -3921,6 +3921,7 @@ function renderProfesionalesConfig() {
       <div class="prof-config-info">
         <p class="prof-config-nombre">${escaparHTML(p.nombre)}</p>
         ${p.telefono ? `<p class="prof-config-tel">📞 ${escaparHTML(formatearTelefonoDisplay(p.telefono))}</p>` : ''}
+        <p class="prof-config-meta">${p.turnos_count > 0 ? `${p.turnos_count} turno${p.turnos_count === 1 ? '' : 's'}` : 'Sin turnos'} · ${p.tiene_horario ? 'Horario cargado' : '⚠️ Sin horario'}</p>
       </div>
       <div class="prof-config-acciones">
         <button class="btn-icon btn-horarios-prof" data-id="${p.id}" data-nombre="${escaparHTML(p.nombre)}" title="Horarios">🕐</button>
@@ -4061,7 +4062,11 @@ async function handleSubmitProfesional(e) {
 }
 
 async function eliminarProfesional(id) {
-  if (!confirm('¿Eliminar este profesional?')) return;
+  const p = profesionales.find(x => x.id === id);
+  const aviso = p && p.turnos_count > 0
+    ? `¿Eliminar a ${p.nombre}? Tiene ${p.turnos_count} turno${p.turnos_count === 1 ? '' : 's'} cargado${p.turnos_count === 1 ? '' : 's'}. Si hay dos con el mismo nombre, fijate cuál tiene los turnos antes de borrar.`
+    : '¿Eliminar este profesional?';
+  if (!confirm(aviso)) return;
   try {
     await ProfesionalesAPI.eliminar(id);
     profesionales = profesionales.filter(p => p.id !== id);
