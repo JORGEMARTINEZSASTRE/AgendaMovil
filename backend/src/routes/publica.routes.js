@@ -328,13 +328,25 @@ router.get('/:userId/disponibilidad', async (req, res) => {
       return res.json({ ok: true, ocupados: [], bloques: [], bloqueado: true, tieneHorario });
     }
 
+    // sucursal_id puede ser una sucursal real o, si "las ubicaciones" del
+    // paso 1 son profesionales, el id de un profesional (ver el mismo
+    // chequeo en la creación de turnos, más abajo en este archivo). Los
+    // turnos ocupados de ese profesional se guardan en profesional_id, no
+    // en sucursal_id — sin esto, los turnos ya agendados no bloqueaban el
+    // horario en la agenda pública.
+    const { rows: esProfRows } = await pool.query(
+      `SELECT id FROM profesionales WHERE id = $1 AND user_id = $2 AND activo = true`,
+      [sucursal_id, req.params.userId]
+    );
+    const filtroCol = esProfRows.length > 0 ? 'profesional_id' : 'sucursal_id';
+
     const { rows: ocupados } = await pool.query(
       `SELECT hora, duracion
        FROM turnos
        WHERE user_id = $1
          AND fecha = $2
          AND estado != 'cancelado'
-         AND sucursal_id = $3`,
+         AND ${filtroCol} = $3`,
       [req.params.userId, fecha, sucursal_id]
     );
 
