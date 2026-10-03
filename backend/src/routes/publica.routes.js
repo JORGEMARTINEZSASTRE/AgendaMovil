@@ -10,7 +10,7 @@ const { enviarBienvenida } = require('../services/mailer');
 const { encolar } = require('../services/waQueue');
 const evolution = require('../services/evolution.service');
 const { normalizarTelefono } = require('../utils/telefono');
-const { ServicioFotos, ClientesManual } = require('../models/queries');
+const { ServicioFotos, ClientesManual, Sucursales } = require('../models/queries');
 const { calcularSenia } = require('../utils/senia');
 const { enviarModificacionTurno } = require('../../recordatorios');
 
@@ -281,6 +281,16 @@ router.get('/:userId/info', async (req, res) => {
 
 router.get('/:userId/sucursales', async (req, res) => {
   try {
+    // Una cuenta nueva sin nada cargado no tenía dónde reservar: la
+    // clienta quedaba trabada en el paso "Ubicación". Se asegura la
+    // "Principal" (con una sola, la agenda pública salta ese paso).
+    const { rows: existeUsuario } = await pool.query(
+      `SELECT 1 FROM usuarios WHERE id::text = $1`, [req.params.userId]
+    );
+    if (existeUsuario.length) {
+      await Sucursales.asegurarPrincipal(req.params.userId);
+    }
+
     // Sucursales clásicas
     const { rows: sucRows } = await pool.query(
       `SELECT id, nombre, tipo, horarios

@@ -96,7 +96,9 @@ async function cargarDatosIniciales() {
 
     turnos        = turnosData        || [];
     servicios     = serviciosData     || [];
-    sucursales    = sucursalesData    || [];
+    // Las desactivadas (borradas que tenían turnos) no cuentan: si no, a
+    // una que tenía 2 y borró una le seguía apareciendo todo lo de sucursales.
+    sucursales    = (sucursalesData   || []).filter(s => s.activo !== false);
     profesionales = profesionalesData || [];
 
     if (configData) {
@@ -253,6 +255,13 @@ function bindBotonesHeader() {
   const btnNuevaSucursal = document.getElementById('btn-nueva-sucursal-operadora');
   if (btnNuevaSucursal) {
     btnNuevaSucursal.addEventListener('click', abrirModalNuevaSucursalOperadora);
+  }
+
+  // Desde Configuración: la que trabaja con otra profesional o tiene otro
+  // local activa las ubicaciones agregando la segunda.
+  const btnActivarVarias = document.getElementById('btn-activar-varias-ubicaciones');
+  if (btnActivarVarias) {
+    btnActivarVarias.addEventListener('click', abrirModalNuevaSucursalOperadora);
   }
 
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -695,7 +704,9 @@ function bindFormTurno() {
   if (inputFecha) {
     inputFecha.addEventListener('change', () => {
       const sucId = getVal('turno-sucursal-id');
-      if (inputFecha.value && sucId) cargarHorariosDisponibles(inputFecha.value);
+      if (inputFecha.value && (sucId || (sucursales || []).length < 2)) {
+        cargarHorariosDisponibles(inputFecha.value);
+      }
     });
   }
 
@@ -755,9 +766,15 @@ function abrirFormTurno(turno = null) {
   if (titulo)    titulo.textContent     = turno ? '✏️ Editar turno'   : '➕ Nuevo turno';
   if (btnGuardar) btnGuardar.textContent = turno ? 'Guardar cambios'   : 'Guardar turno';
 
-  // Poblar selector de sucursales
+  // Poblar selector de sucursales. Con una sola (lo normal: trabaja sola)
+  // el campo ni se muestra — se usa esa sin preguntar. Solo aparece para
+  // las que activaron varias profesionales o locales.
   const selectSucursal = document.getElementById('turno-sucursal-id');
+  const campoSucursal  = document.getElementById('campo-turno-sucursal');
+  const variasUbic     = (sucursales || []).length >= 2;
+  if (campoSucursal) campoSucursal.style.display = variasUbic ? '' : 'none';
   if (selectSucursal) {
+    selectSucursal.required = variasUbic;
     selectSucursal.innerHTML = '<option value="">— Elegí ubicación —</option>' +
       (sucursales || []).map(s => {
         const icono = s.tipo === 'profesional' ? '👤' : '🏪';
@@ -863,8 +880,13 @@ function abrirFormTurno(turno = null) {
     setVal('turno-cumple-dia',     turno.cumple_dia      || '');
     setVal('turno-cumple-mes',     turno.cumple_mes      || '');
 
+    // Turno viejo sin ubicación y hay una sola: se le asigna esa
+    if (!getVal('turno-sucursal-id') && (sucursales || []).length === 1) {
+      setVal('turno-sucursal-id', sucursales[0].id);
+    }
+
     // Cargar horarios disponibles y seleccionar el del turno
-    if (getVal('turno-sucursal-id')) {
+    if (getVal('turno-sucursal-id') || !variasUbic) {
       cargarHorariosDisponibles(turno.fecha, formatearHora(turno.hora));
     }
 
@@ -890,8 +912,9 @@ function abrirFormTurno(turno = null) {
       setVal('turno-sucursal-id', sucursales[0].id);
     }
 
-    // Cargar horarios de la fecha seleccionada
-    if (fechaSeleccionada && getVal('turno-sucursal-id')) {
+    // Cargar horarios de la fecha seleccionada (con varias ubicaciones
+    // espera a que elija una; con una o ninguna carga directo)
+    if (fechaSeleccionada && (getVal('turno-sucursal-id') || !variasUbic)) {
       cargarHorariosDisponibles(fechaSeleccionada);
     }
   }
@@ -918,12 +941,14 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
   selectHora.innerHTML = '<option value="">Cargando...</option>';
 
   const sucursalId = getVal('turno-sucursal-id');
-  if (!sucursalId) {
-    selectHora.innerHTML = '<option value="">— Primero elegí sucursal —</option>';
+  const variasUbic = (sucursales || []).length >= 2;
+  if (!sucursalId && variasUbic) {
+    selectHora.innerHTML = '<option value="">— Primero elegí profesional / local —</option>';
     return;
   }
 
-  // Traer los turnos del día
+  // Traer los turnos del día. Con una sola ubicación todos los turnos son
+  // de ella (incluidos los viejos que quedaron sin sucursal_id).
   let ocupados = [];
   try {
     const turnosDelDia = await TurnosAPI.getAll({ fecha });
@@ -931,6 +956,7 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
       // Si estoy editando, excluir el propio turno
       if (editandoId && t.id === editandoId) return false;
       if (t.estado === 'cancelado') return false;
+      if (!variasUbic) return true;
       return String(t.sucursal_id || '') === String(sucursalId);
     });
   } catch (err) {
@@ -947,7 +973,7 @@ async function cargarHorariosDisponibles(fecha, horaSeleccionada = null) {
   let tieneHorario = false;
   try {
     const usuario = Sesion.getUsuario();
-    if (usuario?.id) {
+    if (usuario?.id && sucursalId) {
       const resp = await fetch(
         `${API_URL}/publica/${usuario.id}/disponibilidad?fecha=${fecha}&sucursal_id=${encodeURIComponent(sucursalId)}`
       );
@@ -1713,7 +1739,8 @@ async function subirFotosPendientes(servId) {
   const checksContainer = document.getElementById('serv-sucursales-checks');
   const wrap = document.getElementById('serv-sucursales-wrap');
   if (checksContainer) {
-    if (!sucursales.length) {
+    // Con una sola ubicación no hay nada que elegir: se oculta
+    if (sucursales.length < 2) {
       if (wrap) wrap.classList.add('oculto');
     } else {
       if (wrap) wrap.classList.remove('oculto');
@@ -2919,6 +2946,18 @@ async function handleCrearSucursalOperadora(e) {
     }
     document.getElementById('modal-nueva-sucursal-operadora')?.classList.add('oculto');
     mostrarToast('Ubicación creada ✅', 'exito');
+
+    // Refrescar la lista global: al pasar a 2+ aparece la pestaña
+    // Sucursales y el selector en el turno (antes quedaba la lista vieja
+    // hasta recargar la página).
+    const recargadas = await SucursalesAPI.listar();
+    sucursales = (recargadas || []).filter(s => s.activo !== false);
+    aplicarVisibilidadSucursales();
+
+    if (sucursales.length >= 2) {
+      document.getElementById('seccion-config')?.classList.add('oculto');
+      irATab('sucursales');
+    }
     await renderSucursalesOperadora();
   } catch (err) {
     mostrarErrorForm('form-sucursal-operadora-error', err.message || 'Error al crear');
@@ -2934,6 +2973,11 @@ function aplicarVisibilidadSucursales() {
 
   const btnTab = document.querySelector('.tab-btn[data-tab="sucursales"]');
   if (btnTab) btnTab.style.display = tieneVarias ? '' : 'none';
+
+  // La tarjeta para activar varias ubicaciones solo tiene sentido
+  // mientras trabaja sola; después se maneja todo desde la pestaña.
+  const cardVarias = document.getElementById('config-card-varias');
+  if (cardVarias) cardVarias.classList.toggle('oculto', tieneVarias);
 
   // Si la pestaña quedó oculta pero era la activa (ej. tenía 2 y borró
   // una), volvemos a Agenda para no dejar la pantalla en un panel al que

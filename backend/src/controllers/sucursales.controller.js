@@ -56,6 +56,7 @@ async function crear(req, res) {
 
 async function listar(req, res) {
   try {
+    await Sucursales.asegurarPrincipal(req.user.id);
     const sucursales = await Sucursales.listar(req.user.id);
     return res.json({ ok: true, sucursales });
   } catch (err) {

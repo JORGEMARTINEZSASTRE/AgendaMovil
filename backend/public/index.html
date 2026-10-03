@@ -63,10 +63,16 @@
       </div>
 
       <div class="ayuda-seccion">
-        <h3>📍 Sucursales y profesionales</h3>
-        <p>Podés crear varias <strong>sucursales</strong> o agregar <strong>profesionales</strong> como ubicaciones. Cada una tiene su propio horario de atención.</p>
-        <p>En la agenda pública, tus clientas eligen primero dónde quieren ir antes de reservar.</p>
-        <p class="ayuda-tip">💡 El tipo (profesional o sucursal) se muestra con un badge en la selección.</p>
+        <h3>🕐 Tu horario de trabajo</h3>
+        <p>Si trabajás sola <strong>no tenés que configurar ninguna sucursal</strong>: la agenda ya viene lista. Solo cargá tus días y horas en <strong>Configuración ⚙️ → Horario de trabajo</strong> y listo, ya podés agendar.</p>
+        <p class="ayuda-tip">💡 Si no cargás horario, igual podés agendar a cualquier hora. Tus clientas en el link público ven los horarios que cargaste.</p>
+      </div>
+
+      <div class="ayuda-seccion">
+        <h3>👥 Varias profesionales o locales (opcional)</h3>
+        <p>Solo si trabajás con otra profesional o tenés más de un local: entrá a <strong>Configuración ⚙️</strong> y tocá <strong>"➕ Agregar profesional o local"</strong>.</p>
+        <p>A partir de ahí aparece la pestaña <strong>🏪 Sucursales</strong>, donde cada una tiene su propio horario, y al crear un turno elegís para quién o dónde es. En la agenda pública, tus clientas eligen primero con quién o dónde reservar.</p>
+        <p class="ayuda-tip">💡 Si después volvés a quedar con una sola, todo eso se oculta solo.</p>
       </div>
 
 
@@ -125,9 +131,9 @@
 
       <div class="ayuda-seccion">
         <h3>🌸 Link público de reservas</h3>
-        <p>Desde Configuración ⚙️ podés copiar el link de tu agenda pública. Tus clientas reservan con un flujo de <strong>5 pasos</strong>:</p>
+        <p>Desde Configuración ⚙️ podés copiar el link de tu agenda pública. Tus clientas reservan así:</p>
         <ol>
-          <li><strong>📍 Ubicación</strong> — Eligen sucursal o profesional</li>
+          <li><strong>📍 Ubicación</strong> — Solo si tenés varias profesionales o locales; si trabajás sola este paso no aparece</li>
           <li><strong>✨ Servicios</strong> — Seleccionan uno o más servicios (agrupados por categoría, con fotos y precios)</li>
           <li><strong>📅 Fecha</strong> — Eligen día en el calendario</li>
           <li><strong>🕐 Hora</strong> — Seleccionan un horario disponible</li>
@@ -201,7 +207,7 @@
         <p>Lo primero que te recomendamos hacer es:</p>
         <ol>
           <li>Cargar tus <strong>servicios</strong> ✨ (con fotos y categorías)</li>
-          <li>Crear <strong>sucursales o profesionales</strong> 📍</li>
+          <li>Cargar tu <strong>horario de trabajo</strong> en Configuración ⚙️ 🕐</li>
           <li>Subir tu <strong>logo</strong> 🎨</li>
           <li>Conectar tu <strong>WhatsApp</strong> 📱</li>
           <li>Compartir tu <strong>link público</strong> 🌸</li>
@@ -640,6 +646,20 @@
       </div>
       <button type="button" id="btn-guardar-horario-unico" class="btn-primario">
         💾 Guardar horario
+      </button>
+    </div>
+
+    <!-- ── TARJETA VARIAS UBICACIONES (solo mientras trabaja sola) ── -->
+    <div id="config-card-varias" class="config-card">
+      <div class="config-card-header">
+        <span class="config-card-icon">👥</span>
+        <div>
+          <p class="config-card-titulo">¿Trabajás con otra profesional o en más de un local?</p>
+          <p class="config-card-desc">Si trabajás sola no tenés que hacer nada: la agenda ya funciona así. Activá esto solo si cada profesional o local necesita su propio horario y sus propios turnos.</p>
+        </div>
+      </div>
+      <button type="button" id="btn-activar-varias-ubicaciones" class="btn-secundario">
+        ➕ Agregar profesional o local
       </button>
     </div>
 
@@ -1157,11 +1177,11 @@
         >
       </div>
 
-      <!-- Sucursal -->
-      <div class="campo">
-        <label for="turno-sucursal-id">🏪 Sucursal *</label>
-        <select id="turno-sucursal-id" required>
-          <option value="">— Elegí sucursal —</option>
+      <!-- Ubicación: solo visible si activó varias profesionales/locales -->
+      <div id="campo-turno-sucursal" class="campo" style="display:none">
+        <label for="turno-sucursal-id">📍 Profesional / local *</label>
+        <select id="turno-sucursal-id">
+          <option value="">— Elegí ubicación —</option>
         </select>
       </div>
 

@@ -454,6 +454,21 @@ const Sucursales = {
     return rows[0];
   },
 
+  // Casi todas las operadoras trabajan solas: para ellas "sucursal" es un
+  // concepto que no tiene sentido y que las trababa (sin ninguna cargada
+  // no podían agendar). Si la cuenta no tiene ni sucursal ni profesional
+  // activa, se le crea una "Principal" en silencio y la app la usa sola.
+  // El INSERT ... WHERE NOT EXISTS evita duplicarla si llegan dos pedidos.
+  async asegurarPrincipal(userId) {
+    await query(
+      `INSERT INTO sucursales (user_id, nombre, tipo, horarios, max_turnos_hora, activo)
+       SELECT $1, 'Principal', 'sucursal', '[]'::jsonb, 1, true
+       WHERE NOT EXISTS (SELECT 1 FROM sucursales    WHERE user_id = $1 AND activo = true)
+         AND NOT EXISTS (SELECT 1 FROM profesionales WHERE user_id = $1 AND activo = true)`,
+      [userId]
+    );
+  },
+
   async listar(userId) {
     const { rows } = await query(
       `SELECT id, user_id, nombre, tipo, horarios, max_turnos_hora, activo, created_at
