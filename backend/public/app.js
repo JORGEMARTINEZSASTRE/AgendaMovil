@@ -1079,8 +1079,10 @@ async function handleSubmitTurno(e) {
   }
 
   const horaMinutos = horaAMinutos(hora);
-  if (horaMinutos < horaAMinutos('07:00') || horaMinutos > horaAMinutos('20:00')) {
-    mostrarErrorForm('form-turno-error', 'El horario debe ser entre las 7:00 y las 20:00');
+  // Mismo rango que ofrece el selector de horas (07:00 a 23:30). Antes
+  // decía 20:00 y rechazaba turnos que el propio selector mostraba.
+  if (horaMinutos < horaAMinutos('07:00') || horaMinutos > horaAMinutos('23:30')) {
+    mostrarErrorForm('form-turno-error', 'El horario debe ser entre las 7:00 y las 23:30');
     return;
   }
 
