@@ -280,6 +280,10 @@ router.get('/:userId/info', async (req, res) => {
 });
 
 router.get('/:userId/sucursales', async (req, res) => {
+  // Un link mal copiado (id cortado o con basura) daba error 500.
+  if (!/^[0-9a-f-]{36}$/i.test(req.params.userId)) {
+    return res.json({ ok: true, sucursales: [] });
+  }
   try {
     // Una cuenta nueva sin nada cargado no tenía dónde reservar: la
     // clienta quedaba trabada en el paso "Ubicación". Se asegura la

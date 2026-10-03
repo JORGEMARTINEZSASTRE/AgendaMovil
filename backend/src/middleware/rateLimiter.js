@@ -58,6 +58,9 @@ const registroLimiter = rateLimit({
   max: 3,                    // 3 registros por IP por hora
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Demasiados registros desde esta IP. Probá más tarde.' }
+  message: { error: 'Demasiados registros desde esta IP. Probá más tarde.' },
+  // El test de punta a punta (backend/test/e2e) registra varias usuarias
+  // falsas seguidas contra un servidor local con NODE_ENV=test.
+  skip: () => process.env.NODE_ENV === 'test',
 });
 module.exports = { loginLimiter, apiLimiter, estrictoLimiter,registroLimiter  };

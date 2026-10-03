@@ -7,7 +7,8 @@
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "seed-admin": "node backend/scripts/seed-admin.js",
-    "test": "node --test \"backend/test/*.test.js\""
+    "test": "node --test \"backend/test/*.test.js\"",
+    "test:e2e": "node --test backend/test/e2e/agenda.e2e.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
