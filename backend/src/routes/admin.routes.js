@@ -337,15 +337,27 @@ router.get('/actividad', async (req, res) => {
         ? Math.floor((ahora - new Date(u.ultimo_uso).getTime()) / 86400000)
         : null;
 
+      // Postgres devuelve COUNT(*) como texto ("0"): comparado con === 0
+      // nunca daba true y las que no cargaron ni un turno salían "activas".
+      const turnosTotal = Number(u.turnos_total) || 0;
+
       let estado;
       if (!u.activo)                        estado = 'desactivada';
-      else if (u.turnos_total === 0)        estado = 'nunca_arranco';
+      else if (turnosTotal === 0)           estado = 'nunca_arranco';
       else if (diasSinUsar <= 7)            estado = 'activa';
       else if (diasSinUsar <= 30)           estado = 'floja';
       else if (diasSinUsar <= 60)           estado = 'en_riesgo';
       else                                  estado = 'abandonada';
 
-      return { ...u, dias_sin_usar: diasSinUsar, estado };
+      return {
+        ...u,
+        turnos_total: turnosTotal,
+        turnos_7d:    Number(u.turnos_7d)  || 0,
+        turnos_30d:   Number(u.turnos_30d) || 0,
+        servicios:    Number(u.servicios)  || 0,
+        dias_sin_usar: diasSinUsar,
+        estado,
+      };
     });
 
     const resumen = usuarios.reduce((acc, u) => {
