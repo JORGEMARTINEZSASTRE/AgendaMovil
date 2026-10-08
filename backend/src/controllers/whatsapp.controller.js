@@ -237,6 +237,7 @@ async function adminEstado(req, res) {
     const { rows } = await query(`SELECT * FROM whatsapp_sesiones WHERE user_id = $1`, [userId]);
     const sesion = rows[0] || null;
     const estadoReal = await evolution.estadoConReconexion(instance);
+    const info = await evolution.infoInstancia(instance);
     if (sesion && estadoReal.ok) {
       await query(
         `UPDATE whatsapp_sesiones SET estado = $1, actualizado_en = NOW() WHERE user_id = $2`,
@@ -251,6 +252,9 @@ async function adminEstado(req, res) {
       estado: estadoReal.ok ? estadoReal.estado : 'error',
       conectado: estadoReal.ok && estadoReal.estado === 'open',
       error: estadoReal.ok ? null : estadoReal.error,
+      motivoCodigo: info.ok ? info.motivoCodigo : null,
+      motivoFecha: info.ok ? info.motivoFecha : null,
+      numeroVinculado: info.ok ? info.numero : null,
     });
   } catch (err) {
     console.error('[WHATSAPP/adminEstado]', err.message);
@@ -298,7 +302,25 @@ async function adminVincular(req, res) {
   }
 }
 
+async function adminResumen(req, res) {
+  try {
+    const { rows } = await query(`
+      SELECT ws.user_id, ws.estado, ws.actualizado_en, u.nombre, u.nombre_negocio, u.email
+      FROM whatsapp_sesiones ws JOIN usuarios u ON u.id = ws.user_id ORDER BY u.nombre`);
+    const out = [];
+    for (const r of rows) {
+      const info = await evolution.infoInstancia(nombreInstanciaDe(r.user_id));
+      out.push({ ...r, evolution: info });
+    }
+    return res.json({ ok: true, sesiones: out });
+  } catch (err) {
+    console.error('[WHATSAPP/adminResumen]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error' });
+  }
+}
+
 module.exports = {
+  adminResumen,
   obtenerEstado,
   conectar,
   desconectar,

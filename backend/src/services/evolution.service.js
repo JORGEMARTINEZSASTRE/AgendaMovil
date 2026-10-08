@@ -98,14 +98,54 @@ async function reiniciarInstancia(nombreInstancia) {
 // de nuevo. Por eso este es el único lugar que debería consultarse: si
 // el reinicio no la revive, es porque de verdad hay que volver a
 // vincular el teléfono, y ahí sí corresponde avisar.
+// Detalle de la instancia (incluye por qué se desconectó la última vez).
+// Evolution v2 devuelve disconnectionReasonCode: 401 = se deslogueó desde
+// el teléfono (o WhatsApp la desvinculó), 440 = la reemplazó otra sesión,
+// 408/428/500/515 = se cayó la conexión y alcanza con reiniciar.
+async function infoInstancia(nombreInstancia) {
+  try {
+    const { data } = await client.get(`/instance/fetchInstances`, { params: { instanceName: nombreInstancia } });
+    const inst = Array.isArray(data) ? data[0] : data;
+    const i = inst?.instance || inst || {};
+    return {
+      ok: true,
+      estado: i.connectionStatus || i.state || i.status || null,
+      motivoCodigo: i.disconnectionReasonCode ?? null,
+      motivoFecha: i.disconnectionAt ?? null,
+      numero: (i.ownerJid || i.owner || '').split('@')[0] || null,
+    };
+  } catch (err) {
+    return { ok: false, error: err.response?.data?.message || err.message };
+  }
+}
+
+// Reiniciar una instancia que está en pleno "connecting" la interrumpe
+// justo cuando Baileys se estaba reconectando solo, y reiniciarla cada
+// 5 minutos (un reinicio por cada recordatorio que intentaba salir) es
+// justamente el patrón que hace que WhatsApp termine desvinculando el
+// dispositivo. Por eso: si está "connecting" se le da tiempo; y como
+// mucho un reinicio cada 10 minutos por instancia.
+const REINICIO_MIN_MS = 10 * 60 * 1000;
+const ultimoReinicio = new Map(); // instance -> timestamp
+
 async function estadoConReconexion(nombreInstancia) {
   const primero = await estadoInstancia(nombreInstancia);
   if (primero.ok && primero.estado === 'open') return primero;
 
+  if (primero.ok && primero.estado === 'connecting') {
+    await new Promise((r) => setTimeout(r, 5000));
+    const otra = await estadoInstancia(nombreInstancia);
+    if (otra.ok && otra.estado === 'open') return otra;
+  }
+
+  const ultimo = ultimoReinicio.get(nombreInstancia) || 0;
+  if (Date.now() - ultimo < REINICIO_MIN_MS) return primero;
+  ultimoReinicio.set(nombreInstancia, Date.now());
+
   const reinicio = await reiniciarInstancia(nombreInstancia);
   if (!reinicio.ok) return primero;
 
-  await new Promise((r) => setTimeout(r, 3000));
+  await new Promise((r) => setTimeout(r, 5000));
   const segundo = await estadoInstancia(nombreInstancia);
   return segundo.ok ? segundo : primero;
 }
@@ -153,6 +193,7 @@ module.exports = {
   obtenerQR,
   estadoInstancia,
   estadoConReconexion,
+  infoInstancia,
   reiniciarInstancia,
   eliminarInstancia,
   enviarMensaje,

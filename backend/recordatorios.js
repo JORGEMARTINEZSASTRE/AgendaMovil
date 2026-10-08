@@ -1023,7 +1023,12 @@ async function chequearConexionesWA() {
       estadoWaConocido[s.user_id] = estadoActual;
 
       if (previo === 'open' && estadoActual !== 'open') {
-        caidas.push({ nombre: s.nombre_negocio || s.user_nombre, estado: estadoActual });
+        const info = await evolution.infoInstancia(instance);
+        const cod = info.ok ? info.motivoCodigo : null;
+        const motivo = cod == 401 ? 'se desvinculó desde el teléfono / WhatsApp la deslogueó'
+          : cod == 440 ? 'la reemplazó otra sesión (abrió WhatsApp Web u otro dispositivo)'
+          : cod ? `corte de conexión (código ${cod})` : 'sin detalle';
+        caidas.push({ nombre: s.nombre_negocio || s.user_nombre, estado: `${estadoActual} — ${motivo}` });
       }
     }
 
@@ -1042,7 +1047,7 @@ async function chequearConexionesWA() {
   }
 }
 
-cron.schedule('*/30 * * * *', chequearConexionesWA);
+cron.schedule('*/10 * * * *', chequearConexionesWA);
 
 module.exports = {
   procesarRecordatorios,
