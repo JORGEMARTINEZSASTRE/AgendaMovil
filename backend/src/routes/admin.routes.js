@@ -93,6 +93,11 @@ function obtenerOrigenPublico(link) {
 // GET /api/admin/usuarios
 router.get('/usuarios', ctrl.listarUsuarios);
 
+// WhatsApp de una operadora (diagnóstico / reconexión)
+const waCtrl = require('../controllers/whatsapp.controller');
+router.get('/usuarios/:id/whatsapp', waCtrl.adminEstado);
+router.post('/usuarios/:id/whatsapp/vincular', estrictoLimiter, waCtrl.adminVincular);
+
 // POST /api/admin/usuarios
 router.post('/usuarios',
   validarCrearUsuario,

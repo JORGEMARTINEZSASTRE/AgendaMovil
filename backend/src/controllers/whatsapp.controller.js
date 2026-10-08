@@ -224,9 +224,85 @@ async function enviarTest(req, res) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+//  ADMIN — ver / revivir el WhatsApp de una operadora
+//  GET  /api/admin/usuarios/:id/whatsapp          → estado (reinicia si se cayó el socket)
+//  POST /api/admin/usuarios/:id/whatsapp/vincular → pairing code (8 dígitos) para
+//       mandarle a la operadora, que lo carga en WhatsApp > Dispositivos vinculados.
+// ═══════════════════════════════════════════════════════════
+async function adminEstado(req, res) {
+  try {
+    const userId = req.params.id;
+    const instance = nombreInstanciaDe(userId);
+    const { rows } = await query(`SELECT * FROM whatsapp_sesiones WHERE user_id = $1`, [userId]);
+    const sesion = rows[0] || null;
+    const estadoReal = await evolution.estadoConReconexion(instance);
+    if (sesion && estadoReal.ok) {
+      await query(
+        `UPDATE whatsapp_sesiones SET estado = $1, actualizado_en = NOW() WHERE user_id = $2`,
+        [estadoReal.estado, userId]
+      );
+    }
+    return res.json({
+      ok: true,
+      instance,
+      sesionEnDB: !!sesion,
+      numero: sesion?.numero_conectado || null,
+      estado: estadoReal.ok ? estadoReal.estado : 'error',
+      conectado: estadoReal.ok && estadoReal.estado === 'open',
+      error: estadoReal.ok ? null : estadoReal.error,
+    });
+  } catch (err) {
+    console.error('[WHATSAPP/adminEstado]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al obtener estado' });
+  }
+}
+
+async function adminVincular(req, res) {
+  try {
+    const userId = req.params.id;
+    const instance = nombreInstanciaDe(userId);
+    const { rows: u } = await query(`SELECT telefono FROM usuarios WHERE id = $1`, [userId]);
+    if (!u[0]) return res.status(404).json({ ok: false, error: 'Usuario no encontrado' });
+
+    const telefono = String(req.body?.telefono || u[0].telefono || '').replace(/\D/g, '') || null;
+
+    marcarVinculacionEnCurso(instance);
+
+    const { rows } = await query(`SELECT 1 FROM whatsapp_sesiones WHERE user_id = $1`, [userId]);
+    if (rows.length === 0) {
+      const crear = await evolution.crearInstancia(instance);
+      if (!crear.ok) {
+        const est = await evolution.estadoInstancia(instance);
+        if (!est.ok) return res.status(500).json({ ok: false, error: crear.error });
+      }
+      await query(
+        `INSERT INTO whatsapp_sesiones (user_id, instance_name, estado)
+         VALUES ($1, $2, 'pendiente') ON CONFLICT (instance_name) DO NOTHING`,
+        [userId, instance]
+      );
+    }
+
+    const qr = await evolution.obtenerQR(instance, telefono);
+    if (!qr.ok) return res.status(500).json({ ok: false, error: qr.error });
+
+    return res.json({
+      ok: true,
+      telefono,
+      pairingCode: qr.data?.pairingCode || null,
+      qr: qr.data?.base64 || qr.data?.qrcode?.base64 || null,
+    });
+  } catch (err) {
+    console.error('[WHATSAPP/adminVincular]', err.message);
+    return res.status(500).json({ ok: false, error: 'Error al vincular' });
+  }
+}
+
 module.exports = {
   obtenerEstado,
   conectar,
   desconectar,
   enviarTest,
+  adminEstado,
+  adminVincular,
 };
