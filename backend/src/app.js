@@ -133,6 +133,13 @@ app.get('/', (_req, res) => {
 });
 
 
+
+// ─── Páginas HTML sin extensión → redirigir ──────────────────
+const paginasHTML = ['admin','login','registro','confirmar','agenda-publica','vitrina'];
+app.get(paginasHTML.map(p => '/' + p), (req, res) => {
+  res.redirect(req.path + '.html' + (req._parsedUrl.search || ''));
+});
+
 // ─── URL AMIGABLE /:slug → vitrina con OG tags ──────────────
 app.get('/:slug([a-z0-9][a-z0-9-]{1,98}[a-z0-9])', async (req, res, next) => {
   try {
