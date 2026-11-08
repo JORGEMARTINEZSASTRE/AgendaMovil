@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   tokenAdmin = localStorage.getItem('depimovil_token');
 
   if (!tokenAdmin) {
-    window.location.href = '/agendamovil/login.html';
+    window.location.href = '/login.html';
     return;
   }
 
@@ -59,11 +59,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await resp.json();
 
     if (!data.ok || data.usuario.rol !== 'admin') {
-      window.location.href = '/agendamovil/index.html';
+      window.location.href = '/index.html';
       return;
     }
   } catch {
-    window.location.href = '/agendamovil/login.html';
+    window.location.href = '/login.html';
     return;
   }
 
@@ -306,14 +306,14 @@ function bindAccionesClientas() {
 function bindBotones() {
   // Ir a la app
   document.getElementById('btn-ir-app')?.addEventListener('click', () => {
-    window.location.href = '/agendamovil/index.html';
+    window.location.href = '/index.html';
   });
 
   // Logout
   document.getElementById('btn-admin-logout')?.addEventListener('click', () => {
     localStorage.removeItem('depimovil_token');
     localStorage.removeItem('depimovil_usuario');
-    window.location.href = '/agendamovil/login.html';
+    window.location.href = '/login.html';
   });
 
   // Nueva clienta

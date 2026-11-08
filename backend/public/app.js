@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnAdmin) {
       btnAdmin.style.display = 'flex';
       btnAdmin.addEventListener('click', () => {
-        window.location.href = '/agendamovil/admin.html';
+        window.location.href = '/admin.html';
       });
     }
   }
