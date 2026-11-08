@@ -454,8 +454,8 @@ function renderPaso1() {
   }
   cont.innerHTML = sucursales.map(s => {
     const esProfesional = s.tipo === 'profesional';
-    const tipoIcon  = esProfesional ? '👤' : '🏪';
-    const tipoBadge = esProfesional ? 'Profesional' : 'Sucursal';
+    const tipoIcon  = esProfesional ? '👤' : '🏠';
+    const tipoBadge = esProfesional ? 'Profesional' : 'Lugar de atención';
     const dot = esProfesional && s.color
       ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px;vertical-align:middle;"></span>`
       : '';

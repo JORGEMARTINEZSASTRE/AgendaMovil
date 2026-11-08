@@ -52,7 +52,7 @@ const btnInvLoader    = document.getElementById('btn-inv-loader');
 // ─── INIT ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   if (Sesion.estaActiva()) {
-    window.location.href = '/index.html';
+    window.location.href = '/agendamovil/index.html';
     return;
   }
 
@@ -151,7 +151,7 @@ async function handleLogin(e) {
       mostrarError(data?.error || 'Error al iniciar sesión');
       return;
     }
-    window.location.href = '/index.html';
+    window.location.href = '/agendamovil/index.html';
   } catch (err) {
     if (err.status === 429)      mostrarError('Demasiados intentos. Esperá 15 minutos.');
     else if (err.status === 403) mostrarError('Cuenta desactivada. Contactá al administrador.');
@@ -218,7 +218,7 @@ async function handleRegistro(e) {
     regExito.classList.remove('oculto');
     formRegistro.style.display = 'none';
 
-    setTimeout(() => { window.location.href = '/index.html'; }, 1400);
+    setTimeout(() => { window.location.href = '/agendamovil/index.html'; }, 1400);
 
   } catch (err) {
     mostrarErrorReg('Error de conexión. Probá de nuevo.');
@@ -247,7 +247,7 @@ async function handleInvitacion(e) {
   try {
     const data = await AuthAPI.activarInvitacion({ token, nombre, nombreNegocio, password });
     if (!data?.ok) { mostrarErrorInv(data?.error || 'Error al activar la cuenta'); return; }
-    window.location.href = '/index.html';
+    window.location.href = '/agendamovil/index.html';
   } catch (err) {
     mostrarErrorInv(err.message || 'Error al activar la cuenta');
   } finally {

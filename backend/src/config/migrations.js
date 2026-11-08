@@ -603,6 +603,36 @@ async function correrMigraciones() {
     `);
     console.log('[MIGRATIONS] ✓ Columna estrella_enviada OK (arranque limpio)');
 
+    // ── Slug público para URLs amigables (Instagram / WhatsApp) ──────
+    await query(`
+      ALTER TABLE public.usuarios
+        ADD COLUMN IF NOT EXISTS slug VARCHAR(100) UNIQUE
+    `);
+    // Backfill: generar slug para usuarios que no tienen
+    const { rows: sinSlug } = await query(
+      "SELECT id, nombre_negocio, nombre FROM usuarios WHERE slug IS NULL"
+    );
+    for (const u of sinSlug) {
+      const base = (u.nombre_negocio || u.nombre || "negocio")
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 80);
+      let slug = base;
+      let n = 2;
+      while (true) {
+        const { rows: dup } = await query(
+          "SELECT 1 FROM usuarios WHERE slug = $1 AND id != $2",
+          [slug, u.id]
+        );
+        if (!dup.length) break;
+        slug = base + "-" + n++;
+      }
+      await query("UPDATE usuarios SET slug = $1 WHERE id = $2", [slug, u.id]);
+    }
+    console.log("[MIGRATIONS] ✓ Slug público OK");
+
     console.log('[MIGRATIONS] Todas las migraciones aplicadas.');
   } catch (err) {
     console.error('[MIGRATIONS] ERROR:', err.message);

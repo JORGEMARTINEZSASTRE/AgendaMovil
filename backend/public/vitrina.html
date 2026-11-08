@@ -76,7 +76,7 @@ function linkAgenda(servicioId) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  userId = new URLSearchParams(location.search).get('u');
+  userId = window.__AGENDA_USER_ID || new URLSearchParams(location.search).get('u');
   if (!userId) {
     mostrarError('Link incompleto. Pedile el link correcto a tu profesional.');
     return;

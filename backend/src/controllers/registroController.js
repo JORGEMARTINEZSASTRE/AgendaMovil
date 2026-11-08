@@ -9,7 +9,29 @@ const mailer = require('../services/mailer');
 
 const DIAS_TRIAL_AUTOREGISTRO = 30;
 
-async function crearUsuarioAutoRegistro30Dias({ nombre, email, passwordHash, telefono, codigo_pais }) {
+function generarSlugBase(texto) {
+  return (texto || 'negocio')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
+
+async function generarSlugUnico(nombre, excludeId) {
+  const base = generarSlugBase(nombre);
+  let slug = base;
+  let n = 2;
+  while (true) {
+    const params = excludeId ? [slug, excludeId] : [slug];
+    const where = excludeId ? 'slug = $1 AND id != $2' : 'slug = $1';
+    const { rows } = await query(`SELECT 1 FROM usuarios WHERE ${where}`, params);
+    if (!rows.length) return slug;
+    slug = base + '-' + n++;
+  }
+}
+
+async function crearUsuarioAutoRegistro30Dias({ nombre, email, passwordHash, telefono, codigo_pais, slug }) {
   let telefonoCompleto = null;
   if (telefono) {
     const limpio = String(telefono).replace(/\D/g, '').replace(/^0+/, '');
@@ -21,11 +43,11 @@ async function crearUsuarioAutoRegistro30Dias({ nombre, email, passwordHash, tel
 
   const { rows } = await query(
     `INSERT INTO usuarios
-       (nombre, email, password_hash, telefono,
+       (nombre, email, password_hash, telefono, slug,
         plan, trial_inicio, trial_fin, activo, rol)
-     VALUES ($1, $2, $3, $4, 'trial', NOW(), NOW() + ($5::int * INTERVAL '1 day'), true, 'cliente')
-     RETURNING id, nombre, email, plan, trial_fin, rol, activo`,
-    [nombre, email.toLowerCase().trim(), passwordHash, telefonoCompleto, DIAS_TRIAL_AUTOREGISTRO]
+     VALUES ($1, $2, $3, $4, $5, 'trial', NOW(), NOW() + ($6::int * INTERVAL '1 day'), true, 'cliente')
+     RETURNING id, nombre, email, plan, trial_fin, rol, activo, slug`,
+    [nombre, email.toLowerCase().trim(), passwordHash, telefonoCompleto, slug, DIAS_TRIAL_AUTOREGISTRO]
   );
   return rows[0];
 }
@@ -34,25 +56,23 @@ async function autoRegistro(req, res) {
   try {
     const { nombre, email, password, telefono, codigo_pais } = req.body;
 
-    // Verificar email único
     const existente = await Usuarios.buscarPorEmailSimple(email);
     if (existente) {
       return res.status(409).json({ ok: false, error: 'Ya existe una cuenta con ese email' });
     }
 
-    // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
+    const slug = await generarSlugUnico(nombre.trim());
 
-    // Crear usuario con trial de 30 días para el primer link compartido con operadoras
     const usuario = await crearUsuarioAutoRegistro30Dias({
       nombre: nombre.trim(),
       email,
       passwordHash,
       telefono,
       codigo_pais: codigo_pais || '+598',
+      slug,
     });
 
-    // Mail de bienvenida (no bloquea si falla)
     try {
       if (mailer.enviarBienvenida) {
         await mailer.enviarBienvenida({
@@ -64,7 +84,6 @@ async function autoRegistro(req, res) {
       console.error('[registro] Error mail bienvenida:', e.message);
     }
 
-    // JWT
     const token = jwt.sign(
       { id: usuario.id, email: usuario.email, rol: usuario.rol || 'cliente' },
       env.jwtSecret,
@@ -82,6 +101,7 @@ async function autoRegistro(req, res) {
         plan: usuario.plan,
         trial_fin: usuario.trial_fin,
         rol: usuario.rol || 'cliente',
+        slug: usuario.slug,
       },
     });
   } catch (err) {
@@ -90,4 +110,4 @@ async function autoRegistro(req, res) {
   }
 }
 
-module.exports = { autoRegistro };
+module.exports = { autoRegistro, generarSlugUnico };

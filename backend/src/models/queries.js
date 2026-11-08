@@ -14,7 +14,7 @@ const Usuarios = {
   async buscarPorEmail(email) {
     const { rows } = await query(
       `SELECT id, email, password_hash, nombre, rol,
-              plan, trial_inicio, trial_fin, activo, ultimo_login
+              plan, trial_inicio, trial_fin, activo, ultimo_login, slug
        FROM usuarios
        WHERE email = $1`,
       [email.toLowerCase().trim()]
@@ -26,7 +26,7 @@ const Usuarios = {
     const { rows } = await query(
       `SELECT id, email, nombre, rol, plan,
               trial_inicio, trial_fin, activo,
-              nombre_negocio, telefono, logo_url, creado_en
+              nombre_negocio, telefono, logo_url, slug, creado_en
        FROM usuarios
        WHERE id = $1`,
       [id]

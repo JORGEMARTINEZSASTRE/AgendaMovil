@@ -31,8 +31,9 @@ app.set('trust proxy', 1);
 // ─── CORS ────────────────────────────────────────
 app.use(cors({
   origin: (origin, cb) => {
-  if (!origin) return cb(null, true); // permite Postman, mobile, etc.
-  if (origin === corsOrigin) return cb(null, true);
+  if (!origin) return cb(null, true);
+  const allowed = [corsOrigin, 'https://agendamovil.pro', 'https://www.agendamovil.pro'];
+  if (allowed.includes(origin)) return cb(null, true);
   cb(new Error('No permitido por CORS'));
 },
   credentials: true,
@@ -129,6 +130,46 @@ app.use(express.static(frontendPath));
 // Redirigir raíz al login
 app.get('/', (_req, res) => {
   res.redirect('/login.html');
+});
+
+
+// ─── URL AMIGABLE /:slug → vitrina con OG tags ──────────────
+app.get('/:slug([a-z0-9][a-z0-9-]{1,98}[a-z0-9])', async (req, res, next) => {
+  try {
+    const { query: dbQuery } = require('./config/db');
+    const { rows } = await dbQuery(
+      `SELECT id, nombre, nombre_negocio, logo_url
+         FROM usuarios
+        WHERE slug = $1 AND activo = true AND rol = 'cliente'`,
+      [req.params.slug]
+    );
+    if (!rows.length) return next();
+
+    const archivo = path.join(frontendPath, 'vitrina.html');
+    const u = rows[0];
+
+    const esc = (s) => String(s || '')
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const nombre      = esc(u.nombre_negocio || u.nombre);
+    const descripcion = esc(`Mirá los servicios de ${u.nombre_negocio || u.nombre} y reservá tu turno.`);
+    const urlAbsoluta = esc(`${req.protocol}://${req.get('host')}/${req.params.slug}`);
+
+    let html = fs.readFileSync(archivo, 'utf8')
+      .replace('<title>Mis servicios</title>', `<title>${nombre}</title>`)
+      .replace('content="Mis servicios"', `content="${nombre}"`)
+      .replace('content="Mirá los servicios y reservá tu turno."', `content="${descripcion}"`)
+      .replace('<meta property="og:type" content="website">',
+        `<meta property="og:type" content="website">\n  <meta property="og:url" content="${urlAbsoluta}">` +
+        (u.logo_url ? `\n  <meta property="og:image" content="${esc(u.logo_url)}">` : ''))
+      .replace('</head>', `<script>window.__AGENDA_USER_ID="${u.id}";</script>\n</head>`);
+
+    return res.type('html').send(html);
+  } catch (err) {
+    console.error('[SLUG]', err.message);
+    return next();
+  }
 });
 
 // ─── 404 ─────────────────────────────────────────

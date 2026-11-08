@@ -61,7 +61,7 @@ async function fetchAPI(endpoint, opciones = {}) {
   // Token expirado o inválido
   if (resp.status === 401) {
     limpiarSesion();
-    window.location.href = '/login.html?motivo=expirado';
+    window.location.href = '/agendamovil/login.html?motivo=expirado';
     return;
   }
 
@@ -124,7 +124,7 @@ const Sesion = {
 // ═══════════════════════════════════════════════════════════
 async function verificarAcceso() {
   if (!Sesion.estaActiva()) {
-    window.location.href = '/login.html';
+    window.location.href = '/agendamovil/login.html';
     return false;
   }
 
@@ -132,7 +132,7 @@ async function verificarAcceso() {
     const data = await fetchAPI('/auth/me');
     if (!data?.ok) {
       limpiarSesion();
-      window.location.href = '/login.html';
+      window.location.href = '/agendamovil/login.html';
       return false;
     }
 
@@ -145,7 +145,7 @@ async function verificarAcceso() {
       const fin = new Date(usuario.trial_fin);
       if (fin < new Date()) {
         limpiarSesion();
-        window.location.href = '/login.html?motivo=trial_expirado';        return false;
+        window.location.href = '/agendamovil/login.html?motivo=trial_expirado';        return false;
       }
     }
 
@@ -153,7 +153,7 @@ async function verificarAcceso() {
   } catch (err) {
     console.error('[verificarAcceso]', err);
     limpiarSesion();
-    window.location.href = '/login.html';
+    window.location.href = '/agendamovil/login.html';
     return false;
   }
 }
@@ -191,7 +191,7 @@ const AuthAPI = {
 
   logout() {
     limpiarSesion();
-    window.location.href = '/login.html';
+    window.location.href = '/agendamovil/login.html';
   },
 };
 

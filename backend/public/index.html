@@ -308,7 +308,7 @@
       <span id="badge-referidos" class="badge-tab" style="display:none"></span>
     </button>
     <button class="tab-btn" data-tab="sucursales">
-      🏪 <span>Sucursales</span>
+      🏠 <span>Mi gabinete</span>
     </button>
     <button class="tab-btn" data-tab="clientes">
       👥 <span>Clientes</span>
@@ -342,6 +342,20 @@
             title="Seleccionar fecha"
           >
         </div>
+      </div>
+
+      
+      <!-- ─── LINK PÚBLICO PARA INSTAGRAM ─── -->
+      <div id="card-link-publico" class="link-publico-card" style="display:none; margin:12px 0; padding:14px 16px; background:linear-gradient(135deg,#A85568 0%,#c97b8e 100%); border-radius:14px; color:#fff;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span style="font-size:20px">🔗</span>
+          <strong style="font-size:15px">Tu link para Instagram</strong>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input id="input-link-publico" readonly style="flex:1; padding:8px 12px; border-radius:8px; border:none; font-size:13px; background:rgba(255,255,255,0.95); color:#333; cursor:pointer" onclick="this.select()">
+          <button id="btn-copiar-link" style="padding:8px 16px; border-radius:8px; border:none; background:#fff; color:#A85568; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap">Copiar</button>
+        </div>
+        <p style="font-size:11px; margin-top:6px; opacity:0.9">Pegá este link en tu bio de Instagram para que tus clientas se agenden solas</p>
       </div>
 
       <div id="lista-usuarios" class="lista-turnos">
@@ -428,8 +442,8 @@
     <!-- ══ PANEL: SUCURSALES ══════════════════ -->
     <section class="tab-panel" data-panel="sucursales">
       <div class="panel-header">
-        <p class="panel-titulo">🏪 Mis sucursales</p>
-        <button id="btn-nueva-sucursal-operadora" class="btn-fab" title="Nueva sucursal">＋</button>
+        <p class="panel-titulo">🏠 Mi lugar de trabajo</p>
+        <button id="btn-nueva-sucursal-operadora" class="btn-fab" title="Nuevo lugar">＋</button>
       </div>
 
       <div id="sucursales-operadora-wrap" class="sucursales-admin">
@@ -1432,7 +1446,7 @@
       </div>
 
       <div id="serv-sucursales-wrap" class="form-grupo">
-        <label>🏪 Disponible en sucursales (opcional)</label>
+        <label>🏠 Disponible en (opcional)</label>
         <p class="form-hint">Si no seleccionás ninguna, el servicio estará disponible en todas.</p>
         <div id="serv-sucursales-checks" class="sucursales-checks-grid"></div>
       </div>
@@ -1787,8 +1801,8 @@
      SCRIPTS
 ════════════════════════════════════════════════ -->
 <script src="telefono.js"></script>
-<script src="api.js"></script>
-<script src="app.js"></script>
+<script src="api.js?v=2"></script>
+<script src="app.js?v=2"></script>
 <script src="fichas.js"></script>
 
 

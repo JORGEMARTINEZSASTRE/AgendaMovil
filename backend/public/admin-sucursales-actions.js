@@ -118,39 +118,39 @@
     const proximoActivo = !activoActual;
     const accion = proximoActivo ? 'activar' : 'desactivar';
 
-    if (!confirm(`¿Querés ${accion} esta sucursal?`)) return;
+    if (!confirm(`¿Querés ${accion} este lugar?`)) return;
 
     try {
       await api(`/sucursales/${id}/activo`, {
         method: 'PATCH',
         body: JSON.stringify({ activo: proximoActivo }),
       });
-      toast(proximoActivo ? '✅ Sucursal activada' : '🔴 Sucursal desactivada');
+      toast(proximoActivo ? '✅ Lugar activado' : '🔴 Lugar desactivado');
       if (typeof window.cargarSucursalesAdmin === 'function') {
         await window.cargarSucursalesAdmin();
       }
       setTimeout(decorarSucursales, 100);
     } catch (err) {
-      toast(err.message || 'No se pudo cambiar la sucursal', 'error');
+      toast(err.message || 'No se pudo cambiar', 'error');
     }
   }
 
   async function borrarSucursal(id, nombre) {
     const ok = confirm(
-      `¿Querés borrar la sucursal "${nombre}"?\n\n` +
+      `¿Querés borrar "${nombre}"?\n\n` +
       'Si tiene turnos históricos, se va a desactivar para conservar la información.'
     );
     if (!ok) return;
 
     try {
       const data = await api(`/sucursales/${id}`, { method: 'DELETE' });
-      toast(data.mensaje || 'Sucursal actualizada');
+      toast(data.mensaje || 'Actualizado');
       if (typeof window.cargarSucursalesAdmin === 'function') {
         await window.cargarSucursalesAdmin();
       }
       setTimeout(decorarSucursales, 100);
     } catch (err) {
-      toast(err.message || 'No se pudo borrar la sucursal', 'error');
+      toast(err.message || 'No se pudo borrar', 'error');
     }
   }
 

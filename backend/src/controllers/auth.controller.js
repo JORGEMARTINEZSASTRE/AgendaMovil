@@ -31,6 +31,7 @@ function datosPublicos(u) {
     activo:         u.activo,
     nombre_negocio: u.nombre_negocio,
     logo_url:       u.logo_url,
+    slug:           u.slug,
   };
 }
 

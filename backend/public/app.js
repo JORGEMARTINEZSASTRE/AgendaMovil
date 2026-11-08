@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnAdmin) {
       btnAdmin.style.display = 'flex';
       btnAdmin.addEventListener('click', () => {
-        window.location.href = '/admin.html';
+        window.location.href = '/agendamovil/admin.html';
       });
     }
   }
@@ -279,17 +279,51 @@ if (btnAyuda) {
     document.getElementById('modal-ayuda')?.classList.remove('oculto');
   });
 }
-// Copiar link de agenda pública
+
+// Inicializar tarjeta de link público para Instagram
+function initLinkPublico() {
+  const card = document.getElementById('card-link-publico');
+  const input = document.getElementById('input-link-publico');
+  const btnCopiar = document.getElementById('btn-copiar-link');
+  if (!card || !input) return;
+
+  const usuario = Sesion.getUsuario();
+  if (!usuario) return;
+
+  const slug = usuario.slug;
+  const link = slug
+    ? window.location.origin + '/' + slug
+    : window.location.origin + '/vitrina.html?u=' + usuario.id;
+
+  input.value = link;
+  card.style.display = 'block';
+
+  if (btnCopiar) {
+    btnCopiar.addEventListener('click', () => {
+      navigator.clipboard.writeText(link).then(() => {
+        btnCopiar.textContent = '¡Copiado!';
+        setTimeout(() => { btnCopiar.textContent = 'Copiar'; }, 2000);
+      });
+    });
+  }
+}
+
+// Copiar link público (usa slug si existe, sino UUID)
 const btnLinkPublico = document.getElementById('btn-link-publico');
 if (btnLinkPublico) {
   btnLinkPublico.addEventListener('click', () => {
     const usuario = Sesion.getUsuario();
-    const link = `${window.location.origin}/agenda-publica.html?u=${usuario.id}`;
+    const slug = usuario.slug;
+    const link = slug
+      ? `${window.location.origin}/${slug}`
+      : `${window.location.origin}/vitrina.html?u=${usuario.id}`;
     navigator.clipboard.writeText(link).then(() => {
-      mostrarToast('¡Link copiado! 📋', 'exito');
+      mostrarToast('¡Link copiado! Compartilo en Instagram 📋', 'exito');
     });
   });
 }
+
+initLinkPublico();
 }
 
 function cerrarModales() {
@@ -780,7 +814,7 @@ function abrirFormTurno(turno = null) {
         const icono = s.tipo === 'profesional' ? '👤' : '🏪';
         return `
           <option value="${s.id}" ${String(turno?.sucursal_id || '') === String(s.id) ? 'selected' : ''}>
-            ${icono} ${escaparHTML(s.nombre || 'Sucursal')}
+            ${icono} ${escaparHTML(s.nombre || 'Mi gabinete')}
           </option>`;
       }).join('');
   }
@@ -2876,7 +2910,7 @@ function abrirModalNuevaSucursalOperadora() {
           <select id="sucursal-operadora-tipo" required>
             <option value="">— Elegí tipo —</option>
             <option value="profesional">👤 Profesional</option>
-            <option value="sucursal">🏪 Sucursal</option>
+            <option value="sucursal">🏠 Lugar de trabajo</option>
           </select>
         </div>
         <div class="campo">
@@ -2908,7 +2942,7 @@ function abrirModalNuevaSucursalOperadora() {
         hint.textContent = 'Nombre de la profesional o profesional independiente';
       } else if (selectTipo.value === 'sucursal') {
         inputNombre.placeholder = 'Ej: Andy Lashes San Nicolás';
-        hint.textContent = 'Nombre de la sucursal o local';
+        hint.textContent = 'Nombre de tu lugar de trabajo o gabinete';
       } else {
         inputNombre.placeholder = '';
         hint.textContent = '';
@@ -3123,11 +3157,11 @@ async function renderSucursalesOperadora() {
     cont.innerHTML = sucursales.map(s => {
       const tipoBadge = s.tipo === 'profesional'
         ? '<span class="sucursal-tipo-badge profesional">👤 Profesional</span>'
-        : '<span class="sucursal-tipo-badge sucursal">🏪 Sucursal</span>';
+        : '<span class="sucursal-tipo-badge sucursal">🏠 Lugar de trabajo</span>';
       return `
         <div class="sucursal-card" data-id="${s.id}">
           <div class="sucursal-card-head">
-            <h3>${escaparHTML(s.nombre || 'Sucursal')}</h3>
+            <h3>${escaparHTML(s.nombre || 'Mi gabinete')}</h3>
             ${tipoBadge}
             <button class="btn-primario btn-sucursal-guardar" data-id="${s.id}">💾 Guardar horarios</button>
             <button class="btn-icon btn-sucursal-eliminar" data-id="${s.id}" data-nombre="${escaparHTML(s.nombre || 'Sucursal')}" title="Eliminar">🗑</button>
